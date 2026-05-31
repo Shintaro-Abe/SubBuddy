@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": {
+    "codex@openai-codex": true,
+    "example-skills@anthropic-agent-skills": true,
+    "document-skills@anthropic-agent-skills": true,
+    "deploy-on-aws@agent-plugins-for-aws": true
+  }
+}

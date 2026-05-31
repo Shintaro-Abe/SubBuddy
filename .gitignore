@@ -1,0 +1,39 @@
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+*.log
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Dependencies / build
+node_modules/
+.next/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Real data / PII (実データはリポジトリに含めない — CLAUDE.md PII方針)
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+seed.local.*
+fixtures.local.*
+
+# iOS / Xcode (将来)
+ios/**/build/
+ios/**/DerivedData/
+*.xcuserstate
+
+# Claude local settings
+.claude/settings.local.json

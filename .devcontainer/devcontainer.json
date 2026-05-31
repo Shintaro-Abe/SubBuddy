@@ -1,0 +1,39 @@
+{
+  "name": "SubBuddy",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "workspaceFolder": "/workspaces/SubBuddy",
+
+  "runArgs": [
+    "--network=claude-observability"
+  ],
+
+  // ★追加: ~/.claude を永続化 (Rebuild しても保持)
+  // localWorkspaceFolderBasename によりプロジェクトごとに独立ボリュームを自動派生。
+  // 例: SubBuddy → SubBuddy-claude-home / SubBuddy → SubBuddy-claude-home
+  // 既存プロジェクトで明示的なボリューム名を保持したい場合は固定文字列に差し替える。
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-claude-home,target=/home/vscode/.claude,type=volume"
+  ],
+
+  "containerEnv": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+    "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative",
+    "OTEL_METRIC_EXPORT_INTERVAL": "10000",
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "OTEL_RESOURCE_ATTRIBUTES": "project.name=SubBuddy",
+    "OTEL_LOG_TOOL_DETAILS": "1"
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {}
+  },
+  "postCreateCommand": ".devcontainer/post_create.sh",
+  "postStartCommand": ".devcontainer/post_start.sh",
+  "postAttachCommand": ".devcontainer/post_start.sh"
+}
