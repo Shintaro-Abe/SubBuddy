@@ -37,13 +37,13 @@
 
 ---
 
-## フェーズ2：検証スキーマ（Zod）
+## フェーズ2：検証スキーマ（Zod）✅
 
-- [ ] T2-1 `src/schemas/` にサブスク登録/更新スキーマ（`subscriptionCreateSchema` / `subscriptionUpdateSchema`）
-- [ ] T2-2 `usageDailyBatchSchema`（`subscriptionId` / `date` / `used` / `usageBucket` 列挙 / `estimatedMinutes*` / `source`、件数上限）
-- [ ] T2-3 不正値・境界（列挙外・負の金額・min>max）の単体テスト
+- [x] T2-1 `src/schemas/subscription.ts`：`subscriptionCreateSchema` / `subscriptionUpdateSchema`（金額整数・importance 1..5・日付 YYYY-MM-DD・URL 検証・既定値補完）
+- [x] T2-2 `src/schemas/usage.ts`：`usageDailyBatchSchema`（列挙バケット・件数上限 1000・min≤max の refine）＋ `src/lib/usage-bucket.ts`（ワイヤ形式⇄Prisma enum 変換）
+- [x] T2-3 境界テスト（列挙外・負/小数金額・範囲外 importance・日付形式・空配列・上限超過・min>max）→ 18 passed
 
-**完了条件**：API 入力・取り込みペイロードがすべて Zod 経由で検証される。境界テストが通る。
+**完了条件**：✅ API 入力・取り込みペイロードを Zod で検証する基盤が揃い、境界テストが通る。
 
 ---
 
