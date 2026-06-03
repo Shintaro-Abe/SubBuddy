@@ -4,5 +4,19 @@
     "example-skills@anthropic-agent-skills": true,
     "document-skills@anthropic-agent-skills": true,
     "deploy-on-aws@agent-plugins-for-aws": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/wbs/scripts/detect-bolt-complete.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }

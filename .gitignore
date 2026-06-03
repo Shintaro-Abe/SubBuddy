@@ -54,3 +54,6 @@ ios/**/DerivedData/
 
 # Claude local settings
 .claude/settings.local.json
+
+# WBS 同期のローカル状態（フック重複提案の抑止用）
+wbs/.sync-state.json

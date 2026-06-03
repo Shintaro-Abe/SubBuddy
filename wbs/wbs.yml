@@ -112,16 +112,18 @@ tasks:
     level: 1
     phase: "実装"
     name: "確認ゲート（AskUserQuestion 連携）"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     predecessors: ["5"]
+    note: "/wbs-sync コマンド：dry-run→確認→apply"
   - id: "7"
     level: 1
     phase: "実装"
     name: "自動トリガ（tasklist 完了検知フック）"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     predecessors: ["5"]
+    note: "PostToolUse フック＋detect-bolt-complete.mjs（重複抑止つき）"
 
   # ───── フェーズ 8：Sheets 初期セットアップ ─────
   - id: "8"
