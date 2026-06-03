@@ -28,6 +28,9 @@
 | 来館 | Visit | `visit` | 物理サービス（ジム等）の利用 1 回＝来館。`usage_source = visit`。位置情報ベースは**近似**。**候補・未確定**：ジムは PRD の現行対象外で、取得方法は保留（`.steering/20260601-anytime-fitness-visit-usage/`）。 |
 | レコメンド（提案） | Recommendation | `recommendation` / `recommendation_snapshot` | サブスクごとの見直し提案。判定値（§4）と理由を持ち、スナップショットとして履歴保持。 |
 | スコアリング | Scoring | `scoring` | ルールベースで利用量・金額・更新日等から判定値を導く処理。AI を使わない（MVP）。 |
+| 観測期間 | Observation Window | `observation_days` | サブスク**登録時点から**の利用量集計の経過日数。過去には遡らない。 |
+| 観測中 | Observing | `data_status = observing` | 観測日数が確定に必要な最小日数に満たず、利用ベース判定を未確定としている状態。画面では「観測中（あと N 日）」と表示。 |
+| 確定 | Ready | `data_status = ready` | 観測が十分になり、利用ベースの判定を確定して出せる状態。 |
 | サービスカタログ | Service Catalog | `service_catalog` | 既知サービスのマスタ（名称・カテゴリ等）。サブスク登録の補助。 |
 | 重要度 | Importance | `importance` | ユーザーが付与する主観的な重要度。判定の補正係数に用いる。 |
 | 利用量センサー | Usage Sensor | — | 利用量を計測する側の総称。iPhone（Screen Time・位置情報）が担う。 |
@@ -65,6 +68,7 @@
 | `strong_cancel_candidate` | 強い解約候補 | 長期未使用等、解約を強く推奨。 |
 
 > SubBuddy は**自動解約を行わない**。判定は提案までで、実行はユーザーに委ねる（恒久方針）。
+> **`観測中`（`data_status = observing`）は判定値ではなく別軸の状態**。利用ベース判定が未確定の間の表示で、確定後に上記いずれかの `decision` を出す（`functional-design.md` §8.5）。
 
 ---
 
@@ -76,7 +80,8 @@
 | 1 来館あたり単価 | `cost_per_visit` | 月額 ÷ 来館日数。ジム等の割高度の目安。**`visit` 採用時に有効**（§3。現状の `recommendation_snapshots` には未定義）。 |
 | 未使用日数 | `unused_days` | 直近で利用が無い連続日数。解約検討の主要シグナル。 |
 | 更新日 | `renewal_date` | 次回課金日。接近時に確認を促す。 |
-| 信頼度 / 近似フラグ | `confidence` / `is_approximate` | 値が確定値か近似（例：位置情報ベースの `visit`）かを表す。 |
+| 信頼度 / 近似フラグ | `confidence` / `is_approximate` | 値が確定値か近似（例：位置情報ベースの `visit`、観測期間が短い間の暫定値）かを表す。 |
+| 観測日数 | `observation_days` | 登録時点からの利用量集計の経過日数。確定までの残り日数は `days_until_ready`。 |
 
 ---
 

@@ -178,6 +178,9 @@ erDiagram
     string user_id FK
     string subscription_id FK
     string decision
+    string data_status
+    int observation_days
+    int days_until_ready
     int cancel_score
     int monthly_amount
     int yearly_amount
@@ -187,6 +190,7 @@ erDiagram
     int days_until_renewal
     float cost_per_usage_day
     boolean has_overlap
+    float confidence
     string reason
     datetime generated_at
   }
@@ -239,6 +243,9 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 
 スコアリング結果の履歴。判定 `decision` と `cancel_score`、算出根拠（30日利用日数・利用分・最終利用からの日数・
 更新日までの日数・単価・重複有無）と `reason`（MVP は定型文、フェーズ2 で AI 生成）を保持。
+利用量の集計は **SubBuddy への登録時点（`subscriptions.created_at`）から開始**し、過去には遡らない。
+`data_status`（`observing` / `ready`）・`observation_days`（登録からの観測日数）・`days_until_ready`（確定まで残り日数）・
+`confidence`（暫定/確定の確からしさ）で、**段階的な情報提供**（§8.5）の状態を表す。
 
 #### service_catalog（正規化辞書）
 
@@ -383,7 +390,7 @@ flowchart LR
 
 未使用日数 / 過去30日の利用日数 / 過去30日の利用バケット / 月額料金 / 年換算料金 /
 更新日までの日数 / 年額更新か / 同カテゴリ重複の有無 / ユーザー設定の重要度 /
-iCloud+ のような容量ベース評価の有無。
+iCloud+ のような容量ベース評価の有無 / **登録からの観測日数**（§8.5 の段階的提供で使用）。
 
 ### 8.3 判定ルール（MVP の初期値・調整可能）
 
@@ -405,6 +412,28 @@ iCloud+ のような容量ベース評価の有無。
 ```text
 cost_per_usage_day = 月額換算料金 ÷ 過去30日の利用日数（利用日数0なら「未使用」として別扱い）
 ```
+
+### 8.5 段階的な情報提供（登録時点からの観測）
+
+利用量の集計は **SubBuddy への登録時点から開始**し、過去には遡らない（サブスクごとに「最終利用」の定義が異なり、
+手動入力では計測が安定しないため、**最終利用日の手動入力は行わない**）。
+そのため、登録直後は利用履歴が不足する。これを踏まえ、判定を 2 系統に分けて**早い段階からユーザーに価値を返す**。
+
+- **利用履歴に依存しない指摘（登録直後＝即時に出せる）**
+  - 同カテゴリ重複（`category` / `normalized_name` で検出）
+  - 料金が割高（月額・年換算・重要度との突合）
+  - 更新日が近い（`next_renewal_date`）
+- **利用履歴に依存する判定（観測が必要）**
+  - ◯日未使用 / 1 利用日あたり単価
+  - 登録からの観測日数が**確定に必要な最小日数（設定値・既定の目安 14 日）**に満たない間は、利用ベースの
+    `decision` を確定させず、`data_status = observing` とし、画面では **「観測中（あと N 日）」** と表示する。
+  - 観測が十分になったら `data_status = ready` とし、§8.3 のルールで確定判定を出す。
+
+- 観測が短い間に算出する利用日数・単価は **`confidence`（暫定/確定）** で確からしさを明示する。
+- この方針により、**登録初日から「重複・割高・更新間近」で役立ち**、観測の進行（あと N 日）が再訪の動機になる。
+  早すぎる誤判定（使っているサービスを誤って解約候補にする）を避け、信頼を維持する。
+
+> 確定に必要な最小観測日数は**設定値として外出し**し調整可能にする（`architecture.md` / `development-guidelines.md` の config 方針）。
 
 ---
 
@@ -464,8 +493,11 @@ flowchart TD
 │ 日経電子版     ¥4,277/月  更新 6/20  [様子見]   │
 │ iCloud+ 200GB  ¥400/月    更新 6/05  [DG検討]   │
 │ AIツールX      ¥3,000/月  未使用62日 [強解約候補]│
+│ 新規登録サービス ¥980/月  更新 6/30  [観測中 あと9日]│
 └───────────────────────────────────────────────┘
 ```
+
+> 登録直後の `観測中` でも、同カテゴリ重複・割高・更新間近の指摘は即時に表示する（§8.5）。
 
 サブスク詳細：
 
