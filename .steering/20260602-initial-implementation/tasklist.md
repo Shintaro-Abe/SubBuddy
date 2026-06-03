@@ -23,16 +23,17 @@
 
 ---
 
-## フェーズ1：データモデルと合成データ
+## フェーズ1：データモデルと合成データ ✅
 
-- [ ] T1-1 `prisma/schema.prisma` に5テーブル定義（`subscriptions` / `billing_events` / `ios_usage_daily_summaries` / `recommendation_snapshots` / `service_catalog`）。全テーブルに `user_id`、金額は整数
-- [ ] T1-2 `recommendation_snapshots` に段階的提供フィールド（`data_status` / `observation_days` / `days_until_ready` / `confidence`）を含める（`functional-design.md` §5・§8.5）
-- [ ] T1-3 `ios_usage_daily_summaries` を `subscription_id × usage_date` 一意制約で定義（冪等 upsert 用）
-- [ ] T1-4 初回マイグレーション作成・適用
-- [ ] T1-5 `prisma/seed.ts` に**合成データのみ**投入（単一ユーザー、各判定が再現するシナリオ：未使用60日/重複/高importance低利用/観測中の新規登録 など）
-- [ ] T1-6 `service_catalog` に除外対象（Apple Music / TV+ / Arcade / One を `is_excluded`）と表記揺れ最小辞書を seed
+- [x] T1-1 `prisma/schema.prisma` に5テーブル（＋`users`）定義。全テーブルに `user_id`、金額は整数、列挙は Prisma enum
+- [x] T1-2 `recommendation_snapshots` に段階的提供フィールド（`data_status` / `observation_days` / `days_until_ready` / `confidence`、`decision` は観測中 null 可）
+- [x] T1-3 `ios_usage_daily_summaries` を `@@unique([subscriptionId, usageDate])` で定義（冪等 upsert 用）
+- [x] T1-4 初回マイグレーション作成・適用（`20260603101154_init`。ローカル PostgreSQL 15）
+- [x] T1-5 `prisma/seed.ts`：**合成データのみ**で8シナリオ（強解約候補/解約検討/重複/様子見/iCloud+/継続/観測中）→ user1・subs8・usage62・billing7
+- [x] T1-6 `service_catalog`：Apple Music/TV+/Arcade/One を `isExcluded`＋表記揺れ最小辞書を seed
 
-**完了条件**：マイグレーションと seed が成功し、合成データで各判定・観測中が再現できる。実 PII なし。
+**完了条件**：✅ マイグレーションと seed が成功し、合成データで各判定・観測中が再現できる。実 PII なし。
+**補足**：Prisma は v7 の設定方式（要 driver adapter）を避け、安定した **v6.19.3** に固定。ローカル DB セットアップは `scripts/setup-local-db.sh` で再現可能（docker 無し環境向け・apt PostgreSQL）。
 
 ---
 
