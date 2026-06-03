@@ -9,17 +9,17 @@
 
 ---
 
-## フェーズ0：プロジェクト雛形
+## フェーズ0：プロジェクト雛形 ✅
 
-- [ ] T0-1 `apps/web/` に Next.js（App Router / TypeScript strict）を初期化
-- [ ] T0-2 Tailwind CSS 導入・`tailwind.config.ts` 設定（共通デザインシステム）
-- [ ] T0-3 ESLint / Prettier 設定（自動強制できる規約を優先）
-- [ ] T0-4 Vitest 設定（`vitest.config.ts`）・テスト雛形
-- [ ] T0-5 Prisma 導入・PostgreSQL 接続（`.env.example` はダミー値のみ。実 `.env` は `.gitignore`）
-- [ ] T0-6 `.tool-versions` 作成（バージョンの一次情報。docs には固定しない）
-- [ ] T0-7 ディレクトリ骨格を**必要分のみ**作成（`src/{app,domain,repositories,config,schemas,lib,components}`。空ディレクトリは作らない）
+- [x] T0-1 `apps/web/` に Next.js（App Router / TypeScript strict）を初期化（Next 16 / React 19）
+- [x] T0-2 Tailwind CSS 導入（Tailwind v4・create-next-app テンプレート）
+- [x] T0-3 ESLint / Prettier 設定（`eslint-config-next` ＋ `.prettierrc.json`・format スクリプト）
+- [x] T0-4 Vitest 設定（`vitest.config.ts`・node 環境・`@` エイリアス）・スモークテスト（`src/lib/money.test.ts`）
+- [x] T0-5 Prisma 導入（`prisma` / `@prisma/client`）・`.env.example`（ダミー値のみ。実 `.env` は `.gitignore`）
+- [x] T0-6 `.tool-versions` 作成（`nodejs 24.16.0`）
+- [x] T0-7 ディレクトリ骨格は**必要分のみ**作成（`src/lib`。他は各フェーズで都度追加・空ディレクトリは作らない）
 
-**完了条件**：`dev` 起動・`lint`・`typecheck`・空テストの `test` がすべて通る。
+**完了条件**：✅ `lint` / `typecheck` / `test`（4 passed）/ `build` がすべて通る。
 
 ---
 
