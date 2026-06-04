@@ -110,7 +110,8 @@
 
 - [x] T7-1 `lint` / `typecheck` / `test`（44 passed）/ `build` がすべて green
 - [x] T7-2 主要導線の手動確認：CRUD（8→9→更新→削除→8）・`usage/daily` 冪等（0→1）・recompute（各判定再現）・全画面 200・不正400/未存在404
-- [~] T7-3 E2E（Playwright）は任意のため今回見送り（手動の通し確認で代替）
+- [x] T7-3 E2E（Playwright）追加：主要導線6本（ダッシュボード/一覧詳細/レコメンド判定・観測中/再計算ボタン/様子見ラベル/登録→削除）→ 6 passed
+  - 本番ビルドに対して実行（dev の HMR はハイドレーション不安定で入力消失のため）。`globalSetup` で合成 seed、`beforeAll` で API 再計算して判定を決定的化。`npm run test:e2e`（= build → playwright）。
 - [x] T7-4 `pre-commit-secret-scan` 実行（ソース検出ゼロ。`.next*` の誤検知は build 成果物・git 管理外）→ Conventional Commits でフィーチャーブランチにコミット
 - [x] T7-5 README に起動・seed・テスト・API 手順を記載（合成データ前提・PII 方針明記）
 
