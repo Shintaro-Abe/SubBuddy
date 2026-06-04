@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ビルド成果物の退避（環境のファイル同期由来。削除不能なため無視）
+.next.broken
+.next.old.*

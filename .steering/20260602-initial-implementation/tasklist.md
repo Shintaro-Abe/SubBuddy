@@ -91,17 +91,18 @@
 
 ---
 
-## フェーズ6：画面（UI / Tailwind）
+## フェーズ6：画面（UI / Tailwind）✅
 
-- [ ] T6-1 ダッシュボード（月額/年額合計・強い解約候補件数・更新間近件数）
-- [ ] T6-2 サブスク一覧（料金・更新日・判定バッジ。**観測中は「観測中 あと N 日」バッジ**）
-- [ ] T6-3 サブスク登録/編集フォーム（Zod と整合・XSS 対策）
-- [ ] T6-4 サブスク詳細（利用量・単価・判定理由・解約導線 URL。観測中は即時指摘＋観測中表示）
-- [ ] T6-5 レコメンド画面（判定別一覧）
-- [ ] T6-6 更新日前レビュー画面
-- [ ] T6-7 共通 UI（`SubscriptionCard` 等）をコンポーネント化（クラス重複回避）
+- [x] T6-1 ダッシュボード（月額/年額合計・強い解約候補件数・更新間近件数・観測中件数・再計算ボタン）
+- [x] T6-2 サブスク一覧（`SubscriptionCard`：料金・更新日・判定バッジ。**観測中は「観測中 あと N 日」バッジ**）
+- [x] T6-3 サブスク登録/編集フォーム（API 経由で Zod 検証・エラー表示・URL 入力。React 既定エスケープで XSS 対策、`dangerouslySetInnerHTML` 不使用）
+- [x] T6-4 サブスク詳細（利用量・単価・判定理由・解約導線 URL〔`safeHttpUrl` で http/https のみ許可〕・編集/削除。観測中は観測中表示）
+- [x] T6-5 レコメンド画面（判定別グループ・スコア順・観測中/未判定を別掲）
+- [x] T6-6 更新間近画面（クエリ `days`・残り日数順・3日以内強調）
+- [x] T6-7 共通 UI をコンポーネント化（`DecisionBadge` / `SubscriptionCard` / `SubscriptionForm` / `RecomputeButton` / `DeleteSubscriptionButton`）
 
-**完了条件**：合成データで全画面が表示され、`review`=「様子見」・観測中表示が `glossary.md` と一致。iCloud+ 容量管理画面は未実装（対象外）。
+**完了条件**：✅ 合成データで全画面が 200 表示。`review`=「様子見」・観測中「あと N 日」表示が `glossary.md` と一致。lint / typecheck / test(44) / build green。iCloud+ 容量管理画面は未実装（対象外）。
+**補足（環境対処）**：開発環境のファイル同期が `.next` 配下に " 2" 重複ファイルを生成し typecheck を阻害したため、`tsconfig.json` の exclude に `**/* 2.*` を追加。Server Component の `Date.now()` を `lib/display.ts#daysUntil` に隔離し React 純粋性ルールに準拠。
 
 ---
 
