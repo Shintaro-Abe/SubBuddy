@@ -107,8 +107,9 @@ export function SubscriptionForm({
       )}
 
       <div>
-        <label className={label}>サービス名</label>
+        <label htmlFor="name" className={label}>サービス名</label>
         <input
+          id="name"
           className={field}
           value={values.name}
           onChange={(e) => set("name", e.target.value)}
@@ -118,8 +119,9 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className={label}>カテゴリ</label>
+        <label htmlFor="category" className={label}>カテゴリ</label>
         <input
+          id="category"
           className={field}
           value={values.category}
           onChange={(e) => set("category", e.target.value)}
@@ -131,8 +133,9 @@ export function SubscriptionForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={label}>金額（円・整数）</label>
+          <label htmlFor="amount" className={label}>金額（円・整数）</label>
           <input
+            id="amount"
             type="number"
             min={0}
             step={1}
@@ -143,8 +146,9 @@ export function SubscriptionForm({
           />
         </div>
         <div>
-          <label className={label}>課金周期</label>
+          <label htmlFor="billingCycle" className={label}>課金周期</label>
           <select
+            id="billingCycle"
             className={field}
             value={values.billingCycle}
             onChange={(e) => set("billingCycle", e.target.value as "monthly" | "yearly")}
@@ -157,8 +161,9 @@ export function SubscriptionForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={label}>次回更新日</label>
+          <label htmlFor="nextRenewalDate" className={label}>次回更新日</label>
           <input
+            id="nextRenewalDate"
             type="date"
             className={field}
             value={values.nextRenewalDate ?? ""}
@@ -166,8 +171,9 @@ export function SubscriptionForm({
           />
         </div>
         <div>
-          <label className={label}>重要度（1〜5）</label>
+          <label htmlFor="importance" className={label}>重要度（1〜5）</label>
           <input
+            id="importance"
             type="number"
             min={1}
             max={5}
@@ -180,8 +186,9 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className={label}>解約手続き URL（任意）</label>
+        <label htmlFor="cancellationUrl" className={label}>解約手続き URL（任意）</label>
         <input
+          id="cancellationUrl"
           type="url"
           className={field}
           value={values.cancellationUrl ?? ""}
@@ -191,8 +198,9 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className={label}>メモ（任意）</label>
+        <label htmlFor="notes" className={label}>メモ（任意）</label>
         <textarea
+          id="notes"
           className={field}
           rows={2}
           value={values.notes ?? ""}
@@ -203,8 +211,9 @@ export function SubscriptionForm({
 
       {id && (
         <div>
-          <label className={label}>状態</label>
+          <label htmlFor="status" className={label}>状態</label>
           <select
+            id="status"
             className={field}
             value={values.status}
             onChange={(e) =>
