@@ -41,7 +41,7 @@ for (const row of dataRows) {
 // --- 差分 ---
 const diffs = computeDiff(spec, current, columns, keyField);
 const counts = { add: 0, update: 0, unchanged: 0, archive: 0 } as Record<string, number>;
-for (const d of diffs) counts[d.type]++;
+for (const d of diffs) counts[d.type] = (counts[d.type] ?? 0) + 1;
 
 const specById = new Map(spec.map((t) => [String(t[keyField]), t]));
 const nameIdx = columns.findIndex((c) => c.field === 'name');

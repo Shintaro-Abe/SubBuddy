@@ -13,7 +13,6 @@ const columns: ColumnDef[] = [
 
 function task(p: Partial<Task> & { id: string }): Task {
   return {
-    id: p.id,
     parent: null,
     level: 1,
     phase: '',

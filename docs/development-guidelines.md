@@ -130,7 +130,44 @@
 
 ---
 
-## 8. 品質チェックの基本フロー
+## 8. WBS 進捗管理の運用（自動トリガ＋確認ゲート）
+
+開発タスクの進捗は WBS で管理し、**正本はリポジトリの `wbs/wbs.yml`**、Google スプレッドシートはその生成ビュー（片方向同期：spec → Sheets）とする。構成は `repository-structure.md` §6 を参照。
+
+### 8.1 基本原則
+
+- **正本は `wbs/wbs.yml` のみ**。進捗が変わったら、まず `wbs.yml` を編集してコミットする。スプレッドシートを手で直しても、次回同期で正本に上書きされる。
+- **片方向**：同期は spec → Sheets の一方向。Sheets から spec への逆流は行わない。
+- **冪等**：同じ `wbs.yml` を二度同期しても結果は変わらない（重複行を作らない）。
+- WBS に書くのは**開発タスクのメタ情報のみ**。エンドユーザーの PII・機微データを書かない（`CLAUDE.md`）。
+
+### 8.2 同期の流れ（確認ゲート）
+
+書き込み前に必ず差分を提示し、**ユーザーの承認を得てから反映**する（承認なしには書き込まない）。
+
+```
+wbs.yml 編集 → dry-run（差分のみ表示・無書き込み） → 差分を提示
+            → ユーザー承認（AskUserQuestion） → 承認時のみ apply（Sheets へ反映）
+```
+
+- 起動は `/wbs-sync` コマンド（`.claude/commands/wbs-sync.md`）。`npm --prefix wbs run sync`（既定 dry-run）→ 差分があれば確認 → `npm --prefix wbs run sync:apply`。
+- spec から消えたタスクは `Archive` シートへ退避してから `WBS` から除去する（履歴を残す）。
+
+### 8.3 自動トリガ
+
+- `.steering/*/tasklist.md` のチェックボックスが**全完了**になった編集を `PostToolUse` フック（`wbs/scripts/detect-bolt-complete.mjs`）が検知し、Claude に同期を提案する（提案のみ。書き込みは確認ゲートを必ず通る）。
+- 同一完了状態での重複提案は抑止する（`wbs/.sync-state.json` にハッシュ記録。gitignore 対象）。
+- 手動でも同じオーケストレータ（`/wbs-sync`）を起動できる。
+
+### 8.4 認証・秘密情報
+
+- Sheets へのアクセスは公式 Workspace CLI（`gws`）を**サービスアカウント（SA）方式**で使う。SA 鍵は `secrets/` に置き、`wbs/.env` の `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` で指定する。
+- **鍵・`.env` はコミットしない**（`.gitignore` / `.gitleaks.toml` で担保）。`wbs.config.yml` には非秘密のみ。
+- Google 側の初期設定（プロジェクト・API 有効化・SA 作成・シート共有）は人手の作業で、手順書は `manuals/wbs-google-setup.md`。
+
+---
+
+## 9. 品質チェックの基本フロー
 
 ```
 実装 → lint / typecheck → 単体テスト → シークレットスキャン → コミット → （必要に応じて）E2E

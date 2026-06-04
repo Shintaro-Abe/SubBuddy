@@ -34,6 +34,9 @@ SubBuddy/
 ├── .editorconfig              # エディタ共通設定
 ├── docs/                      # 永続的ドキュメント（北極星）
 ├── .steering/                 # 作業単位ドキュメント（[YYYYMMDD]-[タイトル]/）
+├── manuals/                   # 人手の操作手順書（外部サービスの GUI 設定など）
+├── wbs/                       # WBS 進捗管理の正本（wbs.yml）と Sheets 同期ツール
+├── secrets/                   # SA 鍵等の秘密情報の置き場（.gitkeep のみ追跡。鍵はコミットしない）
 └── apps/
     ├── web/                   # Mac 側：Next.js（Web + API + Worker 同居）
     └── ios/                   # iPhone 側：Swift / SwiftUI（利用量センサー）
@@ -143,7 +146,37 @@ apps/ios/
 
 ---
 
-## 6. ファイル配置の基本ルール（横断）
+## 6. WBS 進捗管理：`wbs/` / `manuals/` / `secrets/`
+
+開発タスクの進捗を WBS で管理する。**正本（Source of Truth）はリポジトリの `wbs/wbs.yml`** で、Google スプレッドシートは人間向けの生成ビュー（片方向同期：spec → Sheets）。運用フロー（自動トリガ＋確認ゲート）は `development-guidelines.md` を一次情報とする。
+
+```
+wbs/
+├── wbs.yml                       # ★WBS 正本（1タスク=1エントリ。WBS ID は不変）
+├── wbs.config.yml                # 非秘密の設定（spreadsheetId・シート名・列順・onMissing 方針）
+├── .env.example                  # 認証情報のテンプレ（ダミー）。実 .env はコミットしない
+├── lib/                          # 純粋ロジック（types / serialize / diff / config / spec / env / sheets）
+└── scripts/                      # 実行スクリプト（init-sheets / sync / detect-bolt-complete.mjs）
+
+manuals/
+├── README.md                     # 操作手順書の置き場の方針
+└── wbs-google-setup.md           # Google 側の初期設定（SA 方式）の手順書
+
+secrets/
+└── .gitkeep                      # 鍵置き場のプレースホルダ（鍵本体は .gitignore で除外）
+```
+
+### 6.1 配置ルール（WBS）
+
+- **正本は `wbs/wbs.yml` のみ**。スプレッドシートは生成物であり、人手で直接編集しても次回同期で正本に上書きされる。
+- `wbs.yml` には**開発タスクのメタ情報のみ**を書く。エンドユーザーの PII・機微データを記載しない（`CLAUDE.md` PII 方針）。
+- **秘密情報は `wbs.config.yml` に書かない**。SA 鍵パスは `wbs/.env`（gitignore）で `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` として指定し、鍵本体は `secrets/` に置く。
+- **`secrets/` 配下の鍵は絶対にコミットしない**（`.gitignore` で除外、`.gitleaks.toml` の allowlist 対象）。`.gitkeep` のみ追跡する。
+- `manuals/` には **Claude Code が自動実行できない人手の操作手順**（外部サービスの GUI 設定・認証）を置く。実在の鍵・トークンは記載しない。
+
+---
+
+## 7. ファイル配置の基本ルール（横断）
 
 | 対象 | 置き場所 | 備考 |
 |---|---|---|
@@ -154,11 +187,15 @@ apps/ios/
 | DB スキーマ | `apps/web/prisma/schema.prisma` | 単一ソース |
 | 設定値（閾値等） | `apps/web/src/config/` | Zod 検証・外出し |
 | 合成データ | `prisma/seed.ts` / `tests/` | 実 PII 禁止 |
+| WBS 正本 | `wbs/wbs.yml` | 進捗の単一ソース。Sheets は生成ビュー |
+| WBS 同期設定（非秘密） | `wbs/wbs.config.yml` | spreadsheetId・列順等。秘密は書かない |
+| 人手の操作手順 | `manuals/` | 外部サービスの GUI 設定・認証 |
+| SA 鍵等の秘密 | `secrets/`（gitignore） | `.gitkeep` のみ追跡。鍵はコミットしない |
 | 図・ダイアグラム | 関連 `docs/*.md` 内 Mermaid | 独立フォルダを作らない |
 
 ### 除外（コミットしない）— `.gitignore` で担保
 
-- `.env`・各種資格情報・トークン（`.env.example` のみ追跡）
+- `.env`・各種資格情報・トークン（`.env.example` のみ追跡）。`wbs/.env`・`secrets/` の SA 鍵も対象
 - 本番 DB ダンプ・実データファイル・実 PII を含むスクショ
 - ビルド成果物（`node_modules/`、`.next/`、`build/`、Xcode `DerivedData/` 等）
 - iOS 署名・プロビジョニング関連の秘密情報
@@ -167,7 +204,7 @@ apps/ios/
 
 ---
 
-## 7. 命名規則（ディレクトリ／ファイルの粒度）
+## 8. 命名規則（ディレクトリ／ファイルの粒度）
 
 詳細なコード命名規則は `development-guidelines.md` に定義する。本書ではリポジトリ構造に関わる粒度のみ規定する。
 

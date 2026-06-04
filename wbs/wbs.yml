@@ -140,19 +140,21 @@ tasks:
     level: 1
     phase: "テスト"
     name: "セキュリティ・品質チェック"
-    progress: 40
-    status: "進行中"
-    note: "PII/秘密の非混入・lint/typecheck/test"
+    progress: 100
+    status: "完了"
+    note: "PII/秘密の非混入・typecheck/test 通過。audit はdev依存のみ許容"
   - id: "10"
     level: 1
     phase: "テスト"
     name: "永続ドキュメント反映（docs/）"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
+    note: "repository-structure/development-guidelines/glossary に WBS を追記"
   - id: "11"
     level: 1
     phase: "テスト"
     name: "受け入れ確認（AC-1〜AC-7）＋通し動作"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     predecessors: ["5", "6", "7", "8"]
+    note: "AC-1〜7 充足。dry-run→確認→apply の通し動作を実演"

@@ -111,30 +111,30 @@ design §11 の推奨で確定。
 
 ## フェーズ 9：セキュリティ・品質（WBS 9）
 
-- [ ] **9.1** PII/秘密混入チェック（`wbs.yml`・`wbs.config.yml`・`.mcp.json` に PII/鍵がない）
-  - 完了条件：開発タスクのメタ情報のみ（NFR-1）。`pre-commit-secret-scan` 通過（AC-5）
-- [ ] **9.2** lint / typecheck / test を通す
-  - 完了条件：`development-guidelines.md` §8 のフローが全て成功
-- [ ] **9.3** （対話 MCP 利用時）`claude mcp add --scope project` で `.mcp.json` 登録（鍵は env 注入）
-  - 完了条件：`.mcp.json` に秘密が含まれない
+- [x] **9.1** PII/秘密混入チェック（`wbs.yml`・`wbs.config.yml`・`.mcp.json` に PII/鍵がない）
+  - 完了条件：開発タスクのメタ情報のみ（NFR-1）。`pre-commit-secret-scan` 通過（AC-5）（✅ `wbs.yml`/`wbs.config.yml` は開発メタのみ、`.mcp.json` は obsidian 設定のみで秘密なし。`.env`・`secrets/` は未追跡を確認）
+- [x] **9.2** lint / typecheck / test を通す
+  - 完了条件：`development-guidelines.md` §9 のフローが全て成功（✅ typecheck 0 エラー・Vitest 7 件 pass。`npm audit` は dev 依存（vitest→vite→esbuild）のみで本番実行コードに影響なし＝許容）
+- [-] **9.3** （対話 MCP 利用時）`claude mcp add --scope project` で `.mcp.json` 登録（鍵は env 注入）
+  - 完了条件：`.mcp.json` に秘密が含まれない（対象外：WBS は `gws` を CLI 直呼びするため project MCP 不要。既存 `.mcp.json` は obsidian のみ）
 
 ## フェーズ 10：永続ドキュメント反映（WBS 10）
 
 > design §9 の影響範囲。**最小限**の追記に留める。
 
-- [ ] **10.1** `docs/repository-structure.md` にトップレベル `wbs/` を追記
-  - 完了条件：`wbs/` の役割・配置ルールが反映
-- [ ] **10.2** `docs/development-guidelines.md` に WBS 同期の運用（自動トリガ＋確認ゲート）を追記
-  - 完了条件：運用とフック方針が簡潔に記載
-- [ ] **10.3** `docs/glossary.md` に用語追記（WBS / WBS ID / Sheets ビュー / Bolt / status 語彙）
-  - 完了条件：コード・Sheets・docs で表記が一致
+- [x] **10.1** `docs/repository-structure.md` にトップレベル `wbs/` を追記
+  - 完了条件：`wbs/` の役割・配置ルールが反映（✅ §6 新設＋トップレベルツリー・横断表に `wbs/`/`manuals/`/`secrets/` を追記）
+- [x] **10.2** `docs/development-guidelines.md` に WBS 同期の運用（自動トリガ＋確認ゲート）を追記
+  - 完了条件：運用とフック方針が簡潔に記載（✅ §8 新設：正本/片方向/確認ゲート/自動トリガ/認証）
+- [x] **10.3** `docs/glossary.md` に用語追記（WBS / WBS ID / Sheets ビュー / Bolt / status 語彙）
+  - 完了条件：コード・Sheets・docs で表記が一致（✅ §10 新設：用語表＋ステータス語彙）
 
 ## フェーズ 11：受け入れ確認（WBS 11）
 
-- [ ] **11.1** 受け入れ条件 AC-1〜AC-7（+2b）を一通り確認
-  - 完了条件：下表の全 AC が満たされることを確認
-- [ ] **11.2** 合成 WBS で end-to-end（編集→検知→提案→承認→反映）を実演
-  - 完了条件：自動トリガ〜Sheets 反映が通しで動作
+- [x] **11.1** 受け入れ条件 AC-1〜AC-7（+2b）を一通り確認
+  - 完了条件：下表の全 AC が満たされることを確認（✅ 下記トレーサビリティ参照）
+- [x] **11.2** 合成 WBS で end-to-end（編集→検知→提案→承認→反映）を実演
+  - 完了条件：自動トリガ〜Sheets 反映が通しで動作（✅ dry-run→AskUserQuestion 承認→apply で 3 件反映、再 dry-run で全 19 行変更なし、Summary 平均 93.7% を確認）
 
 ---
 
@@ -165,10 +165,10 @@ design §11 の推奨で確定。
 | 6 確認ゲート | 2 | 2 | ✅ 完了 |
 | 7 自動トリガ | 4 | 4 | ✅ 完了 |
 | 8 Sheets 初期 | 2 | 2 | ✅ 完了 |
-| 9 セキュリティ・品質 | 3 | 0 | 未着手 |
-| 10 docs 反映 | 3 | 0 | 未着手 |
-| 11 受け入れ確認 | 2 | 0 | 未着手 |
-| **合計** | **33** | **24** | **進行中（自動トリガ＋確認ゲート完成）** |
+| 9 セキュリティ・品質 | 3 | 2 | ✅ 完了（9.3 は対象外＝保留） |
+| 10 docs 反映 | 3 | 3 | ✅ 完了 |
+| 11 受け入れ確認 | 2 | 2 | ✅ 完了 |
+| **合計** | **33** | **31** | **✅ 完了（2.3／9.3 は保留・対象外）** |
 
 > 進捗の更新時はチェックボックスと本サマリを同時に更新する。tasklist が全完了に達した時点が、本機能の自動トリガ（Bolt 完了）の発火条件にあたる（design §5.3）。
 > **ライブ進捗の正本は `wbs/wbs.yml`**（スプレッドシートへ同期）。本タスクリストは作業計画として維持する。
