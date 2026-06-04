@@ -47,18 +47,19 @@
 
 ---
 
-## フェーズ3：ドメイン（集計・正規化・スコアリング＋段階的提供）
+## フェーズ3：ドメイン（集計・正規化・スコアリング＋段階的提供）✅
 
-- [ ] T3-1 `src/config/scoring.ts`：しきい値・`minObservationDays`（既定14）を Zod 検証付きで外出し（`scoringConfigSchema`）
-- [ ] T3-2 `src/domain/usage/`：直近30日の利用日数・最終利用からの日数・バケット集計（純関数）＋ `usage/daily` 正規化（`normalize.ts`）
-- [ ] T3-3 `src/domain/scoring/`：`computeRecommendation(input, config)` 純関数。**登録からの観測日数**を入力に含める
-- [ ] T3-4 段階的提供（案A）：観測 < `minObservationDays` は `data_status='observing'`＋`days_until_ready` を返し、確定判定を保留
-- [ ] T3-5 利用に依存しない指摘（同カテゴリ重複・割高・更新間近）は観測日数に関係なく算出
-- [ ] T3-6 §8.3 判定ルール（60日→strong_cancel_candidate 等）と `cost_per_usage_day` 算出
-- [ ] T3-7 `src/domain/scoring/reasons.ts`：判定別の定型文（観測中の定型文を含む）
-- [ ] T3-8 単体テスト：判定網羅／**観測中⇄確定の境界（`minObservationDays` 前後）**／単価／config 差し替えで判定差分
+- [x] T3-1 `src/config/scoring.ts`：しきい値・`minObservationDays`（既定14）を Zod 検証付きで外出し（`scoringConfigSchema`・`refine` で整合検証）
+- [x] T3-2 `src/domain/usage/`：直近30日の利用日数・最終利用からの日数・バケット分数集計（`aggregate.ts`・純関数）＋ `usage/daily` 正規化（`normalize.ts`）
+- [x] T3-3 `src/domain/scoring/computeRecommendation(input, config)` 純関数。**登録からの観測日数**を入力に含める
+- [x] T3-4 段階的提供（案A）：観測 < `minObservationDays` は `data_status='observing'`＋`days_until_ready`＋暫定 `confidence` を返し、確定判定を保留
+- [x] T3-5 利用に依存しない指摘（同カテゴリ重複・更新間近）は観測日数に関係なく理由へ即時反映（割高はベンチマーク未整備のため保留）
+- [x] T3-6 §8.3 判定ルール（60日→strong_cancel_candidate 等）と `cost_per_usage_day` 算出・`cancelScore`
+- [x] T3-7 `src/domain/scoring/reasons.ts`：判定別の定型文（観測中の定型文を含む。`review`=「様子見」）
+- [x] T3-8 単体テスト：判定網羅／**観測中⇄確定の境界（13日 observing・14日 ready）**／単価／config 差し替えで判定差分 → 計41 passed
 
-**完了条件**：ドメインは副作用なしで、§8 と §8.5 の挙動がテストで保証される。
+**完了条件**：✅ ドメインは副作用なしで、§8 と §8.5 の挙動がテストで保証される。lint / typecheck / test(41) / build すべて green。
+**補足**：割高（overpriced）の即時指摘はカテゴリ別の価格ベンチマークが未整備のため今回保留（必要分のみ実装）。利用バケット→分は下限値（保守的見積り）を採用（`USAGE_BUCKET_LOWER_MINUTES`）。
 
 ---
 

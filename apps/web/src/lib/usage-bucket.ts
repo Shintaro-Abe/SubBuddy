@@ -38,3 +38,18 @@ export function toUsageBucketEnum(wire: UsageBucketWire): UsageBucket {
 export function toUsageBucketWire(value: UsageBucket): UsageBucketWire {
   return ENUM_TO_WIRE[value];
 }
+
+/**
+ * 各バケットが表す「最小の利用分数」（下限値）。
+ * iOS からは時間そのものではなくバケット（◯分以上）が来るため、
+ * 集計では保守的に下限値を採用して「少なくとも何分使ったか」を見積もる。
+ */
+export const USAGE_BUCKET_LOWER_MINUTES: Record<UsageBucketWire, number> = {
+  none: 0,
+  "1m_plus": 1,
+  "5m_plus": 5,
+  "15m_plus": 15,
+  "30m_plus": 30,
+  "60m_plus": 60,
+  "120m_plus": 120,
+};
