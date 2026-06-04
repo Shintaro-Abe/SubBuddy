@@ -1,0 +1,37 @@
+# WBS 同期の設定（非秘密。コミット可）
+# 秘密情報（SA鍵パス）は .env / secrets/ で管理し、ここには書かない。
+version: 1
+
+spreadsheet:
+  # スプレッドシートID（URL の /d/ と /edit の間）。秘密ではない。
+  id: "1t157DK_7S8n8ViJKi7QX8bHhM91kJhUgvZ6lhnILux8"
+  sheets:
+    wbs: "WBS"          # 本体（1行=1タスク、先頭列が WBS ID）
+    archive: "Archive"  # spec から消えたタスクの退避先（US-10）
+    summary: "Summary"  # フェーズ別・全体の進捗ロールアップ（数式。US-8）
+
+# spec(wbs.yml)のフィールド → Sheet 列見出し（この順で列を並べる）
+columns:
+  - { field: id,            header: "WBS ID" }
+  - { field: parent,        header: "親ID" }
+  - { field: level,         header: "レベル" }
+  - { field: phase,         header: "分類" }
+  - { field: name,          header: "タスク名" }
+  - { field: assignee,      header: "担当" }
+  - { field: plannedStart,  header: "開始予定" }
+  - { field: plannedEnd,    header: "終了予定" }
+  - { field: actualStart,   header: "開始実績" }
+  - { field: actualEnd,     header: "終了実績" }
+  - { field: estimateHours, header: "見積工数" }
+  - { field: actualHours,   header: "実績工数" }
+  - { field: progress,      header: "進捗率" }
+  - { field: status,        header: "ステータス" }
+  - { field: predecessors,  header: "先行タスク" }
+  - { field: deliverable,   header: "成果物" }
+  - { field: note,          header: "備考" }
+
+# 結合キー（不変）
+key: id
+
+# spec から消えた行の扱い：archive（Archive シートへ移送） / keep（残す） / delete（削除）
+onMissing: archive

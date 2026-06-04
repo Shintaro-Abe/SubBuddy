@@ -12,6 +12,23 @@
 *.key
 credentials*.json
 
+# Google / OAuth credentials (WBS sync) — 絶対にコミットしない
+# ※ .gitignore は行末コメント不可。コメントは必ず独立行に書く
+# Google がダウンロードさせる OAuth クライアント鍵の既定名
+client_secret*.json
+# サービスアカウント鍵
+*service-account*.json
+*-sa.json
+gcp-*.json
+# 取得済みトークン
+token.json
+tokens/
+# Workspace CLI のローカル認証情報置き場（想定）
+.gws/
+# 鍵をリポジトリ内に置く場合の隔離先（中身は追跡しない／フォルダだけ残す）
+secrets/*
+!secrets/.gitkeep
+
 # Dependencies / build
 node_modules/
 .next/
@@ -37,3 +54,6 @@ ios/**/DerivedData/
 
 # Claude local settings
 .claude/settings.local.json
+
+# WBS 同期のローカル状態（フック重複提案の抑止用）
+wbs/.sync-state.json
