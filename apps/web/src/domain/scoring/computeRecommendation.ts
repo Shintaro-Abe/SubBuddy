@@ -26,6 +26,11 @@ export interface RecommendationInput {
   usageMinutes30d: number;
   /** 最終利用からの日数（一度も利用がなければ null）。 */
   daysSinceLastUse: number | null;
+  /**
+   * 利用計測データが1件でも存在するか。
+   * false（計測対象外/未同期：iCloud+ 等）は未使用日数を確定できないため、利用ベースの解約判定を出さない。
+   */
+  hasUsageData: boolean;
   /** 更新までの残り日数（不明なら null）。 */
   daysUntilRenewal: number | null;
   /** 同カテゴリに他の契約がある。 */
@@ -112,15 +117,21 @@ export function computeRecommendation(
   }
 
   // --- 確定（利用ベース判定） ---
-  // 未使用日数：最終利用がなければ「登録からの観測日数」を未使用とみなす。
-  const unusedDays = input.daysSinceLastUse ?? input.observationDays;
-  const isLowUsage = input.usageDays30d <= config.lowUsageMaxDays;
+  // 未使用日数：計測データがある場合のみ確定できる。
+  //  - 最終利用があればその日数。
+  //  - 計測データはあるが利用ゼロなら「登録からの観測日数」を未使用とみなす。
+  //  - 計測データが1件も無い（計測対象外/未同期）なら null＝未使用日数は確定不能。
+  const unusedDays = input.hasUsageData
+    ? (input.daysSinceLastUse ?? input.observationDays)
+    : null;
+  const isLowUsage = input.hasUsageData && input.usageDays30d <= config.lowUsageMaxDays;
   const isHighImportance = input.importance >= config.highImportanceMin;
 
   let decision: Decision;
-  if (unusedDays >= config.strongCancelUnusedDays) {
+  if (unusedDays !== null && unusedDays >= config.strongCancelUnusedDays) {
     decision = Decision.strong_cancel_candidate;
   } else if (
+    unusedDays !== null &&
     unusedDays >= config.considerCancelUnusedDays &&
     monthlyAmount >= config.considerCancelMinAmount
   ) {
@@ -141,7 +152,7 @@ export function computeRecommendation(
     review: 30,
     keep: 10,
   };
-  const unusedBonus = (Math.min(unusedDays, 60) / 60) * 15;
+  const unusedBonus = ((Math.min(unusedDays ?? 0, 60)) / 60) * 15;
   const cancelScore = Math.round(clamp(bandBase[decision] + unusedBonus, 0, 100));
 
   return {
@@ -150,12 +161,14 @@ export function computeRecommendation(
     dataStatus: DataStatus.ready,
     daysUntilReady: 0,
     cancelScore,
-    confidence: 1.0,
+    // 利用計測データが無い場合は確からしさを下げる（判定保留に近い keep）。
+    confidence: input.hasUsageData ? 1.0 : 0.5,
     reason: reasonForDecision(decision, {
-      unusedDays,
+      unusedDays: unusedDays ?? 0,
       usageDays30d: input.usageDays30d,
       monthlyAmount,
       importance: input.importance,
+      hasUsageData: input.hasUsageData,
     }),
   };
 }

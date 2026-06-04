@@ -13,6 +13,7 @@ function input(overrides: Partial<RecommendationInput> = {}): RecommendationInpu
     usageDays30d: 20,
     usageMinutes30d: 600,
     daysSinceLastUse: 0,
+    hasUsageData: true,
     daysUntilRenewal: 20,
     hasCategoryOverlap: false,
     isLowerUsageInOverlap: false,
@@ -63,12 +64,28 @@ describe("computeRecommendation：確定後の判定ルール", () => {
     expect(r.reason).toContain("65 日間");
   });
 
-  it("一度も未使用でも観測十分なら観測日数を未使用日数とみなす", () => {
+  it("計測データはあるが利用ゼロなら観測日数を未使用日数とみなす", () => {
     const r = computeRecommendation(
-      input({ daysSinceLastUse: null, usageDays30d: 0, observationDays: 70 }),
+      input({ daysSinceLastUse: null, usageDays30d: 0, observationDays: 70, hasUsageData: true }),
       cfg,
     );
     expect(r.decision).toBe(Decision.strong_cancel_candidate);
+  });
+
+  it("計測データが1件も無い契約（iCloud+ 等）は解約判定を出さず keep・保留", () => {
+    const r = computeRecommendation(
+      input({
+        daysSinceLastUse: null,
+        usageDays30d: 0,
+        observationDays: 300,
+        hasUsageData: false,
+        importance: 3,
+      }),
+      cfg,
+    );
+    expect(r.decision).toBe(Decision.keep);
+    expect(r.confidence).toBeLessThan(1);
+    expect(r.reason).toContain("保留");
   });
 
   it("30日以上未使用 × 月1,000円超 → consider_cancel", () => {

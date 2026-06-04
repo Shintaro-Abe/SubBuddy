@@ -75,17 +75,19 @@
 
 ---
 
-## フェーズ5：API（Route Handlers）
+## フェーズ5：API（Route Handlers）✅
 
-- [ ] T5-1 `GET/POST /api/subscriptions`、`GET/PUT/DELETE /api/subscriptions/[id]`
-- [ ] T5-2 `GET /api/summary`（月額/年額合計・件数）
-- [ ] T5-3 `POST /api/usage/daily`（Zod 検証 → 冪等 upsert、不正は 400）
-- [ ] T5-4 `GET /api/recommendations`（最新スナップショット）、`POST /api/recommendations/recompute`（全件再計算）
-- [ ] T5-5 `GET /api/renewals/upcoming`（クエリ `days`、既定14）
-- [ ] T5-6 `GET /api/service-catalog`
-- [ ] T5-7 エラーレスポンスに内部情報・PII を含めない
+- [x] T5-1 `GET/POST /api/subscriptions`、`GET/PUT/DELETE /api/subscriptions/[id]`（所有権確認・部分更新）
+- [x] T5-2 `GET /api/summary`（月額/年額合計・件数。アクティブのみ集計）
+- [x] T5-3 `POST /api/usage/daily`（Zod 検証 → 整形 → 冪等 upsert、不正は 400）
+- [x] T5-4 `GET /api/recommendations`（最新スナップショット）、`POST /api/recommendations/recompute`（`src/services/recompute.ts` で全件再計算）
+- [x] T5-5 `GET /api/renewals/upcoming`（クエリ `days`、既定14・1..365 検証）
+- [x] T5-6 `GET /api/service-catalog`
+- [x] T5-7 エラーレスポンスは汎用文＋フィールドパスのみ（内部情報・PII・スタック非露出。`src/lib/api.ts`）
 
-**完了条件**：`design.md` §4 の契約どおり応答し、合成 POST で `usage/daily` の冪等性を確認できる。`/api/icloud-plus` は未実装（対象外）。
+**完了条件**：✅ `design.md` §4 の契約どおり応答。通し確認で seed→recompute→各判定の再現、`usage/daily` の冪等性（同一バッチ2回で行 0→1）、不正→400・未存在→404 を確認。`/api/icloud-plus` は未実装（対象外）。
+**補足（通し確認で判明したバグ修正）**：利用ログが1件も無い契約（iCloud+ 等）が強い解約候補に誤判定されたため、`hasUsageData=false` は未使用日数を確定不能とし利用ベース判定を出さない仕様に修正（domain＋design §5.2 更新、テスト追加で計44 passed）。
+**補足（構成）**：再計算の orchestration はアプリケーションサービス `src/services/recompute.ts` に配置（ドメインは純関数のまま、I/O はリポジトリ経由）。
 
 ---
 

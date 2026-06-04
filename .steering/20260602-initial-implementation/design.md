@@ -139,6 +139,7 @@ items: [{
 
 ```text
 data_status = observing（観測 < cfg.minObservationDays(=14)）       → 確定 decision は出さず「観測中（あと N 日）」
+利用計測データが1件も無い（計測対象外/未同期：iCloud+ 等）          → 未使用日数を確定できず利用ベース判定を出さない（keep・confidence 低）
 unusedDays >= cfg.strongCancelUnusedDays(=60)                    → strong_cancel_candidate
 unusedDays >= cfg.considerCancelUnusedDays(=30) && monthly >= cfg.considerCancelMinAmount(=1000) → consider_cancel
 同カテゴリ複数 && 低利用側                                        → consider_cancel（低利用側）
@@ -146,6 +147,10 @@ unusedDays >= cfg.considerCancelUnusedDays(=30) && monthly >= cfg.considerCancel
 （容量余剰 iCloud+ → consider_downgrade：今回はルール枠のみ。capacity データ未投入のため発火しない）
 上記以外で十分利用                                                → keep
 ```
+
+> **計測データ無しの扱い（通し確認で判明）**：利用ログが1件も無い契約（Screen Time 計測対象外の iCloud+ 等）は、
+> `unusedDays` を「登録からの観測日数」とみなすと誤って強い解約候補になる。`hasUsageData=false` のときは
+> 未使用日数を確定不能（null）とし、利用ベースの解約判定を出さない（keep・`confidence` を下げて保留扱い）。
 
 - `cost_per_usage_day = 月額換算 ÷ 直近30日利用日数`（0 日は「未使用」として別扱い）。
 - `reason` は判定ごとの**定型文**（`src/domain/scoring/reasons.ts`）。観測中は「観測中（あと N 日）」の定型文。

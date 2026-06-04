@@ -29,8 +29,18 @@ export function reasonObserving(daysUntilReady: number, flags: ImmediateFlags): 
 /** 確定後（ready）の判定理由文。 */
 export function reasonForDecision(
   decision: Decision,
-  ctx: { unusedDays: number; usageDays30d: number; monthlyAmount: number; importance: number },
+  ctx: {
+    unusedDays: number;
+    usageDays30d: number;
+    monthlyAmount: number;
+    importance: number;
+    hasUsageData?: boolean;
+  },
 ): string {
+  // 利用計測データが無い契約（iCloud+ 等の計測対象外）は、利用ベースの判定を保留する。
+  if (ctx.hasUsageData === false) {
+    return "利用状況のデータがないため、利用ベースの判定は保留します（継続）。";
+  }
   switch (decision) {
     case Decision.strong_cancel_candidate:
       return `${ctx.unusedDays} 日間使われていません。解約候補です。`;
