@@ -63,14 +63,15 @@
 
 ---
 
-## フェーズ4：永続化（リポジトリ）
+## フェーズ4：永続化（リポジトリ）✅
 
-- [ ] T4-1 `src/repositories/`：subscriptions / usage / recommendations / service-catalog の Prisma アクセスを集約（ドメインから Prisma を直接呼ばない）
-- [ ] T4-2 usage の `subscription_id × usage_date` 冪等 upsert を実装
-- [ ] T4-3 `recommendation_snapshots` の追記（履歴保持）
-- [ ] T4-4 冪等 upsert の単体テスト（同一バッチ再送で行が増えない）
+- [x] T4-1 `src/repositories/`：subscriptions / usage / recommendations / service-catalog の Prisma アクセスを集約（`src/lib/prisma.ts` 共有クライアント・`src/lib/user.ts` 固定ユーザー。Prisma クライアントを引数注入可能にしテスト容易性を確保）
+- [x] T4-2 usage の `subscription_id × usage_date` 冪等 upsert を実装（`upsertUsageDailyBatch`）
+- [x] T4-3 `recommendation_snapshots` の追記（`appendRecommendationSnapshot`）＋最新取得（`listLatestRecommendations`・`distinct`）
+- [x] T4-4 冪等 upsert の契約テスト（フェイククライアントで複合キー upsert を検証・再送で同一キー）→ 計43 passed
 
-**完了条件**：DB アクセスがリポジトリ経由に限定され、冪等性がテストで保証される。
+**完了条件**：✅ DB アクセスがリポジトリ経由に限定され、冪等性がテストで保証される。lint / typecheck / test(43) green。
+**補足**：単体テストは DB 非依存（フェイク注入）で冪等の「契約」を検証。DB 実体での行数不変はフェーズ5の通し確認（同一バッチ2回 POST）で確認する。
 
 ---
 
