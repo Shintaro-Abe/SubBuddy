@@ -106,15 +106,30 @@
 
 ---
 
-## フェーズ7：品質チェック・仕上げ
+## フェーズ7：品質チェック・仕上げ ✅
 
-- [ ] T7-1 `lint` / `typecheck` / `test` がすべて green
-- [ ] T7-2 主要導線の手動確認（登録 → usage 同期 → recompute → レコメンド/ダッシュボード表示）
-- [ ] T7-3 （任意）E2E（Playwright）で主要導線1本
-- [ ] T7-4 `pre-commit-secret-scan` 実行 → コミット（Conventional Commits、フィーチャーブランチ）
-- [ ] T7-5 README に起動・seed・テスト手順を記載（合成データ前提）
+- [x] T7-1 `lint` / `typecheck` / `test`（44 passed）/ `build` がすべて green
+- [x] T7-2 主要導線の手動確認：CRUD（8→9→更新→削除→8）・`usage/daily` 冪等（0→1）・recompute（各判定再現）・全画面 200・不正400/未存在404
+- [~] T7-3 E2E（Playwright）は任意のため今回見送り（手動の通し確認で代替）
+- [x] T7-4 `pre-commit-secret-scan` 実行（ソース検出ゼロ。`.next*` の誤検知は build 成果物・git 管理外）→ Conventional Commits でフィーチャーブランチにコミット
+- [x] T7-5 README に起動・seed・テスト・API 手順を記載（合成データ前提・PII 方針明記）
 
-**完了条件**：`requirements.md` の AC-1〜AC-9（AC-6b 含む）を満たし、品質チェックが通り、実 PII・秘密情報がコミットされていない。
+**完了条件**：✅ `requirements.md` の AC-1〜AC-9（AC-7b 含む）を満たし、品質チェックが通り、実 PII・秘密情報がコミットされていない。
+
+### 受け入れ条件の最終確認
+
+| AC | 結果 |
+|---|---|
+| AC-1 起動・migrate・seed | ✅ build/seed 成功（user1/subs8/usage62） |
+| AC-2 CRUD・合計表示 | ✅ API/画面で確認（合計表示・8件→増減） |
+| AC-3 冪等同期・400 | ✅ 同一バッチ再送で行不変・不正は 400 |
+| AC-4 判定ルール・config | ✅ テスト＋recompute 出力で確認 |
+| AC-5 レコメンド表示 | ✅ 判定別一覧・理由・解約URL |
+| AC-6 ダッシュボード | ✅ 合計・候補件数・更新間近件数 |
+| AC-7 様子見ラベル | ✅ glossary 一致 |
+| AC-7b 段階的提供 | ✅ 観測中「あと N 日」・即時指摘 |
+| AC-8 テスト・品質 | ✅ test44/lint/typecheck/build |
+| AC-9 PII 非混入 | ✅ 合成のみ・秘密情報未コミット |
 
 ---
 
