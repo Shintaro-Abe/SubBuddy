@@ -81,6 +81,9 @@ model Subscription {
   importance      Int                @default(3) // 1..5（主観的重要度）
   cancellationUrl String?            @map("cancellation_url")
   notes           String?
+  matchedServiceId String?            @map("matched_service_id")
+  usageType       String              @default("active_foreground") @map("usage_type")
+  initialValueAnswer String?          @map("initial_value_answer")
   createdAt       DateTime           @default(now()) @map("created_at") // 利用量集計の起点（§8.5）
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
@@ -178,6 +181,35 @@ model ServiceCatalog {
   isSupported     Boolean  @default(true) @map("is_supported")
   isExcluded      Boolean  @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
   notes           String?
+  usageType       String   @default("active_foreground") @map("usage_type")
+
+  plans           ServicePlan[]
+  alternativesFrom ServiceAlternative[] @relation("alt_from")
 
   @@map("service_catalog")
+}
+
+model ServicePlan {
+  id            String         @id @default(cuid())
+  serviceId     String         @map("service_id")
+  name          String
+  monthlyPrice  Int            @map("monthly_price")
+  isFreeTier    Boolean        @default(false) @map("is_free_tier")
+  verifiedAt    DateTime       @map("verified_at")
+  sourceUrl     String?        @map("source_url")
+
+  service       ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_plans")
+}
+
+model ServiceAlternative {
+  id            String         @id @default(cuid())
+  fromServiceId String         @map("from_service_id")
+  toServiceId   String         @map("to_service_id")
+  relation      String         @default("same_category")
+
+  fromService   ServiceCatalog @relation("alt_from", fields: [fromServiceId], references: [id], onDelete: Cascade)
+
+  @@map("service_alternatives")
 }

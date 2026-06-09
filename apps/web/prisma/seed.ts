@@ -12,6 +12,8 @@
  *  8. 新規登録サービス       → 登録直後・観測中（あと N 日）
  */
 import { PrismaClient, BillingCycle, UsageBucket } from "@prisma/client";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const prisma = new PrismaClient();
 
@@ -33,6 +35,8 @@ async function main() {
   await prisma.iosUsageDailySummary.deleteMany();
   await prisma.billingEvent.deleteMany();
   await prisma.subscription.deleteMany();
+  await prisma.serviceAlternative.deleteMany();
+  await prisma.servicePlan.deleteMany();
   await prisma.serviceCatalog.deleteMany();
   await prisma.user.deleteMany();
 
@@ -40,28 +44,67 @@ async function main() {
     data: { id: "user_local", name: "ローカルユーザー（合成）" },
   });
 
-  // --- service_catalog：除外対象（Apple 系）＋ 表記揺れ最小辞書 ---
+  // --- service_catalog：除外対象（Apple 系） ---
   await prisma.serviceCatalog.createMany({
     data: [
-      {
-        canonicalName: "Apple Music",
-        category: "music",
-        isExcluded: true,
-        commonAliases: "アップルミュージック",
-      },
-      { canonicalName: "Apple TV+", category: "video", isExcluded: true },
+      { canonicalName: "Apple Music", category: "music", isExcluded: true, commonAliases: "アップルミュージック" },
+      { canonicalName: "Apple TV+", category: "video_streaming", isExcluded: true },
       { canonicalName: "Apple Arcade", category: "game", isExcluded: true },
       { canonicalName: "Apple One", category: "bundle", isExcluded: true },
-      {
-        canonicalName: "Amazon Music",
-        category: "music",
-        commonAliases: "アマゾンミュージック,Amazon Music Unlimited",
-        domains: "music.amazon.co.jp",
-      },
-      { canonicalName: "Spotify", category: "music", domains: "spotify.com" },
-      { canonicalName: "iCloud+", category: "storage", commonAliases: "アイクラウド" },
     ],
   });
+
+  // --- service_catalog：知識ベース（service-catalog.json から投入） ---
+  interface CatalogEntry {
+    canonicalName: string;
+    category: string;
+    usageType: string;
+    commonAliases: string;
+    plans: { name: string; monthlyPrice: number; isFreeTier: boolean }[];
+    alternatives: string[];
+  }
+  const catalogPath = join(__dirname, "seed", "service-catalog.json");
+  const catalog: CatalogEntry[] = JSON.parse(readFileSync(catalogPath, "utf-8"));
+  const serviceIdMap = new Map<string, string>();
+
+  for (const entry of catalog) {
+    const service = await prisma.serviceCatalog.create({
+      data: {
+        canonicalName: entry.canonicalName,
+        category: entry.category,
+        usageType: entry.usageType,
+        commonAliases: entry.commonAliases,
+      },
+    });
+    serviceIdMap.set(entry.canonicalName, service.id);
+
+    if (entry.plans.length > 0) {
+      await prisma.servicePlan.createMany({
+        data: entry.plans.map((p) => ({
+          serviceId: service.id,
+          name: p.name,
+          monthlyPrice: p.monthlyPrice,
+          isFreeTier: p.isFreeTier,
+          verifiedAt: now,
+        })),
+      });
+    }
+  }
+
+  // 代替関係の投入（双方向ではなく from→to の片方向）
+  for (const entry of catalog) {
+    const fromId = serviceIdMap.get(entry.canonicalName);
+    if (!fromId || entry.alternatives.length === 0) continue;
+    const altData = entry.alternatives
+      .map((altName) => {
+        const toId = serviceIdMap.get(altName);
+        return toId ? { fromServiceId: fromId, toServiceId: toId } : null;
+      })
+      .filter((d): d is { fromServiceId: string; toServiceId: string } => d !== null);
+    if (altData.length > 0) {
+      await prisma.serviceAlternative.createMany({ data: altData });
+    }
+  }
 
   // --- subscriptions（合成）---
   // helper：サブスクと利用サマリ（直近 days 日のうち usedDays 日を used=true）を作る

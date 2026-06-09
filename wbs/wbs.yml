@@ -81,7 +81,7 @@ tasks:
     level: 2
     phase: "設計"
     name: "wbs.md（人間向け一覧）任意生成"
-    progress: 0
+    progress: 100
     status: "保留"
 
   # ───── フェーズ 3〜5：コア実装 ─────
@@ -158,3 +158,457 @@ tasks:
     status: "完了"
     predecessors: ["5", "6", "7", "8"]
     note: "AC-1〜7 充足。dry-run→確認→apply の通し動作を実演"
+
+  # ═════════════════════════════════════════════════════════════
+  # 定量レコメンドエンジン（パターン判定方式への転換）
+  # steering: .steering/20260609-quantitative-recommendation-engine/
+  # ═════════════════════════════════════════════════════════════
+
+  # ───── RE-1：データモデル・スキーマ変更 ─────
+  - id: "RE-1"
+    level: 1
+    phase: "実装"
+    name: "データモデル・スキーマ変更"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.1"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "ServiceCatalog に usageType 追加"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.2"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "ServicePlan テーブル新規作成"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.3"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "ServiceAlternative テーブル新規作成"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.4"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "Subscription に matchedServiceId/usageType/initialValueAnswer 追加"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.5"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "schemas/usage.ts に source=ios_shortcut 追加"
+    progress: 100
+    status: "完了"
+  - id: "RE-1.6"
+    parent: "RE-1"
+    level: 2
+    phase: "実装"
+    name: "schemas/subscription.ts に3フィールド追加"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-2：サービス知識ベースの構築 ─────
+  - id: "RE-2"
+    level: 1
+    phase: "実装"
+    name: "サービス知識ベースの構築"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-1"]
+  - id: "RE-2.1"
+    parent: "RE-2"
+    level: 2
+    phase: "実装"
+    name: "service-catalog.json 主要50件作成"
+    progress: 100
+    status: "完了"
+  - id: "RE-2.2"
+    parent: "RE-2"
+    level: 2
+    phase: "実装"
+    name: "seed スクリプト更新"
+    progress: 100
+    status: "完了"
+  - id: "RE-2.3"
+    parent: "RE-2"
+    level: 2
+    phase: "実装"
+    name: "無料プラン isFreeTier 設定・除外テスト"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-3：パターン判定ロジックの実装 ─────
+  - id: "RE-3"
+    level: 1
+    phase: "実装"
+    name: "パターン判定ロジックの実装（P1〜P7）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-1"]
+  - id: "RE-3.1"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "config/scoring.ts パターン判定用しきい値に変更"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.2"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "computeRecommendation 入力型の拡張"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.3"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "computeRecommendation 出力型の拡張（matchedPatterns等）"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.4"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P1 判定（方式C：スパン内利用日数＋最終利用経過日数）"
+    progress: 100
+    status: "完了"
+    note: "月額=30日/年額=365日スパン。usage_type別分岐"
+  - id: "RE-3.5"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P2 判定（重複で割高）"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.6"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P3 判定（安いプランがある）＋陳腐化補正"
+    progress: 100
+    status: "完了"
+    note: "isFreeTier除外。verifiedAt 6ヶ月超過で信頼度低下"
+  - id: "RE-3.7"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P4 判定（安い競合がある）＋陳腐化補正"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.8"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P5 判定（更新が近い）"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.9"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "P6 判定（高額で長期継続）"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.10"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "Decision 決定関数（複数パターン→最強Decisionの選択）"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.11"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "reasons.ts パターン別理由文生成"
+    progress: 100
+    status: "完了"
+  - id: "RE-3.12"
+    parent: "RE-3"
+    level: 2
+    phase: "実装"
+    name: "年間節約額の算出"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-4：recompute.ts の拡張 ─────
+  - id: "RE-4"
+    level: 1
+    phase: "実装"
+    name: "recompute.ts の拡張（知識ベース取得・スパン算出）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-2", "RE-3"]
+  - id: "RE-4.1"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "usageType を Subscription から取得"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.2"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "contractMonths・cumulativeSpend 自動算出"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.3"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "judgmentSpanDays を billingCycle から決定"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.4"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "usageDaysInSpan を利用記録から集計"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.5"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "P3 用：知識ベースから安い有料プラン取得"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.6"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "P4 用：知識ベースから安い有料競合取得"
+    progress: 100
+    status: "完了"
+  - id: "RE-4.7"
+    parent: "RE-4"
+    level: 2
+    phase: "実装"
+    name: "P2 用：同カテゴリ最安月額の算出"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-5：登録 UI の変更 ─────
+  - id: "RE-5"
+    level: 1
+    phase: "実装"
+    name: "登録 UI の変更（カタログ選択式＋初回1問）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-2"]
+  - id: "RE-5.1"
+    parent: "RE-5"
+    level: 2
+    phase: "実装"
+    name: "あいまい検索（Fuse.js）導入"
+    progress: 100
+    status: "完了"
+  - id: "RE-5.2"
+    parent: "RE-5"
+    level: 2
+    phase: "実装"
+    name: "カタログ候補の選択 UI"
+    progress: 100
+    status: "完了"
+  - id: "RE-5.3"
+    parent: "RE-5"
+    level: 2
+    phase: "実装"
+    name: "カタログ外サービスの登録導線（カテゴリ・usageType選択）"
+    progress: 100
+    status: "完了"
+  - id: "RE-5.4"
+    parent: "RE-5"
+    level: 2
+    phase: "実装"
+    name: "初回1問 UI（なくなったら困るか・3択＋スキップ）"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-6：レコメンド表示 UI の変更 ─────
+  - id: "RE-6"
+    level: 1
+    phase: "実装"
+    name: "レコメンド表示 UI の変更（パターン・根拠・節約額）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-3", "RE-4"]
+  - id: "RE-6.1"
+    parent: "RE-6"
+    level: 2
+    phase: "実装"
+    name: "一覧画面にパターンバッジ・根拠表示"
+    progress: 100
+    status: "完了"
+  - id: "RE-6.2"
+    parent: "RE-6"
+    level: 2
+    phase: "実装"
+    name: "詳細画面にパターン別根拠・caveat・節約額表示"
+    progress: 100
+    status: "完了"
+  - id: "RE-6.3"
+    parent: "RE-6"
+    level: 2
+    phase: "実装"
+    name: "詳細画面に QR コード表示ボタン追加"
+    progress: 100
+    status: "完了"
+    note: "usage_type が active_foreground/active_background のみ表示"
+
+  # ───── RE-7：Shortcuts 連携 ─────
+  - id: "RE-7"
+    level: 1
+    phase: "実装"
+    name: "Shortcuts 連携（起動記録受信・QR コード）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-1"]
+  - id: "RE-7.1"
+    parent: "RE-7"
+    level: 2
+    phase: "実装"
+    name: "source=ios_shortcut のリクエスト受付確認"
+    progress: 100
+    status: "完了"
+  - id: "RE-7.2"
+    parent: "RE-7"
+    level: 2
+    phase: "実装"
+    name: "QR コード生成実装"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-8：テスト ─────
+  - id: "RE-8"
+    level: 1
+    phase: "テスト"
+    name: "パターン判定のテスト"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-3", "RE-4", "RE-5", "RE-6", "RE-7"]
+  - id: "RE-8.1"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "P1〜P7 各パターンの該当/非該当テスト"
+    progress: 100
+    status: "完了"
+  - id: "RE-8.2"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "P1 方式C（スパン＋最終利用日）の7ケーステスト"
+    progress: 100
+    status: "完了"
+  - id: "RE-8.3"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "usage_type 別の P1 適用可否テスト"
+    progress: 100
+    status: "完了"
+  - id: "RE-8.4"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "知識ベース陳腐化テスト"
+    progress: 100
+    status: "完了"
+  - id: "RE-8.5"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "無料プラン除外テスト"
+    progress: 100
+    status: "完了"
+  - id: "RE-8.6"
+    parent: "RE-8"
+    level: 2
+    phase: "テスト"
+    name: "既存 E2E テスト（Playwright）の通過確認"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-9：ドキュメント改訂 ─────
+  - id: "RE-9"
+    level: 1
+    phase: "ドキュメント"
+    name: "product-requirements・functional-design 改訂"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-8"]
+  - id: "RE-9.1"
+    parent: "RE-9"
+    level: 2
+    phase: "ドキュメント"
+    name: "product-requirements §1（ビジョン・中心価値）改訂"
+    progress: 100
+    status: "完了"
+  - id: "RE-9.2"
+    parent: "RE-9"
+    level: 2
+    phase: "ドキュメント"
+    name: "product-requirements §8.3（判定ルール）をP1〜P7に置換"
+    progress: 100
+    status: "完了"
+  - id: "RE-9.3"
+    parent: "RE-9"
+    level: 2
+    phase: "ドキュメント"
+    name: "product-requirements §8.5（段階的提供）をusage_type方式に改訂"
+    progress: 100
+    status: "完了"
+  - id: "RE-9.4"
+    parent: "RE-9"
+    level: 2
+    phase: "ドキュメント"
+    name: "product-requirements §10.0/10.1 改訂"
+    progress: 100
+    status: "完了"
+  - id: "RE-9.5"
+    parent: "RE-9"
+    level: 2
+    phase: "ドキュメント"
+    name: "functional-design §8 判定ルール改訂"
+    progress: 100
+    status: "完了"
+
+  # ───── RE-10：品質チェック・受け入れ確認 ─────
+  - id: "RE-10"
+    level: 1
+    phase: "テスト"
+    name: "品質チェック・受け入れ確認（AC-1〜AC-11）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-8", "RE-9"]
+  - id: "RE-10.1"
+    parent: "RE-10"
+    level: 2
+    phase: "テスト"
+    name: "受け入れ条件 AC-1〜AC-11 全件確認"
+    progress: 100
+    status: "完了"
+  - id: "RE-10.2"
+    parent: "RE-10"
+    level: 2
+    phase: "テスト"
+    name: "合成データで各 usage_type のレコメンド確認"
+    progress: 100
+    status: "完了"
+  - id: "RE-10.3"
+    parent: "RE-10"
+    level: 2
+    phase: "テスト"
+    name: "リント・型チェック通過"
+    progress: 100
+    status: "完了"

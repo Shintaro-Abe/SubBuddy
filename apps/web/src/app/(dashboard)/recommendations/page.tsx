@@ -8,7 +8,6 @@ import { RecomputeButton } from "@/components/RecomputeButton";
 
 export const dynamic = "force-dynamic";
 
-// 解約寄りの強い順に表示する。
 const ORDER: Decision[] = [
   "strong_cancel_candidate",
   "consider_cancel",
@@ -26,8 +25,7 @@ export default async function RecommendationsPage() {
   const groups = ORDER.map((decision) => ({
     decision,
     items: ready
-      .filter((r) => r.recommendation?.decision === decision)
-      .sort((a, b) => (b.recommendation!.cancelScore - a.recommendation!.cancelScore)),
+      .filter((r) => r.recommendation?.decision === decision),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -54,16 +52,22 @@ export default async function RecommendationsPage() {
               <li key={s.id}>
                 <Link
                   href={`/subscriptions/${s.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-50"
+                  className="block px-4 py-3 hover:bg-zinc-50"
                 >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{s.name}</div>
-                    <div className="truncate text-xs text-zinc-500">{rec!.reason}</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{s.name}</div>
+                    </div>
+                    <div className="shrink-0 text-right text-sm">
+                      <div className="font-medium">{formatYen(rec!.monthlyAmount)}/月</div>
+                      {rec!.yearlyAmount > 0 && rec!.decision !== "keep" && (
+                        <div className="text-xs text-red-600">
+                          解約で年間{formatYen(rec!.yearlyAmount)}節約
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="shrink-0 text-right text-sm">
-                    <div className="font-medium">{formatYen(rec!.monthlyAmount)}/月</div>
-                    <div className="text-xs text-zinc-400">スコア {rec!.cancelScore}</div>
-                  </div>
+                  <div className="mt-1 text-xs text-zinc-500">{rec!.reason}</div>
                 </Link>
               </li>
             ))}

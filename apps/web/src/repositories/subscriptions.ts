@@ -43,6 +43,9 @@ export function createSubscription(
     notes: input.notes ?? null,
     signupChannel: input.signupChannel ?? null,
     status: input.status,
+    matchedServiceId: input.matchedServiceId ?? null,
+    usageType: input.usageType ?? "active_foreground",
+    initialValueAnswer: input.initialValueAnswer ?? null,
   };
   return db.subscription.create({ data });
 }

@@ -10,6 +10,21 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const billingCycleSchema = z.enum(["monthly", "yearly"]);
 export const subscriptionStatusSchema = z.enum(["active", "paused", "canceled"]);
 
+export const usageTypeSchema = z.enum([
+  "active_foreground",
+  "active_background",
+  "active_other_device",
+  "passive",
+  "entitlement",
+  "capacity",
+]);
+
+export const initialValueAnswerSchema = z.enum([
+  "very_important",
+  "somewhat",
+  "not_much",
+]);
+
 export const subscriptionCreateSchema = z.object({
   name: z.string().trim().min(1).max(200),
   category: z.string().trim().min(1).max(100),
@@ -22,6 +37,9 @@ export const subscriptionCreateSchema = z.object({
   notes: z.string().max(2000).optional(),
   signupChannel: z.string().max(100).optional(),
   status: subscriptionStatusSchema.default("active"),
+  matchedServiceId: z.string().trim().min(1).optional(),
+  usageType: usageTypeSchema.default("active_foreground"),
+  initialValueAnswer: initialValueAnswerSchema.optional(),
 });
 
 // 更新は全項目任意（部分更新）。

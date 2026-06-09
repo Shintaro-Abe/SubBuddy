@@ -7,6 +7,7 @@ import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 import { formatDate, formatYen, safeHttpUrl } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton";
+import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export default async function SubscriptionDetailPage({
   const recs = await listLatestRecommendations(userId);
   const rec = recs.find((r) => r.subscriptionId === id) ?? null;
   const cancelUrl = safeHttpUrl(s.cancellationUrl);
+  const usageType = (s as Record<string, unknown>).usageType as string | undefined;
+  const showQr = usageType === "active_foreground" || usageType === "active_background";
 
   return (
     <div className="space-y-6">
@@ -70,26 +73,39 @@ export default async function SubscriptionDetailPage({
         </section>
 
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
-          <h2 className="mb-2 text-sm font-semibold text-zinc-700">判定・利用状況</h2>
+          <h2 className="mb-2 text-sm font-semibold text-zinc-700">レコメンド</h2>
           {rec ? (
             <>
               {rec.dataStatus === "observing" ? (
                 <Row label="状態" value={`観測中（あと ${rec.daysUntilReady} 日）`} />
               ) : (
                 <>
-                  <Row label="直近30日の利用日数" value={`${rec.usageDays30d} 日`} />
-                  <Row
-                    label="最終利用からの日数"
-                    value={rec.daysSinceLastUse !== null ? `${rec.daysSinceLastUse} 日` : "—"}
-                  />
-                  <Row
-                    label="1利用日あたり費用"
-                    value={rec.costPerUsageDay !== null ? formatYen(Math.round(rec.costPerUsageDay)) : "—"}
-                  />
+                  {rec.daysSinceLastUse !== null && (
+                    <Row
+                      label="最終利用からの日数"
+                      value={`${rec.daysSinceLastUse} 日`}
+                    />
+                  )}
+                  <Row label="重複あり" value={rec.hasOverlap ? "あり" : "なし"} />
+
+                  {/* 節約額 */}
+                  {rec.decision && rec.decision !== "keep" && (
+                    <Row
+                      label="解約した場合の年間節約額"
+                      value={
+                        <span className="text-red-600">
+                          {formatYen(rec.yearlyAmount)}
+                        </span>
+                      }
+                    />
+                  )}
                 </>
               )}
-              <Row label="重複あり" value={rec.hasOverlap ? "あり" : "なし"} />
-              <div className="mt-3 rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">{rec.reason}</div>
+
+              {/* 理由（パターン根拠） */}
+              <div className="mt-3 rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">
+                {rec.reason}
+              </div>
             </>
           ) : (
             <p className="text-sm text-zinc-500">
@@ -99,16 +115,25 @@ export default async function SubscriptionDetailPage({
         </section>
       </div>
 
-      {cancelUrl && (
-        <a
-          href={cancelUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-        >
-          解約手続きページを開く ↗
-        </a>
-      )}
+      <div className="flex flex-wrap gap-3">
+        {cancelUrl && (
+          <a
+            href={cancelUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
+          >
+            解約手続きページを開く ↗
+          </a>
+        )}
+
+        {showQr && (
+          <ShortcutsQrCode
+            subscriptionId={s.id}
+            subscriptionName={s.name}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -48,7 +48,7 @@
 
 | 対象 | 規則 | 例 |
 |---|---|---|
-| 変数・関数 | camelCase | `costPerUsageDay`、`computeScore()` |
+| 変数・関数 | camelCase | `computeRecommendation()`、`matchedPatterns` |
 | 型・インターフェース・クラス | PascalCase | `Subscription`、`UsageSummary` |
 | 定数（真の不変値） | UPPER_SNAKE_CASE | `DEFAULT_CURRENCY` |
 | ファイル（実装） | kebab-case | `scoring-rules.ts`、`gym-visit-connector.ts` |

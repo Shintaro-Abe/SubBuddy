@@ -96,8 +96,8 @@ apps/web/
     │   ├── (dashboard)/           # Web ダッシュボード画面群
     │   └── api/                   # Route Handlers（/api/*）
     ├── domain/                    # ★ドメインロジック（UI/API 非依存・Worker へ分離可能）
-    │   ├── scoring/               # ルールベース判定（functional-design §8）
-    │   └── usage/                 # 利用量の集計・正規化ロジック
+    │   ├── scoring/               # パターンマッチング判定 P1〜P7（functional-design §8）
+    │   └── usage/                 # 利用量データの集計・正規化（P1 パターン判定の入力準備）
     ├── ingestion/                 # ★利用量・請求の取り込み（architecture §5.1）
     │   ├── connectors/            # ソース別コネクタ（Adapter）
     │   │   ├── screen-time/       # 利用時間（iPhone 集計値）

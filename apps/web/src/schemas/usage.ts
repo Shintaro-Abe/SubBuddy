@@ -19,7 +19,7 @@ export const usageDailyItemSchema = z
     usageBucket: z.enum(USAGE_BUCKET_WIRE),
     estimatedMinutesMin: z.number().int().min(0).optional(),
     estimatedMinutesMax: z.number().int().min(0).optional(),
-    source: z.enum(["ios_device_activity", "manual_synthetic"]).default("ios_device_activity"),
+    source: z.enum(["ios_device_activity", "manual_synthetic", "ios_shortcut"]).default("ios_device_activity"),
   })
   .refine(
     (v) =>

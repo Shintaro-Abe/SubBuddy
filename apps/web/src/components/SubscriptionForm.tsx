@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ServiceCatalogSearch } from "./ServiceCatalogSearch";
 
-/**
- * サブスク登録/編集フォーム（T6-3）。
- * 送信先は Zod 検証済みの API（新規=POST、編集=PUT）。
- * 入力値は React がエスケープして描画するため XSS は発生しない（dangerouslySetInnerHTML は不使用）。
- */
 export interface SubscriptionFormValues {
   name: string;
   category: string;
@@ -18,6 +14,9 @@ export interface SubscriptionFormValues {
   cancellationUrl?: string;
   notes?: string;
   status: "active" | "paused" | "canceled";
+  matchedServiceId?: string;
+  usageType: string;
+  initialValueAnswer?: string;
 }
 
 const EMPTY: SubscriptionFormValues = {
@@ -30,7 +29,24 @@ const EMPTY: SubscriptionFormValues = {
   cancellationUrl: "",
   notes: "",
   status: "active",
+  matchedServiceId: undefined,
+  usageType: "active_foreground",
+  initialValueAnswer: undefined,
 };
+
+const USAGE_TYPE_OPTIONS = [
+  { value: "active_foreground", label: "iPhoneアプリで使う" },
+  { value: "active_background", label: "音楽・ポッドキャストなど裏で再生する" },
+  { value: "active_other_device", label: "PC・テレビ・Webで使う（iPhoneでは使わない）" },
+  { value: "passive", label: "保管・同期・常時稼働するサービス" },
+  { value: "entitlement", label: "会員特典・送料無料など権利として持っている" },
+] as const;
+
+const VALUE_ANSWER_OPTIONS = [
+  { value: "very_important", label: "すぐ困る" },
+  { value: "somewhat", label: "少し困る" },
+  { value: "not_much", label: "あまり困らない" },
+] as const;
 
 export function SubscriptionForm({
   id,
@@ -44,6 +60,7 @@ export function SubscriptionForm({
   const [issues, setIssues] = useState<{ path: string; message: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [catalogMatched, setCatalogMatched] = useState(!!initial?.matchedServiceId);
 
   function set<K extends keyof SubscriptionFormValues>(key: K, value: SubscriptionFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -55,7 +72,6 @@ export function SubscriptionForm({
     setIssues([]);
     setError(null);
 
-    // 空文字の任意項目は送らない（Zod の optional に合わせる）。
     const payload: Record<string, unknown> = {
       name: values.name,
       category: values.category,
@@ -63,10 +79,13 @@ export function SubscriptionForm({
       billingCycle: values.billingCycle,
       importance: Number(values.importance),
       status: values.status,
+      usageType: values.usageType,
     };
     if (values.nextRenewalDate) payload.nextRenewalDate = values.nextRenewalDate;
     if (values.cancellationUrl) payload.cancellationUrl = values.cancellationUrl;
     if (values.notes) payload.notes = values.notes;
+    if (values.matchedServiceId) payload.matchedServiceId = values.matchedServiceId;
+    if (values.initialValueAnswer) payload.initialValueAnswer = values.initialValueAnswer;
 
     try {
       const res = await fetch(id ? `/api/subscriptions/${id}` : "/api/subscriptions", {
@@ -106,18 +125,38 @@ export function SubscriptionForm({
         </ul>
       )}
 
+      {/* サービス名：カタログ検索 or 自由入力 */}
       <div>
-        <label htmlFor="name" className={label}>サービス名</label>
-        <input
-          id="name"
-          className={field}
-          value={values.name}
-          onChange={(e) => set("name", e.target.value)}
-          required
-          maxLength={200}
-        />
+        <label className={label}>サービス名</label>
+        {!id ? (
+          <ServiceCatalogSearch
+            initialValue={values.name}
+            onSelect={(entry) => {
+              set("name", entry.canonicalName);
+              set("category", entry.category);
+              set("usageType", entry.usageType);
+              set("matchedServiceId", entry.id);
+              setCatalogMatched(true);
+            }}
+            onManualEntry={(name) => {
+              set("name", name);
+              setCatalogMatched(false);
+              set("matchedServiceId", undefined);
+            }}
+          />
+        ) : (
+          <input
+            id="name"
+            className={field}
+            value={values.name}
+            onChange={(e) => set("name", e.target.value)}
+            required
+            maxLength={200}
+          />
+        )}
       </div>
 
+      {/* カテゴリ：カタログ選択時は自動設定・表示のみ */}
       <div>
         <label htmlFor="category" className={label}>カテゴリ</label>
         <input
@@ -127,9 +166,30 @@ export function SubscriptionForm({
           onChange={(e) => set("category", e.target.value)}
           required
           maxLength={100}
-          placeholder="music / video / news など"
+          readOnly={catalogMatched}
+          placeholder="video_streaming / music / ai_tool など"
         />
+        {catalogMatched && (
+          <p className="mt-1 text-xs text-zinc-500">カタログから自動設定されました</p>
+        )}
       </div>
+
+      {/* 利用の性質：カタログ選択時は自動設定、カタログ外はユーザーが選択 */}
+      {!catalogMatched && (
+        <div>
+          <label htmlFor="usageType" className={label}>利用の仕方</label>
+          <select
+            id="usageType"
+            className={field}
+            value={values.usageType}
+            onChange={(e) => set("usageType", e.target.value)}
+          >
+            {USAGE_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -184,6 +244,36 @@ export function SubscriptionForm({
           />
         </div>
       </div>
+
+      {/* 初回1問：新規登録時のみ表示 */}
+      {!id && (
+        <div>
+          <label className={label}>このサブスクがなくなったら困りますか？</label>
+          <div className="mt-2 flex gap-2">
+            {VALUE_ANSWER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  values.initialValueAnswer === opt.value
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-300 hover:bg-zinc-50"
+                }`}
+                onClick={() => set("initialValueAnswer", opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-50"
+              onClick={() => set("initialValueAnswer", undefined)}
+            >
+              スキップ
+            </button>
+          </div>
+        </div>
+      )}
 
       <div>
         <label htmlFor="cancellationUrl" className={label}>解約手続き URL（任意）</label>
