@@ -48,8 +48,6 @@ npx prisma db seed
 npm run dev
 ```
 
-http://localhost:3000 でアクセスできます。
-
 ## プロジェクト構成
 
 ```
