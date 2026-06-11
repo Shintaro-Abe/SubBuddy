@@ -10,6 +10,9 @@
  *  6. iCloud+ 200GB        → 容量ベース（consider_downgrade のルール枠）
  *  7. 動画見放題            → 十分利用                  → keep
  *  8. 新規登録サービス       → 登録直後・観測中（あと N 日）
+ *  9. Dropbox（passive）     → 最終利用90日前でも P1 適用外 → keep
+ * 10. Amazonプライム（entitlement）→ 起動記録なしでも P1 適用外 → keep
+ * 11. Netflix（matchedServiceId 付き）→ 知識ベース経由で P3（安いプラン）/P4（安い競合）
  */
 import { PrismaClient, BillingCycle, UsageBucket } from "@prisma/client";
 import { readFileSync } from "fs";
@@ -190,6 +193,7 @@ async function main() {
       normalizedName: "Amazon Music",
       category: "music",
       amount: 1080,
+      usageType: "active_background",
       billingCycle: BillingCycle.monthly,
       importance: 4,
       nextRenewalDate: daysAhead(25),
@@ -206,6 +210,7 @@ async function main() {
       normalizedName: "Spotify",
       category: "music",
       amount: 980,
+      usageType: "active_background",
       billingCycle: BillingCycle.monthly,
       importance: 2,
       nextRenewalDate: daysAhead(18),
@@ -250,6 +255,7 @@ async function main() {
       normalizedName: "iCloud+",
       category: "storage",
       amount: 400,
+      usageType: "capacity",
       billingCycle: BillingCycle.monthly,
       importance: 3,
       nextRenewalDate: daysAhead(5),
@@ -291,8 +297,69 @@ async function main() {
     },
   });
 
+  // 9. passive（Dropbox 相当）：同期型。最終利用が90日前でも「使っていない」（P1）は適用外
+  //    active_foreground なら強い解約候補になる利用実績だが、passive なので keep のまま
+  const dropbox = await prisma.subscription.create({
+    data: {
+      userId: user.id,
+      name: "Dropbox",
+      normalizedName: "Dropbox",
+      category: "cloud_storage",
+      amount: 1500,
+      usageType: "passive",
+      billingCycle: BillingCycle.monthly,
+      importance: 3,
+      nextRenewalDate: daysAhead(12),
+      createdAt: daysAgo(400),
+      cancellationUrl: "https://example.com/cancel/dropbox",
+    },
+  });
+  await addUsage(dropbox.id, {
+    windowDays: 3,
+    usedDays: 2,
+    bucket: UsageBucket.m5_plus,
+    lastUsedDaysAgo: 90,
+  });
+
+  // 10. entitlement（Amazon Prime 相当）：権利保有型。アプリ起動記録ゼロでも P1 適用外
+  const prime = await prisma.subscription.create({
+    data: {
+      userId: user.id,
+      name: "Amazonプライム",
+      normalizedName: "Amazonプライム",
+      category: "membership",
+      amount: 600,
+      usageType: "entitlement",
+      billingCycle: BillingCycle.monthly,
+      importance: 4,
+      nextRenewalDate: daysAhead(14),
+      createdAt: daysAgo(700),
+      cancellationUrl: "https://example.com/cancel/prime",
+    },
+  });
+
+  // 11. 知識ベース連携（matchedServiceId 付き）：プレミアム契約で十分利用。
+  //     P3（広告つきスタンダード ¥790 へのダウングレード）と P4（安い競合）の提案が出る
+  const netflix = await prisma.subscription.create({
+    data: {
+      userId: user.id,
+      name: "Netflix",
+      normalizedName: "Netflix",
+      category: "video_streaming",
+      amount: 2290,
+      usageType: "active_foreground",
+      matchedServiceId: serviceIdMap.get("Netflix") ?? null,
+      billingCycle: BillingCycle.monthly,
+      importance: 4,
+      nextRenewalDate: daysAhead(16),
+      createdAt: daysAgo(100),
+      cancellationUrl: "https://example.com/cancel/netflix",
+    },
+  });
+  await addUsage(netflix.id, { windowDays: 30, usedDays: 20, bucket: UsageBucket.m60_plus });
+
   // --- billing_events（合成・手動由来）---
-  for (const sub of [aiTool, news, musicMain, musicSub, learning, icloud, video]) {
+  for (const sub of [aiTool, news, musicMain, musicSub, learning, icloud, video, dropbox, prime, netflix]) {
     await prisma.billingEvent.create({
       data: {
         userId: user.id,

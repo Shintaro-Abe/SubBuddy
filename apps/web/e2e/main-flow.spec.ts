@@ -56,6 +56,30 @@ test.describe("SubBuddy 主要導線", () => {
     await expect(card).toContainText("継続");
   });
 
+  test("passive のサブスクに「使っていない」判定が出ない", async ({ page }) => {
+    // Dropbox（usage_type=passive）は最終利用が90日前でも P1 適用外 → 継続のまま
+    await page.goto("/subscriptions");
+    const card = page.getByRole("link", { name: /Dropbox/ });
+    await expect(card).toContainText("継続");
+
+    await card.click();
+    await expect(page.getByRole("heading", { name: "Dropbox" })).toBeVisible();
+    // 最終利用は把握しているのに、判定理由に「使っていない」系のパターンが出ない
+    await expect(page.getByText("最終利用からの日数")).toBeVisible();
+    await expect(
+      page.getByText("見直し対象に該当する条件がありません。継続をおすすめします。"),
+    ).toBeVisible();
+    await expect(page.getByText(/最後に使ったのは/)).toHaveCount(0);
+  });
+
+  test("知識ベース連携でダウングレード提案が出る", async ({ page }) => {
+    // Netflix（matchedServiceId 付き・プレミアム ¥2,290）に安いプラン（P3）の提案が出る
+    await page.goto("/subscriptions");
+    await page.getByRole("link", { name: /Netflix/ }).click();
+    await expect(page.getByRole("heading", { name: "Netflix" })).toBeVisible();
+    await expect(page.getByText(/広告つきスタンダード（¥790\/月）に変更できます/)).toBeVisible();
+  });
+
   test("サブスクを登録して一覧に現れ、削除できる", async ({ page }) => {
     const name = "E2Eテスト動画（合成）";
 
