@@ -131,6 +131,7 @@ export default async function SubscriptionDetailPage({
           <ShortcutsQrCode
             subscriptionId={s.id}
             subscriptionName={s.name}
+            usageSyncToken={process.env.USAGE_SYNC_TOKEN ?? null}
           />
         )}
       </div>

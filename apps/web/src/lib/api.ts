@@ -23,6 +23,11 @@ export function badRequest(message = "invalid request") {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+export function unauthorized() {
+  // トークン未設定か不一致かは区別せず、同じ応答を返す（設定状態を漏らさない）。
+  return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+}
+
 export function notFound(message = "not found") {
   return NextResponse.json({ error: message }, { status: 404 });
 }

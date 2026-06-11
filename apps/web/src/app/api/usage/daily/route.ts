@@ -1,5 +1,6 @@
 import { getCurrentUserId } from "@/lib/user";
-import { ok, fromZodError, badRequest, serverError } from "@/lib/api";
+import { ok, fromZodError, badRequest, serverError, unauthorized } from "@/lib/api";
+import { verifyUsageSyncToken } from "@/lib/usage-auth";
 import { usageDailyBatchSchema } from "@/schemas/usage";
 import { normalizeUsageBatch } from "@/domain/usage/normalize";
 import { upsertUsageDailyBatch } from "@/repositories/usage";
@@ -7,10 +8,15 @@ import { upsertUsageDailyBatch } from "@/repositories/usage";
 export const dynamic = "force-dynamic";
 
 /**
- * 利用量同期（iOS の集計値のみ）。Zod 検証 → 整形 → 冪等 upsert。
+ * 利用量同期（iOS の集計値のみ）。トークン検証 → Zod 検証 → 整形 → 冪等 upsert。
  * 同一バッチを再送しても行は増えない（subscription_id × usage_date）。
+ * 認証は事前共有トークン（architecture §8.1.1）。USAGE_SYNC_TOKEN 未設定時は常に 401。
  */
 export async function POST(req: Request) {
+  if (!verifyUsageSyncToken(req.headers.get("authorization"), process.env.USAGE_SYNC_TOKEN)) {
+    return unauthorized();
+  }
+
   let body: unknown;
   try {
     body = await req.json();

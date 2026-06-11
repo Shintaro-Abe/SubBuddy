@@ -6,12 +6,15 @@ import { QRCodeSVG } from "qrcode.react";
 interface Props {
   subscriptionId: string;
   subscriptionName: string;
+  /** 利用量同期 API の事前共有トークン。ショートカットが Authorization ヘッダで送る値（architecture §8.1.1）。 */
+  usageSyncToken?: string | null;
   apiBaseUrl?: string;
 }
 
 export function ShortcutsQrCode({
   subscriptionId,
   subscriptionName,
+  usageSyncToken = null,
   apiBaseUrl = typeof window !== "undefined" ? window.location.origin : "",
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -20,6 +23,7 @@ export function ShortcutsQrCode({
     url: `${apiBaseUrl}/api/usage/daily`,
     subscriptionId,
     subscriptionName,
+    ...(usageSyncToken ? { token: usageSyncToken } : {}),
   });
 
   return (
