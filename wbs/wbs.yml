@@ -612,3 +612,33 @@ tasks:
     name: "リント・型チェック通過"
     progress: 100
     status: "完了"
+
+  # ───── RE-11：作業会フォローアップ（seed・E2E・API 認証） ─────
+  - id: "RE-11"
+    level: 1
+    phase: "実装"
+    name: "フォローアップ（seed バリエーション・E2E・利用量同期 API 認証）"
+    progress: 100
+    status: "完了"
+    predecessors: ["RE-10"]
+  - id: "RE-11.1"
+    parent: "RE-11"
+    level: 2
+    phase: "実装"
+    name: "seed に usage_type バリエーション追加（passive・entitlement・知識ベース連携）"
+    progress: 100
+    status: "完了"
+  - id: "RE-11.2"
+    parent: "RE-11"
+    level: 2
+    phase: "テスト"
+    name: "E2E 追加（passive に未使用判定が出ない／ダウングレード提案が出る）"
+    progress: 100
+    status: "完了"
+  - id: "RE-11.3"
+    parent: "RE-11"
+    level: 2
+    phase: "実装"
+    name: "利用量同期 API の事前共有トークン認証（USAGE_SYNC_TOKEN・401）"
+    progress: 100
+    status: "完了"
