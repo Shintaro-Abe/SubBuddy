@@ -237,6 +237,31 @@ describe("観測中の即時パターン判定", () => {
     expect(r.dataStatus).toBe(DataStatus.observing);
     expect(r.matchedPatterns.some((p) => p.pattern === "P2")).toBe(true);
   });
+
+  it("登録直後・利用データなしでも観測中になる（functional-design §8.5）", () => {
+    const r = computeRecommendation(input({
+      observationDays: 3,
+      hasUsageData: false,
+      usageDaysInSpan: 0,
+      daysSinceLastUse: null,
+    }), cfg);
+    expect(r.dataStatus).toBe(DataStatus.observing);
+    expect(r.daysUntilReady).toBe(cfg.minObservationDays - 3);
+    expect(r.decision).toBeNull();
+    expect(r.reason).toContain("観測中");
+  });
+
+  it("受動利用（passive）は登録直後でも観測中にならず即時確定する（§8.5）", () => {
+    const r = computeRecommendation(input({
+      observationDays: 3,
+      usageType: "passive",
+      hasUsageData: false,
+      usageDaysInSpan: 0,
+      daysSinceLastUse: null,
+    }), cfg);
+    expect(r.dataStatus).toBe(DataStatus.ready);
+    expect(r.decision).toBe(Decision.keep);
+  });
 });
 
 describe("年間節約額", () => {

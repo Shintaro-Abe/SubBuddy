@@ -99,9 +99,10 @@ export function computeRecommendation(
   };
 
   // --- 観測中（P1 の利用判定は保留。P2〜P6 は即時判定可能） ---
+  // 観測中かどうかは登録からの経過日数のみで決まる（design §「dataStatus は時間ベース」）。
+  // 利用データの有無は P1 の適用可否（matchP1）にだけ影響する。
   if (
     canApplyP1(input.usageType) &&
-    input.hasUsageData &&
     input.observationDays < config.minObservationDays
   ) {
     const daysUntilReady = config.minObservationDays - input.observationDays;
