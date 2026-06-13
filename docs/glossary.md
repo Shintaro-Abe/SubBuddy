@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-02
+> 最終更新：2026-06-13
 > 関連：`product-requirements.md`、`functional-design.md`、`architecture.md`、`repository-structure.md`、`development-guidelines.md`
 
 ---
@@ -31,7 +31,13 @@
 | 観測期間 | Observation Window | `observation_days` | サブスク**登録時点から**の利用量集計の経過日数。過去には遡らない。 |
 | 観測中 | Observing | `data_status = observing` | 観測日数が確定に必要な最小日数に満たず、利用ベース判定を未確定としている状態。画面では「観測中（あと N 日）」と表示。 |
 | 確定 | Ready | `data_status = ready` | 観測が十分になり、利用ベースの判定を確定して出せる状態。 |
-| サービスカタログ | Service Catalog | `service_catalog` | 既知サービスのマスタ（名称・カテゴリ等）。サブスク登録の補助。 |
+| サービスカタログ | Service Catalog | `service_catalog` | 既知サービスのマスタ（名称・カテゴリ・利用の性質等）。サブスク登録時のあいまい検索・自動設定に使用。 |
+| サービスプラン | Service Plan | `service_plans` | 同一サービスの料金プラン情報。P3（安いプランがある）の判定に使用。無料プラン（`is_free_tier=true`）は比較対象から除外。 |
+| 代替サービス | Service Alternative | `service_alternatives` | サービス間の代替関係。P4（安い競合がある）の判定に使用。 |
+| 知識ベース | Knowledge Base | — | サービスカタログ・プラン・代替サービスの総称。P3・P4 の判定の情報源。料金の確認日（`verified_at`）から6ヶ月超過で信頼度を低下させる。 |
+| 利用の性質 | Usage Type | `usage_type` | サブスクの使い方の分類（`active_foreground` / `active_background` / `active_other_device` / `passive` / `entitlement` / `capacity`）。P1 の適用可否を決定する。 |
+| なくなったら困るか | Initial Value Answer | `initial_value_answer` | 登録時の1問（`very_important` / `somewhat` / `not_much`）。将来の判定拡張用に保持。 |
+| カタログ紐付け | Matched Service | `matched_service_id` | サブスクがサービスカタログのどのサービスに対応するか。プラン・代替の自動取得に使う。 |
 | 重要度 | Importance | `importance` | ユーザーが付与する主観的な重要度。判定の補正係数に用いる。 |
 | 利用量センサー | Usage Sensor | — | 利用量を計測する側の総称。iPhone（Screen Time・位置情報）が担う。 |
 | コネクタ / アダプタ | Connector / Adapter | `connectors/<source>` | 取得源ごとに利用量・請求を取り込む実装。原本を保持し、共通モデルへ正規化（`architecture.md` §5.1）。 |

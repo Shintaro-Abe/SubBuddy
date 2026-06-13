@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-05-31
+> 最終更新：2026-06-13
 > 関連：`product-requirements.md`（要求）、`architecture.md`（技術仕様）、`glossary.md`（用語）
 
 ---
@@ -122,6 +122,8 @@ erDiagram
   subscriptions ||--o{ ios_usage_daily_summaries : measured_as
   subscriptions ||--o{ recommendation_snapshots : evaluated_as
   service_catalog ||..o{ subscriptions : normalizes
+  service_catalog ||--o{ service_plans : has
+  service_catalog ||--o{ service_alternatives : from
 
   users {
     string id PK
@@ -139,6 +141,9 @@ erDiagram
     string billing_cycle
     date next_renewal_date
     string signup_channel
+    string usage_type
+    string initial_value_answer
+    string matched_service_id FK
     string status
     int importance
     string cancellation_url
@@ -204,7 +209,23 @@ erDiagram
     string cancellation_url
     boolean is_supported
     boolean is_excluded
+    string usage_type
     string notes
+  }
+  service_plans {
+    string id PK
+    string service_id FK
+    string name
+    int monthly_price
+    boolean is_free_tier
+    datetime verified_at
+    string source_url
+  }
+  service_alternatives {
+    string id PK
+    string from_service_id FK
+    string to_service_id
+    string relation
   }
 ```
 
@@ -223,6 +244,8 @@ erDiagram
 | billing_cycle | 課金周期（monthly / yearly 等） |
 | next_renewal_date | 次回更新日 |
 | signup_channel | 契約経路（App Store / Web 等） |
+| usage_type | 利用の性質（§8.3）。「使っていない」パターンの適用可否を決定 |
+| initial_value_answer | なくなったら困るか（very_important / somewhat / not_much） |
 | status | active / canceled / paused 等 |
 | importance | ユーザー主観の重要度（スコアリング補正に使用） |
 | cancellation_url | 公式の解約導線 URL |
@@ -237,7 +260,7 @@ erDiagram
 
 iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 `none / 1m_plus / 5m_plus / 15m_plus / 30m_plus / 60m_plus / 120m_plus`。
-`source` は `ios_device_activity` 等。`subscription_id × usage_date` を一意キーとして upsert。
+`source` は `ios_device_activity` / `ios_shortcut` / `manual_synthetic` 等。`subscription_id × usage_date` を一意キーとして upsert。
 
 #### recommendation_snapshots（レコメンド履歴）
 
@@ -251,6 +274,18 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 
 サービス名の表記揺れ正規化と対象判定。`is_excluded=true` に Apple Music / TV+ / Arcade / One を登録し、
 登録候補・レコメンド対象から除外する。`domains` / `app_bundle_ids` は iOS 計測対象との突合に使う。
+`usage_type` でサービスの利用の性質の既定値を保持し、サブスク登録時にカタログから自動設定する。
+
+#### service_plans（サービスプラン）
+
+同一サービスの料金プラン情報。`monthly_price`（月額換算）を持ち、P3（安いプランがある）の判定に使用する。
+`is_free_tier=true` のプランは比較対象から除外する。`verified_at` で料金の確認日を持ち、
+6ヶ月超過で信頼度を低下させる。
+
+#### service_alternatives（代替サービス）
+
+サービス間の代替関係。`from_service_id` → `to_service_id` の関係で、P4（安い競合がある）の判定に使用する。
+`relation` は `same_category` 等。
 
 > 注：実データ（実在のサブスク・請求・利用）は実行時にローカル DB にのみ保存し、リポジトリには含めない。
 > seed/fixture は合成データのみ（`CLAUDE.md` PII 方針）。
@@ -333,8 +368,8 @@ flowchart LR
   更新日前レビューの対象になる。登録しないサブスクは SubBuddy の評価対象外（全契約の自動取得はしない）。
 - **アクター**：ユーザー
 - **事前条件**：Mac ローカルのアプリが起動している。
-- **入力（必須）**：name / amount / currency / billing_cycle / next_renewal_date
-- **入力（任意）**：category / importance / signup_channel / cancellation_url / notes
+- **入力（必須）**：name / amount / currency / billing_cycle / next_renewal_date / usage_type
+- **入力（任意）**：category / importance / initial_value_answer / signup_channel / cancellation_url / notes
 - **基本フロー**：
   1. 登録フォームを開く
   2. 項目を入力

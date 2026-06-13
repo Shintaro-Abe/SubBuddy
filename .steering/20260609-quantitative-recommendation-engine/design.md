@@ -52,8 +52,8 @@
 
 | パターン | Decision | 表示名 |
 |---|---|---|
-| P1 使っていない（60日以上） | `strong_cancel_candidate` | 強い解約候補 |
-| P1 使っていない（30日以上） | `consider_cancel` | 解約検討 |
+| P1 使っていない（スパン内0日＋61日以上未使用） | `strong_cancel_candidate` | 強い解約候補 |
+| P1 使っていない（それ以外の該当） | `review` | 様子見 |
 | P2 重複で割高 | `consider_cancel` | 解約検討 |
 | P4 安い競合がある | `consider_cancel` | 乗り換え検討 |
 | P3 安いプランがある | `consider_downgrade` | ダウングレード検討 |
@@ -199,8 +199,7 @@ type InitialValueAnswer = "very_important" | "somewhat" | "not_much";
 
 interface CheaperOption {
   name: string;
-  monthlyPrice: number;
-  verifiedAt: Date;
+  monthlyPrice: number; // recompute.ts で陳腐化補正済みの値を渡す
 }
 ```
 
@@ -208,15 +207,20 @@ interface CheaperOption {
 
 ```typescript
 export interface RecommendationResult {
-  decision: Decision;
+  decision: Decision | null;           // 観測中で P2〜P6 も非該当なら null
   dataStatus: DataStatus;
+  observationDays: number;
+  daysUntilReady: number;              // ready なら 0
   matchedPatterns: MatchedPattern[];   // 該当した全パターン
   annualSavingsIfCancelled: number;
   annualSavingsIfDowngraded: number | null;
-  reason: string;                      // 全パターンを統合した理由文
   monthlyAmount: number;
   yearlyAmount: number;
+  daysSinceLastUse: number | null;
+  daysUntilRenewal: number | null;
+  hasOverlap: boolean;
   confidence: number;
+  reason: string;                      // 全パターンを統合した理由文
 }
 
 interface MatchedPattern {
@@ -339,7 +343,36 @@ export function computeRecommendation(
     });
   }
 
-  // ── Decision 決定 ──
+  // ── 観測中判定（P1 適用対象のみ。受動利用・権利保有は即 ready） ──
+  if (
+    canApplyP1(input.usageType) &&
+    input.hasUsageData &&
+    input.observationDays < config.minObservationDays
+  ) {
+    const daysUntilReady = config.minObservationDays - input.observationDays;
+    const confidence = clamp(
+      Math.round((input.observationDays / config.minObservationDays) * 100) / 100,
+      0.1, 0.99,
+    );
+    // 観測中でも P2〜P6 は即時判定して表示する
+    const immediatePatterns = matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount);
+    return {
+      decision: immediatePatterns.length > 0
+        ? determineDecision(immediatePatterns, input, config) : null,
+      dataStatus: DataStatus.observing,
+      daysUntilReady,
+      matchedPatterns: immediatePatterns,
+      annualSavingsIfCancelled: yearlyAmount,
+      annualSavingsIfDowngraded: annualSavingsDown,
+      confidence,
+      reason: immediatePatterns.length > 0
+        ? buildReason(immediatePatterns)
+        : reasonObserving(daysUntilReady, ...),
+      // ...base fields
+    };
+  }
+
+  // ── 確定（全パターン判定） ──
   const decision = determineDecision(patterns, input, config);
   const reason = buildReason(patterns);
   const annualSavingsDown = input.cheaperPlan
@@ -347,16 +380,12 @@ export function computeRecommendation(
     : null;
 
   return {
-    decision,
-    dataStatus: input.observationDays >= config.minObservationDays
-      ? DataStatus.ready
-      : DataStatus.observing,
+    decision: patterns.length > 0 ? decision : Decision.keep,
+    dataStatus: DataStatus.ready,
+    daysUntilReady: 0,
     matchedPatterns: patterns,
     annualSavingsIfCancelled: yearlyAmount,
     annualSavingsIfDowngraded: annualSavingsDown,
-    reason,
-    monthlyAmount,
-    yearlyAmount,
     confidence: patterns.length > 0 ? 1.0 : 0.5,
   };
 }

@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-02
+> 最終更新：2026-06-13
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -96,15 +96,10 @@ apps/web/
     │   ├── (dashboard)/           # Web ダッシュボード画面群
     │   └── api/                   # Route Handlers（/api/*）
     ├── domain/                    # ★ドメインロジック（UI/API 非依存・Worker へ分離可能）
-    │   ├── scoring/               # パターンマッチング判定 P1〜P7（functional-design §8）
-    │   └── usage/                 # 利用量データの集計・正規化（P1 パターン判定の入力準備）
-    ├── ingestion/                 # ★利用量・請求の取り込み（architecture §5.1）
-    │   ├── connectors/            # ソース別コネクタ（Adapter）
-    │   │   ├── screen-time/       # 利用時間（iPhone 集計値）
-    │   │   ├── icloud/            # 容量
-    │   │   ├── gym-visit/         # 来館（位置情報ベース・採用時）
-    │   │   └── billing-email/     # 請求メール抽出（フェーズ2）
-    │   └── normalize/             # 共通モデルへの（遅延）正規化
+    │   ├── scoring/               # パターンマッチング判定（functional-design §8）
+    │   └── usage/                 # 利用量データの集計・正規化（判定の入力準備）
+    ├── services/                  # ★アプリケーションサービス（ドメインとリポジトリの橋渡し）
+    │                              #   レコメンド再計算（recompute）等。Worker 分離の単位
     ├── repositories/              # Prisma 経由の永続化（ドメインから DB を隠蔽）
     ├── config/                    # スコアリング閾値等の外出し設定（Zod 検証。architecture §6）
     ├── schemas/                   # Zod スキーマ（API 入力・取り込みペイロード）
@@ -116,8 +111,7 @@ apps/web/
 ### 4.1 配置ルール（Mac 側）
 
 - **ドメインロジックは `src/domain/` に集約**し、`app/api/` や `components/` にビジネスルールを散在させない（`architecture.md` §7 の分離点を守る）。
-- **取り込みは `src/ingestion/` に閉じる**。新しい取得源は `connectors/<source>/` を 1 つ追加するだけで対応する（コア無改修）。
-  - コネクタは**取得した原本（生データ）を保持**し、共通モデルへの正規化は `normalize/` で遅延実行（入口で情報を捨てない。`architecture.md` §5.1）。
+- **アプリケーションサービスは `src/services/` に配置**。ドメインロジックとリポジトリを組み合わせたユースケース実行（レコメンド再計算等）を担い、Worker 分離の単位となる。
 - **DB アクセスは `src/repositories/` 経由のみ**。ドメイン層から Prisma を直接呼ばない（Worker 分離・テスト容易性のため）。
 - **スコアリング閾値はコード直書きせず `src/config/` に外出し**（Zod 検証。`architecture.md` §6）。
 - **Zod スキーマは `src/schemas/` に集約**し、API 入力・取り込みペイロードの検証境界を一元化する。
@@ -182,7 +176,7 @@ secrets/
 |---|---|---|
 | 永続ドキュメント | `docs/` | 基本設計の変更時のみ更新 |
 | 作業単位ドキュメント | `.steering/[YYYYMMDD]-[タイトル]/` | 作業ごとに新規・履歴保持 |
-| Mac 実装 | `apps/web/src/` | レイヤ別（domain / ingestion / repositories / config / schemas / components） |
+| Mac 実装 | `apps/web/src/` | レイヤ別（domain / services / repositories / config / schemas / components） |
 | iOS 実装 | `apps/ios/` | センサー・同期のみ。判定ロジックは持たせない |
 | DB スキーマ | `apps/web/prisma/schema.prisma` | 単一ソース |
 | 設定値（閾値等） | `apps/web/src/config/` | Zod 検証・外出し |

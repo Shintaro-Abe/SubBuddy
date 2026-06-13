@@ -228,7 +228,7 @@ describe("複数パターン該当時の Decision 優先度", () => {
 });
 
 describe("観測中の即時パターン判定", () => {
-  it("観測中でも P2〜P6 は判定される", () => {
+  it("観測中でも P2〜P6 は判定され、decision が確定する", () => {
     const r = computeRecommendation(input({
       observationDays: 3,
       hasCategoryOverlap: true,
@@ -236,6 +236,7 @@ describe("観測中の即時パターン判定", () => {
     }), cfg);
     expect(r.dataStatus).toBe(DataStatus.observing);
     expect(r.matchedPatterns.some((p) => p.pattern === "P2")).toBe(true);
+    expect(r.decision).toBe(Decision.consider_cancel);
   });
 
   it("登録直後・利用データなしでも観測中になる（functional-design §8.5）", () => {

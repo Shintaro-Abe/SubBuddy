@@ -95,7 +95,7 @@ export async function recomputeRecommendations(
     let cheaperPlan: CheaperOption | null = null;
     let cheaperAlternative: CheaperOption | null = null;
 
-    const matchedServiceId = (s as Record<string, unknown>).matchedServiceId as string | null;
+    const matchedServiceId = s.matchedServiceId;
     if (matchedServiceId) {
       const plans = await prisma.servicePlan.findMany({
         where: {
@@ -126,15 +126,21 @@ export async function recomputeRecommendations(
           },
           orderBy: { monthlyPrice: "asc" },
         });
-        if (altPlans.length > 0 && altPlans[0].monthlyPrice < monthlyAmt) {
-          const altService = await prisma.serviceCatalog.findUnique({
-            where: { id: alt.toServiceId },
-          });
-          if (altService && (!cheaperAlternative || altPlans[0].monthlyPrice < cheaperAlternative.monthlyPrice)) {
-            cheaperAlternative = {
-              name: altService.canonicalName,
-              monthlyPrice: altPlans[0].monthlyPrice,
-            };
+        if (altPlans.length > 0) {
+          const altStaleDays = Math.floor((asOf.getTime() - altPlans[0].verifiedAt.getTime()) / DAY_MS);
+          const altConfidence = altStaleDays > config.knowledgeBaseStaleDays
+            ? config.staleConfidenceMultiplier : 1.0;
+          const altPrice = Math.round(altPlans[0].monthlyPrice * altConfidence);
+          if (altPrice < monthlyAmt) {
+            const altService = await prisma.serviceCatalog.findUnique({
+              where: { id: alt.toServiceId },
+            });
+            if (altService && (!cheaperAlternative || altPrice < cheaperAlternative.monthlyPrice)) {
+              cheaperAlternative = {
+                name: altService.canonicalName,
+                monthlyPrice: altPrice,
+              };
+            }
           }
         }
       }
