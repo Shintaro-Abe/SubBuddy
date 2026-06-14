@@ -12,12 +12,12 @@
 
 | # | タスク | 完了条件 | 担当 | 状態 |
 |---|---|---|---|---|
-| 0-1 | Apple Developer Program（有料）の加入状態を確認する | 有料メンバーシップが有効 | ユーザー | 未着手 |
-| 0-2 | Xcode プロジェクトを `spikes/ios-screen-time/` に新規作成する | SwiftUI の空アプリが実機でビルド・起動できる | ユーザー | 未着手 |
-| 0-3 | App Group を設定する（Provisioning Profile + Entitlements） | 本体アプリと Monitor 拡張で同じ App Group ID を共有 | ユーザー | 未着手 |
-| 0-4 | Family Controls の dev entitlement を有効化する | Xcode の Signing & Capabilities に Family Controls が追加されている | ユーザー | 未着手 |
-| 0-5 | DeviceActivityMonitor Extension ターゲットを追加する | 拡張ターゲットが作成され、本体と同じ App Group・Family Controls entitlement を持つ | ユーザー | 未着手 |
-| 0-6 | 実機ビルド・署名の動作確認（空アプリ＋空拡張が実機で起動） | iPhone 上で空アプリが起動し、拡張がプロセスとして認識される | ユーザー | 未着手 |
+| 0-1 | Apple Developer Program（有料）の加入状態を確認する | 有料メンバーシップが有効 | ユーザー | 完了 |
+| 0-2 | Xcode プロジェクトを `spikes/ios-screen-time/` に新規作成する | SwiftUI の空アプリが実機でビルド・起動できる | ユーザー | 完了 |
+| 0-3 | App Group を設定する（Provisioning Profile + Entitlements） | 本体アプリと Monitor 拡張で同じ App Group ID を共有 | ユーザー | 完了（`group.com.subbuddy.SubBuddySpike`） |
+| 0-4 | Family Controls の dev entitlement を有効化する | Xcode の Signing & Capabilities に Family Controls が追加されている | ユーザー | 完了 |
+| 0-5 | DeviceActivityMonitor Extension ターゲットを追加する | 拡張ターゲットが作成され、本体と同じ App Group・Family Controls entitlement を持つ | ユーザー | 完了 |
+| 0-6 | 実機ビルド・署名の動作確認（空アプリ＋空拡張が実機で起動） | iPhone 上で空アプリが起動し、拡張がプロセスとして認識される | ユーザー | 完了（PLA 同意・実機信頼の手順あり。下記「実機検証メモ」参照） |
 
 ---
 
@@ -25,13 +25,13 @@
 
 | # | タスク | 完了条件 | 担当 | 状態 |
 |---|---|---|---|---|
-| 1-1 | App Group への書き込みコード（拡張側）を実装する | `activityId/eventId/date/bucket/generatedAt/sequence` を App Group（UserDefaults + ファイル両方式）に書ける | Claude（設計）+ ユーザー（実装） | 未着手 |
-| 1-2 | App Group からの読み取りコード（本体側）を実装する | 本体アプリが拡張の書いたレコードを全件読み取れる | Claude + ユーザー | 未着手 |
-| 1-3 | 単発到達の書込→読取を実機で確認する | 1対象・1閾値で到達→本体が読める | ユーザー | 未着手 |
-| 1-4 | 複数同時到達で取りこぼしがないことを確認する | 複数閾値が短時間に到達しても全件読める | ユーザー | 未着手 |
-| 1-5 | 本体再起動後もデータが残ることを確認する | 本体 kill → 再起動 → 読取で前回のデータが残っている | ユーザー | 未着手 |
-| 1-6 | 端末再起動後もデータが残ることを確認する | iPhone 再起動 → 本体起動 → 読取で前回のデータが残っている | ユーザー | 未着手 |
-| 1-7 | MUST-1 の go/no-go を判定し、結果を記録する | 全件通過なら go。1つでも NG なら no-go を記録し以降中止 | ユーザー + Claude | 未着手 |
+| 1-1 | App Group への書き込みコード（拡張側）を実装する | `activityId/eventId/date/bucket/generatedAt/sequence` を App Group（UserDefaults + ファイル両方式）に書ける | Claude（設計）+ ユーザー（実装） | 完了 |
+| 1-2 | App Group からの読み取りコード（本体側）を実装する | 本体アプリが拡張の書いたレコードを全件読み取れる | Claude + ユーザー | 完了 |
+| 1-3 | 単発到達の書込→読取を実機で確認する | 1対象・1閾値で到達→本体が読める | ユーザー | 完了（「レコード数1」を実機で確認） |
+| 1-4 | 複数同時到達で取りこぼしがないことを確認する | 複数閾値が短時間に到達しても全件読める | ユーザー | 未検証 |
+| 1-5 | 本体再起動後もデータが残ることを確認する | 本体 kill → 再起動 → 読取で前回のデータが残っている | ユーザー | 未検証 |
+| 1-6 | 端末再起動後もデータが残ることを確認する | iPhone 再起動 → 本体起動 → 読取で前回のデータが残っている | ユーザー | 未検証 |
+| 1-7 | MUST-1 の go/no-go を判定し、結果を記録する | 全件通過なら go。1つでも NG なら no-go を記録し以降中止 | ユーザー + Claude | 暫定 go（単発の受け渡しは成立。多重到達・再起動耐性は未検証） |
 
 ---
 
@@ -39,12 +39,12 @@
 
 | # | タスク | 完了条件 | 担当 | 状態 |
 |---|---|---|---|---|
-| 2-1 | 認可（`.individual`）の取得UIを実装する | `AuthorizationCenter.requestAuthorization(for: .individual)` が成功する | Claude + ユーザー | 未着手 |
-| 2-2 | FamilyActivityPicker で対象アプリを1つ選択できるようにする | 選択画面が表示され、選んだ `FamilyActivitySelection` を保存できる | Claude + ユーザー | 未着手 |
-| 2-3 | 選んだ対象の名前を `Label(token)` で画面に表示する | 選択したアプリ名が本体画面に表示される | Claude + ユーザー | 未着手 |
-| 2-4 | DeviceActivityEvent を1つ登録し `startMonitoring` する | 15分閾値の監視が開始される | Claude + ユーザー | 未着手 |
-| 2-5 | `eventDidReachThreshold` で到達通知をログ出力する | 対象アプリを15分以上使うと拡張のログに出力される | ユーザー | 未着手 |
-| 2-6 | 到達→App Group 書込→本体読取→画面表示の一気通貫を確認する | 許可取り→選択→監視→到達→表示が1サブスク・1アプリで通る | ユーザー | 未着手 |
+| 2-1 | 認可（`.individual`）の取得UIを実装する | `AuthorizationCenter.requestAuthorization(for: .individual)` が成功する | Claude + ユーザー | 完了 |
+| 2-2 | FamilyActivityPicker で対象アプリを1つ選択できるようにする | 選択画面が表示され、選んだ `FamilyActivitySelection` を保存できる | Claude + ユーザー | 完了 |
+| 2-3 | 選んだ対象の名前を `Label(token)` で画面に表示する | 選択したアプリ名が本体画面に表示される | Claude + ユーザー | 完了（選択数表示で代替。Label 表示は本実装で精緻化） |
+| 2-4 | DeviceActivityEvent を1つ登録し `startMonitoring` する | 15分閾値の監視が開始される | Claude + ユーザー | 完了（15/30/60/120分の4閾値を登録） |
+| 2-5 | `eventDidReachThreshold` で到達通知をログ出力する | 対象アプリを15分以上使うと拡張のログに出力される | ユーザー | 完了（Console.app で `reached its threshold` を確認） |
+| 2-6 | 到達→App Group 書込→本体読取→画面表示の一気通貫を確認する | 許可取り→選択→監視→到達→表示が1サブスク・1アプリで通る | ユーザー | 完了 |
 
 ---
 
@@ -87,11 +87,11 @@
 
 | # | タスク | 完了条件 | 担当 | 状態 |
 |---|---|---|---|---|
-| 6-1 | 本体から `POST /api/usage/daily` への送信を実装する | App Group のデータから `usageDailyBatchSchema` の JSON を生成し送信 | Claude（設計）+ ユーザー（実装） | 未着手 |
-| 6-2 | ネットワーク不通時に未送信を貯め、復旧後に再送することを確認する | 不通→復旧→再送で全件が Mac の DB に保存される | ユーザー | 未着手 |
-| 6-3 | Mac 停止→再起動を挟んでも帳尻が合うことを確認する | Mac 停止中の送信は失敗→Mac 復旧後の再送で保存される | ユーザー | 未着手 |
-| 6-4 | 冪等保存（同じデータを2回送っても重複しない）を確認する | `(subscriptionId, usageDate)` で upsert。段階は下がらない | ユーザー | 未着手 |
-| 6-5 | MUST-7, AC-3 の結果を記録する | OK/NG と再現手順を記録 | ユーザー + Claude | 未着手 |
+| 6-1 | 本体から `POST /api/usage/daily` への送信を実装する | App Group のデータから `usageDailyBatchSchema` の JSON を生成し送信 | Claude（設計）+ ユーザー（実装） | 完了 |
+| 6-2 | ネットワーク不通時に未送信を貯め、復旧後に再送することを確認する | 不通→復旧→再送で全件が Mac の DB に保存される | ユーザー | 未検証 |
+| 6-3 | Mac 停止→再起動を挟んでも帳尻が合うことを確認する | Mac 停止中の送信は失敗→Mac 復旧後の再送で保存される | ユーザー | 未検証 |
+| 6-4 | 冪等保存（同じデータを2回送っても重複しない）を確認する | `(subscriptionId, usageDate)` で upsert。段階は下がらない | ユーザー | 完了（同一データを複数回送信し行が増えず m120_plus を維持） |
+| 6-5 | MUST-7, AC-3 の結果を記録する | OK/NG と再現手順を記録 | ユーザー + Claude | 完了（AC-3 達成。再送・Mac停止耐性は未検証） |
 
 ---
 
@@ -110,6 +110,54 @@
 
 | # | タスク | 完了条件 | 担当 | 状態 |
 |---|---|---|---|---|
-| 8-1 | MUST 1〜9 の結果を集約し、go/no-go を総合判定する | 全 MUST が OK なら go。1つでも NG なら no-go。判定表を本ステアリングに記録 | ユーザー + Claude | 未着手 |
+| 8-1 | MUST 1〜9 の結果を集約し、go/no-go を総合判定する | 全 MUST が OK なら go。1つでも NG なら no-go。判定表を本ステアリングに記録 | ユーザー + Claude | 部分完了（下記「実機検証メモ」に暫定判定） |
 | 8-2 | MVP 確定スコープを記録する（対象数上限・バケット下限・送信方式・日付基準） | go の場合のスコープが確定し、docs/ 追記候補が整理されている | Claude | 未着手 |
-| 8-3 | no-go の場合の手動記録切替方針を記録する | no-go の場合の代替方式と判断根拠が整理されている | Claude | 未着手 |
+| 8-3 | no-go の場合の P1 見送り方針を記録する | no-go の場合の代替方式（P2〜P6 のみ運用＋Shortcuts）と判断根拠が整理されている | Claude | 未着手 |
+
+---
+
+## 実機検証メモ（2026-06-14 実施）
+
+### 検証環境
+
+- iPhone 実機（iOS 16+）／Mac（Xcode）／Apple Developer Program（有料）
+- App Group：`group.com.subbuddy.SubBuddySpike`（本体・拡張で共有）
+- Bundle：`com.subbuddy.SubBuddySpike` ／ 拡張：`...MonitorExtension`
+- Mac 側 SubBuddy は devcontainer 内で稼働。iPhone からの到達は VS Code の
+  `remote.localPortHost: allInterfaces` で Mac の `0.0.0.0:3000` に公開して実現
+  （iPhone → `http://<MacのLAN IP>:3000`）。
+
+### 実証できたこと（暫定 go の根拠）
+
+| 検証 | 結果・証跡 |
+|---|---|
+| MUST-1：拡張 → App Group → 本体読取 | ○ 本体で「レコード数1」を確認 |
+| AC-2：最小縦割り（認可→選択→監視→到達→読取→表示） | ○ 一気通貫で成立 |
+| 閾値到達 | ○ Console.app で `UsageTrackingAgent ... reached its threshold` を確認 |
+| AC-3：`POST /api/usage/daily` → Mac DB に冪等 upsert | ○ `ios_usage_daily_summaries` に `Netflix / 2026-06-14 / m120_plus / estimated_minutes_min=120 / source=ios_device_activity` が着弾。`USAGE_SYNC_TOKEN` の Bearer 認証も通過 |
+
+### つまづき・是正した落とし穴（本実装で先回りすべき点）
+
+1. **Monitor 拡張のクラス名は Info.plist の `NSExtensionPrincipalClass` と一致必須**。
+   不一致だと `Failed to notify ... ExtensionError Code=0` が出て拡張が起動しない。
+2. **App Group / Family Controls は本体と拡張の「両ターゲット」に設定**。Shared コードは
+   両ターゲットの Target Membership に入れる（漏れると `Cannot find ... in scope`）。
+3. **拡張のログは `print` では Console に出ない**。`os.Logger` を使う。
+4. **App Group コンテナ取得・`UserDefaults(suiteName:)` の force unwrap は禁止**（nil で
+   クラッシュ）。Optional 化してフェイルセーフに。
+5. **`DeviceActivityEvent(includesPastActivity: true)`** にしないと監視開始前の利用が
+   閾値にカウントされず、検証が始められない。
+6. **送信先 IP に `127.0.0.1` は不可**（iPhone 自身を指す）。Mac の LAN IP ＋
+   `allInterfaces` 公開、`http`（自己署名 https は ATS で失敗）。ATS 例外も設定。
+7. **サブスク ID は「送信先 DB に実在する ID」でなければ FK 制約で 500**。DB 再シード等で
+   ID が変わる点に注意。
+8. **着弾確認は `created_at` で絞らない**。冪等 upsert は既存行を update するため
+   `created_at` は変わらない。`usage_date` と `estimated_minutes_min`（iOS 由来は値あり、
+   seed は空）で判別する。
+
+### 暫定判定
+
+- **配管（MUST-1）と同期（AC-3）は成立 → 最大の不確実性は解消。暫定 go。**
+- 未検証で残る MUST（多重到達・再起動耐性 MUST-1 残項目／復旧 MUST-2／測定精度 MUST-3／
+  日付境界 MUST-4／二重通知 MUST-5／スケール MUST-6／再送 MUST-7 残項目／配布 MUST-9）は
+  段階3〜7 として継続。**最終 go/no-go はこれらを満たしてから確定する。**
