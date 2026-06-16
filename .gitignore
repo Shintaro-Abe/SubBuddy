@@ -57,3 +57,6 @@ ios/**/DerivedData/
 
 # WBS 同期のローカル状態（フック重複提案の抑止用）
 wbs/.sync-state.json
+
+# iOS Spike: 実 IP・トークンを書き込むため追跡しない（.example をコピーして使う）
+spikes/ios-screen-time/SubBuddySpike/Shared/Constants.swift
