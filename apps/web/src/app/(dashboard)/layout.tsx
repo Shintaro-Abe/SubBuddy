@@ -6,6 +6,7 @@ import Link from "next/link";
 const NAV = [
   { href: "/", label: "ダッシュボード" },
   { href: "/subscriptions", label: "サブスク一覧" },
+  { href: "/spending", label: "支出の可視化" },
   { href: "/recommendations", label: "レコメンド" },
   { href: "/renewals", label: "更新間近" },
 ];
