@@ -160,6 +160,7 @@ model RecommendationSnapshot {
   hasOverlap      Boolean     @default(false) @map("has_overlap")
   confidence      Float       @default(1.0) // 暫定/確定の確からしさ（§8.5）
   reason          String
+  matchedPatterns Json?       @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
   generatedAt     DateTime    @default(now()) @map("generated_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

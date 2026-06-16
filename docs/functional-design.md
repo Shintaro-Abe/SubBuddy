@@ -197,6 +197,7 @@ erDiagram
     boolean has_overlap
     float confidence
     string reason
+    json matched_patterns
     datetime generated_at
   }
   service_catalog {
@@ -266,6 +267,9 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 
 スコアリング結果の履歴。判定 `decision` と `cancel_score`、算出根拠（30日利用日数・利用分・最終利用からの日数・
 更新日までの日数・単価・重複有無）と `reason`（MVP は定型文、フェーズ2 で AI 生成）を保持。
+`matched_patterns`（jsonb）は判定時に当てはまったパターン（`MatchedPattern[]`：pattern/label/evidence/caveat）をそのまま保存し、
+画面が判定時と同じ内容の根拠ラベルを表示できるようにする。`reason` はこの `matched_patterns` から組み立てた表示用の文章。
+旧データや観測中で根拠なしの場合は null。
 利用量の集計は **SubBuddy への登録時点（`subscriptions.created_at`）から開始**し、過去には遡らない。
 `data_status`（`observing` / `ready`）・`observation_days`（登録からの観測日数）・`days_until_ready`（確定まで残り日数）・
 `confidence`（暫定/確定の確からしさ）で、**段階的な情報提供**（§8.5）の状態を表す。

@@ -28,12 +28,14 @@ export interface CheaperOption {
   monthlyPrice: number;
 }
 
-export interface MatchedPattern {
+// type エイリアスにすることで暗黙の索引シグネチャが付き、Prisma の Json 入力型
+// （InputJsonValue）へキャストなしで保存できる（.steering/20260616-matched-patterns-persistence/design.md §2.1）。
+export type MatchedPattern = {
   pattern: "P1" | "P2" | "P3" | "P4" | "P5" | "P6";
   label: string;
   evidence: string;
   caveat?: string;
-}
+};
 
 export interface RecommendationInput {
   amount: number;

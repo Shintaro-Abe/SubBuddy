@@ -29,6 +29,7 @@ export function appendRecommendationSnapshot(
       hasOverlap: result.hasOverlap,
       confidence: result.confidence,
       reason: result.reason,
+      matchedPatterns: result.matchedPatterns, // 判定根拠を jsonb に保存（MatchedPattern[]）
     },
   });
 }

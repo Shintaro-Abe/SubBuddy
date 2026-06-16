@@ -8,6 +8,7 @@ import { formatDate, formatYen, safeHttpUrl } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton";
 import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
+import { parseMatchedPatterns } from "@/domain/scoring/matchedPatterns";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,25 @@ export default async function SubscriptionDetailPage({
                   )}
                 </>
               )}
+
+              {/* 根拠タグ（matchedPatterns）。根拠がないときは出さない */}
+              {(() => {
+                const patterns = parseMatchedPatterns(rec.matchedPatterns);
+                if (patterns.length === 0) return null;
+                return (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {patterns.map((p) => (
+                      <span
+                        key={p.pattern}
+                        title={p.evidence}
+                        className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 ring-1 ring-inset ring-zinc-200"
+                      >
+                        {p.label}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {/* 理由（パターン根拠） */}
               <div className="mt-3 rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">
