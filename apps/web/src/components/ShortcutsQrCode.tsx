@@ -28,31 +28,36 @@ export function ShortcutsQrCode({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-      >
+      <button type="button" onClick={() => setOpen(true)} className="btn ghost">
         利用記録を自動化する
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-base font-semibold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="panel w-full max-w-sm shadow-xl">
+            <p className="title" style={{ marginBottom: 8 }}>
               {subscriptionName} の利用記録を自動化
-            </h3>
-            <p className="mb-4 text-sm text-zinc-600">
+            </p>
+            <p className="body" style={{ marginBottom: 16 }}>
               iPhone のカメラでこの QR コードを読み取り、ショートカットを設定してください。
               設定は1回だけです。以後、アプリを開くたびに自動で記録されます。
             </p>
-            <div className="flex justify-center rounded-lg border border-zinc-200 bg-white p-4">
+            <div
+              className="flex justify-center"
+              style={{
+                border: "1px solid var(--hair)",
+                borderRadius: 12,
+                background: "#fff",
+                padding: 16,
+              }}
+            >
               <QRCodeSVG value={qrData} size={200} />
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="mt-4 w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+              className="btn block"
+              style={{ marginTop: 16 }}
             >
               閉じる
             </button>

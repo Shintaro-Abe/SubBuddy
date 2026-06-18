@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { Decision } from "@prisma/client";
 import { getCurrentUserId } from "@/lib/user";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
-import { DECISION_LABEL, formatYen } from "@/lib/display";
-import { DecisionBadge } from "@/components/DecisionBadge";
+import { DECISION_DOT_CLASS, DECISION_LABEL, formatYen } from "@/lib/display";
 import { RecomputeButton } from "@/components/RecomputeButton";
 
 export const dynamic = "force-dynamic";
@@ -29,75 +28,68 @@ export default async function RecommendationsPage() {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">レコメンド</h1>
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <p className="display">レコメンド</p>
         <RecomputeButton />
       </div>
+      <p className="caption" style={{ marginTop: 8 }}>
+        判定ごとに分けて表示。根拠をもとに、続けるか見直すかはご自身で判断できます。
+      </p>
 
       {rows.length > 0 && groups.length === 0 && observing.length === 0 && (
-        <p className="rounded-md bg-amber-50 p-4 text-sm text-amber-800">
+        <p className="panel caption" style={{ marginTop: 24, padding: 16 }}>
           まだ判定がありません。「判定を再計算」を実行してください。
         </p>
       )}
 
       {groups.map((g) => (
-        <section key={g.decision} className="space-y-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-700">
-            <DecisionBadge recommendation={{ decision: g.decision, dataStatus: "ready", daysUntilReady: 0 }} />
-            <span>{DECISION_LABEL[g.decision]}（{g.items.length} 件）</span>
-          </h2>
-          <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
+        <section key={g.decision} style={{ marginTop: 28 }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
+            <span className={`badge ${DECISION_DOT_CLASS[g.decision]}`}><span className="dot" /></span>
+            <span className="title" style={{ fontSize: 18 }}>{DECISION_LABEL[g.decision]}</span>
+            <span className="caption num" style={{ margin: 0 }}>{g.items.length} 件</span>
+          </div>
+          <div className="panel" style={{ padding: "4px 16px" }}>
             {g.items.map(({ subscription: s, recommendation: rec }) => (
-              <li key={s.id}>
-                <Link
-                  href={`/subscriptions/${s.id}`}
-                  className="block px-4 py-3 hover:bg-zinc-50"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{s.name}</div>
-                    </div>
-                    <div className="shrink-0 text-right text-sm">
-                      <div className="font-medium">{formatYen(rec!.monthlyAmount)}/月</div>
-                      {rec!.yearlyAmount > 0 && rec!.decision !== "keep" && (
-                        <div className="text-xs text-red-600">
-                          解約で年間{formatYen(rec!.yearlyAmount)}節約
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-1 text-xs text-zinc-500">{rec!.reason}</div>
-                </Link>
-              </li>
+              <Link key={s.id} href={`/subscriptions/${s.id}`} className="rowitem">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{s.name}</div>
+                  <div className="caption" style={{ margin: "2px 0 0" }}>{rec!.reason}</div>
+                </div>
+                <div className="num shrink-0 text-right">{formatYen(rec!.monthlyAmount)} /月</div>
+              </Link>
             ))}
-          </ul>
+          </div>
         </section>
       ))}
 
       {observing.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-zinc-700">観測中（{observing.length} 件）</h2>
-          <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
+        <section style={{ marginTop: 28 }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
+            <span className="badge b-observe"><span className="dot" /></span>
+            <span className="title" style={{ fontSize: 18 }}>観測中</span>
+            <span className="caption num" style={{ margin: 0 }}>{observing.length} 件</span>
+          </div>
+          <div className="panel" style={{ padding: "4px 16px" }}>
             {observing.map(({ subscription: s, recommendation: rec }) => (
-              <li key={s.id}>
-                <Link
-                  href={`/subscriptions/${s.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-50"
-                >
-                  <span className="truncate font-medium">{s.name}</span>
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    あと {rec!.daysUntilReady} 日
-                  </span>
-                </Link>
-              </li>
+              <Link key={s.id} href={`/subscriptions/${s.id}`} className="rowitem">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{s.name}</div>
+                  <div className="caption" style={{ margin: "2px 0 0" }}>
+                    確定まであと <span className="num">{rec!.daysUntilReady}</span> 日
+                  </div>
+                </div>
+              </Link>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       {unjudged.length > 0 && (
-        <p className="text-xs text-zinc-400">未判定 {unjudged.length} 件（再計算で判定されます）</p>
+        <p className="caption" style={{ marginTop: 24 }}>
+          未判定 <span className="num">{unjudged.length}</span> 件（再計算で判定されます）
+        </p>
       )}
     </div>
   );

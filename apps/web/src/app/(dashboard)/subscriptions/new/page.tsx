@@ -2,8 +2,13 @@ import { SubscriptionForm } from "@/components/SubscriptionForm";
 
 export default function NewSubscriptionPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">サブスクを登録</h1>
+    <div>
+      <div className="pagehead">
+        <p className="display">サブスクを登録</p>
+        <p className="caption" style={{ marginTop: 8 }}>
+          まずは1件。あとから編集できます。
+        </p>
+      </div>
       <SubscriptionForm />
     </div>
   );

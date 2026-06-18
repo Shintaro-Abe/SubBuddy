@@ -28,7 +28,8 @@ export function DeleteSubscriptionButton({ id }: { id: string }) {
       type="button"
       onClick={handleDelete}
       disabled={busy}
-      className="inline-flex items-center rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+      className="btn ghost disabled:opacity-50"
+      style={{ color: "var(--red)", borderColor: "#e0c4bf" }}
     >
       {busy ? "削除中…" : "削除"}
     </button>
