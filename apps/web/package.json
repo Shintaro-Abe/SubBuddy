@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "demo:usage": "node --env-file=.env scripts/demo-send-usage.mjs",
+    "demo:revert": "node --env-file=.env scripts/demo-revert-usage.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
