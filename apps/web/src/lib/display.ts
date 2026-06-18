@@ -13,16 +13,51 @@ export const DECISION_LABEL: Record<Decision, string> = {
   strong_cancel_candidate: "強い解約候補",
 };
 
-/** バッジの配色（Tailwind クラス）。解約寄りほど暖色・強色。 */
-export const DECISION_BADGE_CLASS: Record<Decision, string> = {
-  keep: "bg-emerald-100 text-emerald-800 ring-emerald-600/20",
-  review: "bg-amber-100 text-amber-800 ring-amber-600/20",
-  consider_downgrade: "bg-orange-100 text-orange-800 ring-orange-600/20",
-  consider_cancel: "bg-orange-100 text-orange-800 ring-orange-600/20",
-  strong_cancel_candidate: "bg-red-100 text-red-800 ring-red-600/20",
+/**
+ * 判定→ドット色クラス（新デザイン／design.css）。バッジは「ドット＋ラベル」形式で表示する。
+ * 警告赤は strong_cancel_candidate のみ（DESIGN.md §2）。observing/未判定は b-observe。
+ */
+export const DECISION_DOT_CLASS: Record<Decision, string> = {
+  keep: "b-keep",
+  review: "b-review",
+  consider_downgrade: "b-consider",
+  consider_cancel: "b-consider",
+  strong_cancel_candidate: "b-strong",
 };
 
-export const OBSERVING_BADGE_CLASS = "bg-slate-100 text-slate-700 ring-slate-500/20";
+/**
+ * カテゴリ（内部キー）→ 画面表示用の日本語ラベル（DESIGN.md §7：画面の語彙は日本語）。
+ * 未知のキーはそのまま返す（データは変更しない・表示のみの変換）。
+ */
+const CATEGORY_LABEL: Record<string, string> = {
+  video_streaming: "動画配信",
+  video: "動画",
+  music: "音楽",
+  productivity: "仕事効率化",
+  cloud_storage: "クラウドストレージ",
+  storage: "ストレージ",
+  vpn: "VPN",
+  ebook: "電子書籍",
+  audiobook: "オーディオブック",
+  dev_tool: "開発ツール",
+  creative_tool: "クリエイティブツール",
+  ai_tool: "AIツール",
+  ai: "AIツール",
+  password_manager: "パスワード管理",
+  news: "ニュース",
+  learning: "学習",
+  education: "教育",
+  finance: "家計・金融",
+  communication: "コミュニケーション",
+  membership: "会員サービス",
+  game: "ゲーム",
+  bundle: "バンドル",
+  other: "その他",
+};
+
+export function categoryLabel(category: string): string {
+  return CATEGORY_LABEL[category] ?? category;
+}
 
 /** 整数（最小通貨単位）を ¥1,080 形式に整形。 */
 export function formatYen(amount: number): string {

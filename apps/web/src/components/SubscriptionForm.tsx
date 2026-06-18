@@ -109,25 +109,30 @@ export function SubscriptionForm({
     }
   }
 
-  const field = "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm";
-  const label = "block text-sm font-medium text-zinc-700";
-
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
-      {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    <form onSubmit={handleSubmit} className="panel" style={{ marginTop: 24 }}>
+      {error && (
+        <div className="field">
+          <p className="help" role="alert" style={{ marginTop: 0 }}>
+            {error}
+          </p>
+        </div>
+      )}
       {issues.length > 0 && (
-        <ul className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {issues.map((i, idx) => (
-            <li key={idx}>
-              {i.path}: {i.message}
-            </li>
-          ))}
-        </ul>
+        <div className="field">
+          <ul role="alert" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {issues.map((i, idx) => (
+              <li key={idx} className="help" style={{ marginTop: idx === 0 ? 0 : 4 }}>
+                {i.path}: {i.message}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* サービス名：カタログ検索 or 自由入力 */}
-      <div>
-        <label className={label}>サービス名</label>
+      <div className="field">
+        <label className="label">サービス名</label>
         {!id ? (
           <ServiceCatalogSearch
             initialValue={values.name}
@@ -147,21 +152,24 @@ export function SubscriptionForm({
         ) : (
           <input
             id="name"
-            className={field}
+            className="input"
             value={values.name}
             onChange={(e) => set("name", e.target.value)}
             required
             maxLength={200}
           />
         )}
+        <div className="help">
+          カタログから選ぶと、カテゴリや利用の性質が自動で入ります。
+        </div>
       </div>
 
       {/* カテゴリ：カタログ選択時は自動設定・表示のみ */}
-      <div>
-        <label htmlFor="category" className={label}>カテゴリ</label>
+      <div className="field">
+        <label htmlFor="category" className="label">カテゴリ</label>
         <input
           id="category"
-          className={field}
+          className="input"
           value={values.category}
           onChange={(e) => set("category", e.target.value)}
           required
@@ -170,17 +178,17 @@ export function SubscriptionForm({
           placeholder="video_streaming / music / ai_tool など"
         />
         {catalogMatched && (
-          <p className="mt-1 text-xs text-zinc-500">カタログから自動設定されました</p>
+          <p className="help">カタログから自動設定されました</p>
         )}
       </div>
 
       {/* 利用の性質：カタログ選択時は自動設定、カタログ外はユーザーが選択 */}
       {!catalogMatched && (
-        <div>
-          <label htmlFor="usageType" className={label}>利用の仕方</label>
+        <div className="field">
+          <label htmlFor="usageType" className="label">利用の仕方</label>
           <select
             id="usageType"
-            className={field}
+            className="input"
             value={values.usageType}
             onChange={(e) => set("usageType", e.target.value)}
           >
@@ -191,25 +199,25 @@ export function SubscriptionForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="amount" className={label}>金額（円・整数）</label>
+      <div className="grid2">
+        <div className="field">
+          <label htmlFor="amount" className="label">金額（円・整数）</label>
           <input
             id="amount"
             type="number"
             min={0}
             step={1}
-            className={field}
+            className="input"
             value={values.amount}
             onChange={(e) => set("amount", Number(e.target.value))}
             required
           />
         </div>
-        <div>
-          <label htmlFor="billingCycle" className={label}>課金周期</label>
+        <div className="field">
+          <label htmlFor="billingCycle" className="label">課金周期</label>
           <select
             id="billingCycle"
-            className={field}
+            className="input"
             value={values.billingCycle}
             onChange={(e) => set("billingCycle", e.target.value as "monthly" | "yearly")}
           >
@@ -219,79 +227,102 @@ export function SubscriptionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="nextRenewalDate" className={label}>次回更新日</label>
+      <div className="grid2">
+        <div className="field">
+          <label htmlFor="nextRenewalDate" className="label">次回更新日</label>
           <input
             id="nextRenewalDate"
             type="date"
-            className={field}
+            className="input"
             value={values.nextRenewalDate ?? ""}
             onChange={(e) => set("nextRenewalDate", e.target.value)}
           />
         </div>
-        <div>
-          <label htmlFor="importance" className={label}>重要度（1〜5）</label>
-          <input
-            id="importance"
-            type="number"
-            min={1}
-            max={5}
-            step={1}
-            className={field}
-            value={values.importance}
-            onChange={(e) => set("importance", Number(e.target.value))}
-          />
+        <div className="field">
+          <label htmlFor="importance" className="label">重要度</label>
+          <div className="seg" role="group" aria-label="重要度">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <span
+                key={n}
+                className={`opt${values.importance === n ? " sel" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={values.importance === n}
+                onClick={() => set("importance", n)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    set("importance", n);
+                  }
+                }}
+              >
+                {n}
+              </span>
+            ))}
+          </div>
+          <div className="help">「なくなったら困る度合い」。判定の参考にします。</div>
         </div>
       </div>
 
       {/* 初回1問：新規登録時のみ表示 */}
       {!id && (
-        <div>
-          <label className={label}>このサブスクがなくなったら困りますか？</label>
-          <div className="mt-2 flex gap-2">
+        <div className="field">
+          <label className="label">このサブスクがなくなったら困りますか？</label>
+          <div className="seg" role="group" aria-label="このサブスクがなくなったら困りますか？">
             {VALUE_ANSWER_OPTIONS.map((opt) => (
-              <button
+              <span
                 key={opt.value}
-                type="button"
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  values.initialValueAnswer === opt.value
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-300 hover:bg-zinc-50"
-                }`}
+                className={`opt${values.initialValueAnswer === opt.value ? " sel" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={values.initialValueAnswer === opt.value}
                 onClick={() => set("initialValueAnswer", opt.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    set("initialValueAnswer", opt.value);
+                  }
+                }}
               >
                 {opt.label}
-              </button>
+              </span>
             ))}
-            <button
-              type="button"
-              className="rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-50"
+            <span
+              className="opt"
+              role="button"
+              tabIndex={0}
               onClick={() => set("initialValueAnswer", undefined)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  set("initialValueAnswer", undefined);
+                }
+              }}
+              style={{ color: "var(--faint)" }}
             >
               スキップ
-            </button>
+            </span>
           </div>
         </div>
       )}
 
-      <div>
-        <label htmlFor="cancellationUrl" className={label}>解約手続き URL（任意）</label>
+      <div className="field">
+        <label htmlFor="cancellationUrl" className="label">解約手続き URL（任意）</label>
         <input
           id="cancellationUrl"
           type="url"
-          className={field}
+          className="input"
           value={values.cancellationUrl ?? ""}
           onChange={(e) => set("cancellationUrl", e.target.value)}
           placeholder="https://…"
         />
       </div>
 
-      <div>
-        <label htmlFor="notes" className={label}>メモ（任意）</label>
+      <div className="field">
+        <label htmlFor="notes" className="label">メモ（任意）</label>
         <textarea
           id="notes"
-          className={field}
+          className="input"
           rows={2}
           value={values.notes ?? ""}
           onChange={(e) => set("notes", e.target.value)}
@@ -300,11 +331,11 @@ export function SubscriptionForm({
       </div>
 
       {id && (
-        <div>
-          <label htmlFor="status" className={label}>状態</label>
+        <div className="field">
+          <label htmlFor="status" className="label">状態</label>
           <select
             id="status"
-            className={field}
+            className="input"
             value={values.status}
             onChange={(e) =>
               set("status", e.target.value as "active" | "paused" | "canceled")
@@ -317,19 +348,11 @@ export function SubscriptionForm({
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex items-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
-        >
+      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+        <button type="submit" disabled={saving} className="btn">
           {saving ? "保存中…" : "保存"}
         </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50"
-        >
+        <button type="button" onClick={() => router.back()} className="btn ghost">
           キャンセル
         </button>
       </div>

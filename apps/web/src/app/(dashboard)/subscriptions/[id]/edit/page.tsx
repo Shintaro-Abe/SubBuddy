@@ -15,8 +15,13 @@ export default async function EditSubscriptionPage({
   if (!s) notFound();
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">サブスクを編集</h1>
+    <div>
+      <div className="pagehead">
+        <p className="display">サブスクを編集</p>
+        <p className="caption" style={{ marginTop: 8 }}>
+          内容を更新すると、見直しの判定にも反映されます。
+        </p>
+      </div>
       <SubscriptionForm
         id={s.id}
         initial={{

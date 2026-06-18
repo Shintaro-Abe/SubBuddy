@@ -30,7 +30,7 @@ export function RecomputeButton() {
       type="button"
       onClick={handleClick}
       disabled={busy}
-      className="inline-flex items-center rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+      className="btn ghost disabled:opacity-50"
     >
       {busy ? "再計算中…" : "判定を再計算"}
     </button>

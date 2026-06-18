@@ -24,40 +24,62 @@ export default async function RenewalsPage({
     .filter((r) => r.daysUntil >= 0 && r.daysUntil <= days)
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
+  const DAY_OPTIONS = [7, 14, 30];
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">更新間近（{days} 日以内）</h1>
+    <div>
+      <p className="display">更新間近</p>
+      <p className="caption" style={{ marginTop: 8 }}>
+        更新日が近い契約を、更新前に見直せます。
+      </p>
+
+      <div className="seg" style={{ margin: "18px 0 6px" }}>
+        {DAY_OPTIONS.map((opt) => (
+          <Link
+            key={opt}
+            href={`/renewals?days=${opt}`}
+            className={`opt${opt === days ? " sel" : ""}`}
+          >
+            {opt}日以内
+          </Link>
+        ))}
+      </div>
 
       {upcoming.length === 0 ? (
-        <p className="rounded-md bg-zinc-100 p-4 text-sm text-zinc-600">
-          {days} 日以内に更新予定のサブスクはありません。
-        </p>
+        <div className="panel" style={{ marginTop: 10 }}>
+          <p className="caption" style={{ margin: 0 }}>
+            {days} 日以内に更新予定の契約はありません。
+          </p>
+        </div>
       ) : (
-        <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
+        <div className="panel" style={{ padding: "6px 18px", marginTop: 10 }}>
           {upcoming.map(({ subscription: s, recommendation: rec, daysUntil }) => (
-            <li key={s.id}>
-              <Link
-                href={`/subscriptions/${s.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-50"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium">{s.name}</span>
+            <Link
+              key={s.id}
+              href={`/subscriptions/${s.id}`}
+              className="rowitem"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div className="left">
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="body" style={{ fontWeight: 700 }}>
+                      {s.name}
+                    </span>
                     <DecisionBadge recommendation={rec} />
                   </div>
-                  <div className="text-xs text-zinc-500">
-                    更新日 {formatDate(s.nextRenewalDate)}・{formatYen(s.amount)}
+                  <div className="caption" style={{ margin: "2px 0 0" }}>
+                    {formatDate(s.nextRenewalDate)} 更新・
+                    <span className="num">{formatYen(s.amount)}</span>
                   </div>
                 </div>
-                <span
-                  className={`shrink-0 text-sm font-medium ${daysUntil <= 3 ? "text-red-600" : "text-zinc-700"}`}
-                >
-                  あと {daysUntil} 日
-                </span>
-              </Link>
-            </li>
+              </div>
+              <span className={`daysbadge${daysUntil <= 3 ? " soon" : ""}`}>
+                あと<span className="num">{daysUntil}</span>日
+              </span>
+            </Link>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

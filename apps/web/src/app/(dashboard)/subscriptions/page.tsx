@@ -9,23 +9,28 @@ export default async function SubscriptionsPage() {
   const rows = await getSubscriptionsWithLatestRecommendation(getCurrentUserId());
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">サブスク一覧（{rows.length} 件）</h1>
-        <Link
-          href="/subscriptions/new"
-          className="inline-flex items-center rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          + 登録
+    <div>
+      <div className="pagehead flex items-end justify-between gap-4">
+        <div>
+          <p className="display">サブスク一覧</p>
+          <p className="caption" style={{ marginTop: 8 }}>
+            継続中 <span className="num">{rows.length}</span> 件
+          </p>
+        </div>
+        <Link href="/subscriptions/new" className="btn">
+          ＋ サブスクを登録
         </Link>
       </div>
 
       {rows.length === 0 ? (
-        <p className="rounded-md bg-zinc-100 p-4 text-sm text-zinc-600">
-          まだ登録がありません。
-        </p>
+        <div className="panel" style={{ marginTop: 24 }}>
+          <p className="body">まだ登録しているサブスクはありません。</p>
+          <p className="caption" style={{ marginTop: 8 }}>
+            「＋ サブスクを登録」から最初の契約を追加してみましょう。
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="cards" style={{ marginTop: 24 }}>
           {rows.map((row) => (
             <SubscriptionCard key={row.subscription.id} row={row} />
           ))}

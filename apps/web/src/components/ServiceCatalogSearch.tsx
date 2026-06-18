@@ -63,7 +63,7 @@ export function ServiceCatalogSearch({ onSelect, onManualEntry, initialValue }: 
       <input
         type="text"
         aria-label="サービス名"
-        className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+        className="input"
         placeholder="サービス名を入力（例：ネトフリ）"
         value={query}
         onChange={(e) => {
@@ -74,22 +74,39 @@ export function ServiceCatalogSearch({ onSelect, onManualEntry, initialValue }: 
       />
 
       {showResults && query.trim() && (
-        <div className="absolute z-10 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-lg">
+        <div
+          className="absolute z-10 w-full"
+          style={{
+            marginTop: 4,
+            background: "#fff",
+            border: "1px solid var(--hair)",
+            borderRadius: 8,
+            boxShadow: "0 6px 28px rgba(95, 107, 94, 0.12)",
+            overflow: "hidden",
+          }}
+        >
           {results.length > 0 ? (
-            <ul>
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {results.map((r) => (
                 <li key={r.id}>
                   <button
                     type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                    className="w-full text-left hover:bg-zinc-50"
+                    style={{
+                      padding: "11px 13px",
+                      fontSize: 15,
+                      color: "var(--ink)",
+                    }}
                     onClick={() => {
                       setQuery(r.canonicalName);
                       setShowResults(false);
                       onSelect(r);
                     }}
                   >
-                    <span className="font-medium">{r.canonicalName}</span>
-                    <span className="ml-2 text-xs text-zinc-500">{r.category}</span>
+                    <span style={{ fontWeight: 500 }}>{r.canonicalName}</span>
+                    <span className="caption" style={{ marginLeft: 8 }}>
+                      {r.category}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -97,7 +114,13 @@ export function ServiceCatalogSearch({ onSelect, onManualEntry, initialValue }: 
           ) : null}
           <button
             type="button"
-            className="w-full border-t border-zinc-100 px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-50"
+            className="w-full text-left hover:bg-zinc-50"
+            style={{
+              padding: "11px 13px",
+              fontSize: 14,
+              color: "var(--faint)",
+              borderTop: "1px solid var(--hair)",
+            }}
             onClick={() => {
               setShowResults(false);
               onManualEntry(query);
