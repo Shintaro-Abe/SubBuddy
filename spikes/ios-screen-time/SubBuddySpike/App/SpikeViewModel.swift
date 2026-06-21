@@ -20,6 +20,13 @@ final class SpikeViewModel: ObservableObject {
     private let mappingStore = MappingStore()
     private let syncService = UsageSyncService()
 
+    init() {
+        // 起動時に OS レベルの認可状態を反映する。
+        // FamilyControls の認可はアプリ再起動・再インストール後も保持されるため、
+        // ここで読み直さないと毎回「未認可」表示に戻ってしまう。
+        isAuthorized = AuthorizationCenter.shared.authorizationStatus == .approved
+    }
+
     // ── 段階2-1: 認可 ──
     func requestAuthorization() async {
         do {

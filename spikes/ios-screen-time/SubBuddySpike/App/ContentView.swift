@@ -14,9 +14,11 @@ struct ContentView: View {
                         Task { await vm.requestAuthorization() }
                     }
                     .disabled(vm.isAuthorized)
+                    .accessibilityIdentifier("auth-request-button")
 
                     Text(vm.isAuthorized ? "認可済み" : "未認可")
                         .foregroundStyle(vm.isAuthorized ? .green : .secondary)
+                        .accessibilityIdentifier("auth-status")
                 }
 
                 // ── 対象選択 ──
@@ -27,8 +29,10 @@ struct ContentView: View {
                             isPresented: $showPicker,
                             selection: $vm.selection
                         )
+                        .accessibilityIdentifier("pick-apps-button")
 
                     Text("選択中: \(vm.selection.applicationTokens.count) アプリ")
+                        .accessibilityIdentifier("selection-count")
                 }
 
                 // ── サブスク ID ──
@@ -36,15 +40,18 @@ struct ContentView: View {
                     TextField("例: clx1abc2def3", text: $vm.subscriptionId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("subscription-id-field")
                 }
 
                 // ── 監視 ──
                 Section("4. 監視") {
                     if vm.isMonitoring {
                         Button("監視を停止", role: .destructive) { vm.stopMonitoring() }
+                            .accessibilityIdentifier("stop-monitoring-button")
                     } else {
                         Button("監視を開始") { vm.startMonitoring() }
                             .disabled(vm.subscriptionId.isEmpty || (vm.selection.applicationTokens.isEmpty && vm.selection.categoryTokens.isEmpty))
+                            .accessibilityIdentifier("start-monitoring-button")
                     }
 
                     if !vm.activeMonitors.isEmpty {
@@ -58,6 +65,12 @@ struct ContentView: View {
                 // ── レコード確認 ──
                 Section("5. App Group レコード") {
                     Button("読み取り更新") { vm.refreshRecords() }
+                        .accessibilityIdentifier("refresh-records-button")
+
+                    Text("レコード件数: \(vm.records.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("record-count")
 
                     ForEach(vm.records, id: \.sequence) { record in
                         VStack(alignment: .leading, spacing: 2) {
@@ -75,6 +88,7 @@ struct ContentView: View {
                     Button("未送信データを送信") {
                         Task { await vm.sync() }
                     }
+                    .accessibilityIdentifier("sync-button")
                 }
 
                 // ── ステータス ──
@@ -83,6 +97,7 @@ struct ContentView: View {
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                        .accessibilityIdentifier("status-message")
                 }
             }
             .navigationTitle("SubBuddy Spike")

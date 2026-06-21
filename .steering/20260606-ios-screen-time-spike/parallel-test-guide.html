@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS 実機テスト 同時進行ガイド（Screen Time × Shortcuts）</title>
+<style>
+  :root {
+    --ink: #1c1c1a;
+    --sub: #6b6b66;
+    --line: #e3e1da;
+    --bg: #faf9f5;
+    --accent: #3a3a36;
+    --warn-bg: #fbf3e8;
+    --warn-line: #d9a441;
+    --code-bg: #1e1e1c;
+    --code-ink: #f2f0e9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    line-height: 1.75;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: .02em; margin: 0 0 8px; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0; }
+  h2 {
+    font-size: 19px; font-weight: 600; margin: 48px 0 16px;
+    padding-top: 8px;
+  }
+  h2 .num {
+    display: inline-block; min-width: 1.6em; color: var(--sub);
+    font-variant-numeric: tabular-nums;
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 28px 0 10px; }
+  p { margin: 10px 0; }
+  ol, ul { margin: 10px 0; padding-left: 1.5em; }
+  li { margin: 6px 0; }
+  code.inline {
+    background: #efece4; padding: 1px 6px; border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+  }
+  .codeblock { position: relative; margin: 14px 0; }
+  .codeblock pre {
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 16px 18px; border-radius: 8px; overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+    line-height: 1.6; margin: 0;
+  }
+  .codeblock .copy {
+    position: absolute; top: 8px; right: 8px;
+    background: #34342f; color: #cfcdc4; border: 1px solid #4a4a44;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit; transition: background .15s;
+  }
+  .codeblock .copy:hover { background: #45453f; }
+  .codeblock .copy.done { color: #9ccc9c; border-color: #5a7a5a; }
+  .note {
+    background: var(--warn-bg); border-left: 3px solid var(--warn-line);
+    padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0;
+    font-size: 14px;
+  }
+  .note b { color: #9a6a16; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f1efe8; font-weight: 600; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: 999px; margin-right: 6px; vertical-align: middle;
+  }
+  .tag.a { background: #e7eef3; color: #2f5a78; }
+  .tag.b { background: #efe9f3; color: #5a3a78; }
+  .tag.share { background: #e9f0e9; color: #3a6a3a; }
+  .steps-grid { border-top: 1px solid var(--line); margin-top: 12px; }
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--sub); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>iOS 実機テスト 同時進行ガイド</h1>
+  <p class="lead">Screen Time（利用時間の取得）と Shortcuts（前面起動の検知）を、1台の iPhone で並行して検証する手順。初めて iOS を触る前提で記載。</p>
+</header>
+
+<h2><span class="num">1</span>全体像</h2>
+<p>2つのテストは別々の iOS のしくみを使うため、同じ端末・同じ期間で同時に走らせて問題ない。互いに干渉しない。</p>
+<table>
+  <tr><th></th><th><span class="tag a">A</span>Screen Time</th><th><span class="tag b">B</span>Shortcuts</th></tr>
+  <tr><td>取得するもの</td><td>利用時間（◯分以上のバケット）</td><td>前面でアプリを開いたという検知のみ</td></tr>
+  <tr><td>しくみ</td><td>DeviceActivity（＝iOS の利用時間計測）＋専用アプリ</td><td>個人オートメーション（＝決めた条件で自動実行する設定）</td></tr>
+  <tr><td>送信</td><td>アプリ起動時にまとめて送信</td><td>アプリを開くたびに即送信</td></tr>
+  <tr><td>所要</td><td>長い（精度確認に7日）</td><td>短い（疎通確認は数時間）</td></tr>
+</table>
+<div class="note"><b>注意：</b>送信先・認証トークン・保存テーブルは両者で共通。<b>テスト対象のサブスクは A 用・B 用で必ず分ける</b>こと。同じサブスク・同じ日に両方が書くと1行にまとまり、どちらの結果か切り分けられなくなる。</div>
+
+<h2><span class="num">2</span>共通の前提準備 <span class="tag share">共通・最初に1回</span></h2>
+<p>A・B どちらの前にも、ここを通す。Mac 側を LAN に公開し、iPhone から届くことを確認する。</p>
+
+<h3>2-1. Mac の IP アドレスを調べる</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>ipconfig getifaddr en0</pre></div>
+<p>表示された IP（例 <code class="inline">192.168.1.100</code>）を後で使う。</p>
+
+<h3>2-2. SubBuddy を LAN から届くように起動する</h3>
+<p>Mac 上で直接起動する場合：</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>cd apps/web
+npx next dev --hostname 0.0.0.0</pre></div>
+<p>devcontainer 内で起動している場合は、VS Code のユーザー設定（<code class="inline">Cmd+Shift+P</code> → Open User Settings (JSON)）に次を追加してウィンドウを再読み込みする：</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>"remote.localPortHost": "allInterfaces"</pre></div>
+<div class="note"><b>注意：</b><code class="inline">127.0.0.1</code>（localhost）は使えない。iPhone にとって <code class="inline">127.0.0.1</code> は iPhone 自身を指すため Mac に届かない。必ず上記の IP を使い、プロトコルは <code class="inline">http</code>（https の自己署名は失敗する）。</div>
+
+<h3>2-3. 公開できているか確認する</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>lsof -nP -iTCP:3000 -sTCP:LISTEN</pre></div>
+<p><code class="inline">*:3000</code> または <code class="inline">0.0.0.0:3000</code> なら公開済み。<code class="inline">127.0.0.1:3000</code> なら未公開（2-2 を見直す）。</p>
+
+<h3>2-4. iPhone の Safari で疎通を確認する</h3>
+<p>iPhone の Safari で <code class="inline">http://&lt;IP&gt;:3000</code> を開く。SubBuddy が表示されれば経路は正常。</p>
+<div class="note"><b>注意：</b>ここが表示されないうちはアプリや Shortcut から送っても無駄。<b>必ず Safari で先に通す</b>こと。以降のエラーを「経路」と「アプリ」に切り分けられる。</div>
+<div class="note"><b>Safari でも開けないときの確認順：</b>①iPhone と Mac が<b>同じ Wi-Fi</b>か。②Mac の<b>ファイアウォール</b>がポート 3000 を塞いでいないか（システム設定 → ネットワーク → ファイアウォール。オンなら一時的にオフか、Node の通信を許可）。③一部のルーターは端末同士の通信を遮断する「クライアント分離（AP アイソレーション）」が有効なことがある。ゲスト用 Wi-Fi を避け、通常の Wi-Fi を使う。</div>
+
+<h3>2-5. 認証トークンを控える</h3>
+<p>Mac の <code class="inline">apps/web/.env</code> の <code class="inline">USAGE_SYNC_TOKEN=</code> の値を控える。A・B 両方で同じ値を使う。一致しないと送信が 401 になる。</p>
+<div class="note"><b>注意（PII）：</b>実際の IP・トークン・利用傾向は Git に置かない。このガイドの値はすべて例。</div>
+
+<h2><span class="num">3</span>推奨スケジュール</h2>
+<p>時間のかかる A の精度確認を先に始め、その裏で B を立ち上げると待ち時間が縮む。</p>
+<table>
+  <tr><th>順</th><th>作業</th><th>目安</th></tr>
+  <tr><td>1</td><td>共通準備（第2章）</td><td>30分</td></tr>
+  <tr><td>2</td><td><span class="tag a">A</span>アプリを組んで最小動作まで通す（第4章）</td><td>半日〜1日</td></tr>
+  <tr><td>3</td><td><span class="tag a">A</span>7日間の精度確認を開始し、毎日記録する</td><td>7日</td></tr>
+  <tr><td>4</td><td><span class="tag b">B</span>Shortcut を作り、疎通ゲートを確認（第5章）。通れば並行稼働</td><td>数時間</td></tr>
+</table>
+
+<h2><span class="num">4</span>トラックA：Screen Time <span class="tag a">A</span></h2>
+<p>専用の検証アプリ（<code class="inline">spikes/ios-screen-time/</code>）を Xcode でビルドして iPhone に入れる。詳細手順は同フォルダの <code class="inline">README.md</code> に沿う。要点とつまずきやすい所のみ記載する。</p>
+
+<h3>4-1. 準備（一度だけ）</h3>
+<ul>
+  <li>Apple Developer Program（有料・年額 $99）に加入し、規約に同意しておく。</li>
+  <li>Xcode を入れた Mac、iOS 16 以降の iPhone、両者が同じ Wi-Fi。</li>
+</ul>
+<div class="note"><b>注意：</b>加入直後は規約反映に<b>数時間〜24時間</b>かかる。Xcode で <code class="inline">PLA Update available</code> 等のエラーが出たら未反映が原因。<a href="https://developer.apple.com/account">developer.apple.com/account</a> で同意して待つ。</div>
+
+<h3>4-2. Xcode 設定の要点</h3>
+<ol>
+  <li>本体アプリと Monitor 拡張（＝裏で動く小プログラム）の<b>両方</b>に、Family Controls と App Groups を付ける。</li>
+  <li>App Group ID は本体と拡張で<b>完全に同じ</b>にする（例 <code class="inline">group.com.yourname.SubBuddySpike</code>）。違うとデータを共有できない。</li>
+  <li>Shared フォルダの4ファイルは <b>両ターゲットに所属</b>させる（Target Membership）。漏れるとビルドエラー。</li>
+  <li>ATS 設定で <code class="inline">Allow Arbitrary Loads = YES</code>。これがないとローカル Mac への HTTP 送信が全部失敗する。</li>
+</ol>
+
+<h3>4-3. 定数ファイルを用意する</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>cp spikes/ios-screen-time/SubBuddySpike/Shared/Constants.swift.example \
+   spikes/ios-screen-time/SubBuddySpike/Shared/Constants.swift</pre></div>
+<p><code class="inline">Constants.swift</code> の3箇所を自分の環境に書き換える（App Group ID／<code class="inline">http://&lt;IP&gt;:3000</code>／トークン）。</p>
+
+<h3>4-4. 最小動作の確認</h3>
+<ol>
+  <li>アプリで「Screen Time の許可」→「アプリを選ぶ」を実行。</li>
+  <li>サブスク ID を入力（Mac の SubBuddy 詳細画面の URL <code class="inline">subscriptions/xxx</code> の <code class="inline">xxx</code>）。</li>
+  <li>「監視を開始」→ 対象アプリを <b>20分以上</b> 使う → 「読み取り更新」でレコードが出る → 「未送信データを送信」。</li>
+</ol>
+<div class="note"><b>注意：</b>サブスク ID は<b>いま送信先になっている DB に実在する ID</b>を使う。存在しない ID は外部キー制約で HTTP 500 になる（再シードで ID が変わる点に注意）。<br>計測下限は約15分。15分ぴったりでは反応しないので20分使う。</div>
+<p>DB への着弾確認（<code class="inline">created_at</code> では絞らない。冪等更新で時刻が変わらないため）：</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>SELECT s.name, u.usage_date, u.usage_bucket, u.estimated_minutes_min, u.source
+FROM ios_usage_daily_summaries u JOIN subscriptions s ON s.id = u.subscription_id
+WHERE u.subscription_id = '<送ったサブスクID>' AND u.usage_date = '<送った日付>';</pre></div>
+
+<h3>4-5. 7日間の精度確認（先に開始する本題）</h3>
+<p>毎日、対象アプリを狙った時間だけ使い、3つを突き合わせる。<code class="inline">field-test-guide.md</code> の記録表に記入する。</p>
+<ul>
+  <li>①手計測（ストップウォッチの実利用分）</li>
+  <li>②iPhone 設定 → スクリーンタイムの表示分</li>
+  <li>③アプリが取り込んだ段階（例 <code class="inline">m120_plus</code>）</li>
+</ul>
+<p>合格目安：有効7日のうち6日以上で①と③が1段階以内。</p>
+<div class="note"><b>注意（途中で監視が止まる）：</b>7日間の途中で<b>iPhone を再起動すると監視が止まることがある</b>。再起動後はアプリを開き、ステータスが「監視中」かを確認する。止まっていたら「監視を開始」を押し直す（押し直しても当日の段階は下がらない）。気づかないと数日分が空欄になる。</div>
+<div class="note"><b>注意（0分の日）：</b>まったく使わなかった日は通知が来ないため<b>レコードが無いのが正常</b>。「使っていない日（none）」と「まだ送れていない日（missing）」は別物。記録表ではその日を「0分・利用なし」として埋め、欠損と区別する。</div>
+
+<h2><span class="num">5</span>トラックB：Shortcuts <span class="tag b">B</span></h2>
+<p>iPhone だけで完結する。アプリのビルドは不要。</p>
+
+<h3>5-1. オートメーションを作る</h3>
+<p>まずトリガを決め、その後で<b>アクションを上から4つ並べる</b>。アクションは候補一覧には出ないので、<b>検索窓に名前を打ち込んで</b>探す。</p>
+<ol>
+  <li>ショートカットアプリ →「オートメーション」→ 個人用を新規作成。</li>
+  <li>トリガ：「App」→ 対象アプリ →「開いている（Is Opened）」。</li>
+  <li>「次へ」→<b>「新規の空のオートメーション」</b>を選び、アクション編集画面に入る。</li>
+</ol>
+<p>ここから、次の4アクションを上から順に追加する。</p>
+
+<h4 style="font-size:14px;font-weight:600;margin:18px 0 6px;">アクション① 日付（Date）</h4>
+<p>検索窓で <code class="inline">日付</code> →「日付」を追加。設定不要（「現在の日付」になる）。</p>
+
+<h4 style="font-size:14px;font-weight:600;margin:18px 0 6px;">アクション② 日付を整形（Format Date）</h4>
+<p>検索窓で <code class="inline">日付を整形</code> → 追加。日付の入力欄に①の変数が入っていることを確認し、<b>形式 → カスタム</b>を選んでフォーマットに <code class="inline">yyyy-MM-dd</code> と入力。→ <code class="inline">2026-06-20</code> のような端末ローカル日付の文字列ができる。</p>
+
+<h4 style="font-size:14px;font-weight:600;margin:18px 0 6px;">アクション③ テキスト（Text）— ここに JSON を書く</h4>
+<p>検索窓で <code class="inline">テキスト</code> →「テキスト」を追加。下の JSON を<b>そのまま貼り付け</b>、<code class="inline">date</code> の値の中身だけを消して<b>②の整形済み日付を変数として差し込む</b>（手打ち文字ではなく変数）。ダブルクォートは残したまま中身だけ変数にする。</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>{"items":[{"subscriptionId":"&lt;B用サブスクのUUID&gt;","date":"&lt;ここに②の変数&gt;","used":true,"usageBucket":"none","source":"ios_shortcut"}]}</pre></div>
+
+<h4 style="font-size:14px;font-weight:600;margin:18px 0 6px;">アクション④ URL の内容を取得（Get Contents of URL）</h4>
+<p>「表示を増やす（Show More）」を開いて設定する。</p>
+<table>
+  <tr><th>項目</th><th>設定値</th></tr>
+  <tr><td>URL</td><td><code class="inline">http://&lt;MacのIP&gt;:3000/api/usage/daily</code></td></tr>
+  <tr><td>方法（Method）</td><td><code class="inline">POST</code></td></tr>
+  <tr><td>ヘッダ（Headers）</td><td><code class="inline">Authorization</code> = <code class="inline">Bearer &lt;トークン&gt;</code><br><code class="inline">Content-Type</code> = <code class="inline">application/json</code></td></tr>
+  <tr><td>要求の本文（Request Body）</td><td>初期値の「フォーム」から<b>「ファイル」に切り替える</b></td></tr>
+  <tr><td>本文の中身</td><td><b>③のテキスト変数</b>を選ぶ</td></tr>
+</table>
+
+<div class="note"><b>注意（本文の入れ方＝最も詰まりやすい）：</b>本文の種類を<b>「フォーム」→「ファイル」に変え</b>、そこに<b>③のテキスト（JSON 文字列）変数</b>を渡す。フォームのままだと「キー＝値」の別形式になり、受信側が JSON として読めず弾かれる（<code class="inline">request body must be valid JSON</code>）。JSON を④のフォームで手組みせず、③で文字列を完成させてから送るのが確実。</div>
+<div class="note"><b>注意（サブスク ID）：</b><code class="inline">subscriptionId</code> は<b>送信先 DB に実在する ID</b>を使う（A の 4-4 と同じ。ダッシュボードのサブスク詳細 URL の <code class="inline">subscriptions/xxx</code> の <code class="inline">xxx</code> をコピペ）。実在しない ID は外部キー制約で HTTP 500 になる。<b>A とは別のサブスク</b>を割り当てる。</div>
+<div class="note"><b>注意（日付の作り方）：</b><code class="inline">date</code> は①②で動的に作る。固定で書くと毎回同じ日になる。<b>端末ローカルの時間帯</b>で作り、Mac 側で解釈し直さない。日跨ぎで別日にならないか後で確認する。</div>
+
+<h3>5-2. 無音で自動実行する設定</h3>
+<ul>
+  <li>「実行前に尋ねる（Ask Before Running）」を OFF。</li>
+  <li>「実行時に通知（Notify When Run）」を OFF。</li>
+  <li>iOS 17 以降は「すぐ実行（Run Immediately）」を選ぶ。</li>
+  <li>別途、オートメーションのサマリ通知も OFF にする。</li>
+</ul>
+
+<h3>5-3. 疎通ゲート（ここが必須の関門）</h3>
+<p>対象アプリを開いて、次をすべて満たすか確認する。</p>
+<ul>
+  <li>確認タップやバナーなしで発火する。</li>
+  <li>POST が通り 200／201 が返る（初回は「ローカルネットワークの許可」ダイアログが出るので許可）。</li>
+  <li>DB の対象行で <code class="inline">daysSinceLastUse</code> 相当（最終利用日）が更新される。</li>
+</ul>
+<div class="note"><b>注意（意味の限界）：</b>このシグナルは「前面で開いた」時しか出ない。<b>背景再生（ロック画面のみの音楽再生など）では発火しない</b>。「検知あり＝最近触った」には使えるが、「検知なし＝使っていない」とは断定しない。</div>
+
+<h2><span class="num">6</span>ミスしやすい箇所（共通）</h2>
+<table>
+  <tr><th>症状</th><th>原因</th><th>対処</th></tr>
+  <tr><td>送信が <code class="inline">Could not connect</code> / timeout</td><td>経路の問題</td><td>第2章をやり直す。まず iPhone Safari で疎通確認</td></tr>
+  <tr><td>HTTP 401</td><td>トークン不一致</td><td><code class="inline">.env</code> の <code class="inline">USAGE_SYNC_TOKEN</code> と一致させる</td></tr>
+  <tr><td>HTTP 500</td><td>サブスク ID が送信先 DB に無い</td><td>ダッシュボードに表示中の実在 ID を使う</td></tr>
+  <tr><td>A と B の結果が混ざる</td><td>同じサブスクに両方送信</td><td>A 用・B 用でサブスクを分ける</td></tr>
+  <tr><td><span class="tag a">A</span>閾値到達してもレコード0</td><td>拡張が起動できていない／監視前の利用</td><td>拡張ログは <code class="inline">os.Logger</code> で確認。<code class="inline">includesPastActivity: true</code> を使う</td></tr>
+  <tr><td><span class="tag a">A</span>端末再起動後にデータが読めない</td><td>ロック解除前は保護領域が読めない</td><td>一度パスコードで解除してからアプリを開く</td></tr>
+  <tr><td><span class="tag b">B</span>発火するが受信エラー（400 等）</td><td>本文がフォーム形式のまま</td><td>リクエスト本文を「テキスト／ファイル」に切り替え JSON を渡す（5-1）</td></tr>
+  <tr><td><span class="tag b">B</span>初回だけ送れない</td><td>ローカルネットワーク許可を拒否した</td><td>設定 → 該当アプリ（ショートカット）→ ローカルネットワークを ON</td></tr>
+</table>
+
+<h3>Mac を止めてしまった後の復旧</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>sudo service postgresql start
+cd apps/web && npx next dev --hostname 0.0.0.0</pre></div>
+<p>復旧後に iPhone 側で再送すれば、止まっていた間のデータも冪等に入る（重複しない）。</p>
+
+<footer>
+  関連：<code class="inline">spikes/ios-screen-time/README.md</code>（A の組み立て）／<code class="inline">.steering/20260606-ios-screen-time-spike/field-test-guide.md</code>（A の記録表）／<code class="inline">research/20260619-ios-shortcut-launch-signal/investigation.md</code>（B の調査・検証ゲート）
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.codeblock .copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var code = btn.parentElement.querySelector('pre').innerText;
+      navigator.clipboard.writeText(code).then(function () {
+        btn.textContent = 'コピー済み';
+        btn.classList.add('done');
+        setTimeout(function () { btn.textContent = 'コピー'; btn.classList.remove('done'); }, 1500);
+      });
+    });
+  });
+</script>
+</body>
+</html>

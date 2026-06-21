@@ -36,6 +36,7 @@ tags = ["ip", "network"]
   regexes = [
     '''192\.168\.0\.[01](?:\b|$)''',      # ゲートウェイ例（ドキュメント等でよく使われる）
     '''10\.0\.0\.[01](?:\b|$)''',
+    '''192\.168\.1\.100''',               # ドキュメント/スクリプトの例 IP（実 IP は gitignore 側に置く）
   ]
 
 # メールアドレス（個人情報）
@@ -70,9 +71,12 @@ tags = ["pii", "phone"]
 
   [rules.allowlist]
   description = "Allowlist obviously non-phone number patterns"
+  regexTarget = "line"
   regexes = [
     # バージョン番号等の誤検知を減らす
     '''0\.[0-9]+\.[0-9]+''',
+    # マスク済みダミー端末 UDID（実 UDID は X ではなく16進が続くので対象外のまま）
+    '''00008110-X{4,}''',
   ]
 
 # AWS アクセスキー ID（デフォルトルールでもカバーされるが明示的に定義）
