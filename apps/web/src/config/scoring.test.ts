@@ -11,6 +11,9 @@ describe("scoringConfigSchema", () => {
     expect(defaultScoringConfig.longContractMonths).toBe(12);
     expect(defaultScoringConfig.knowledgeBaseStaleDays).toBe(180);
     expect(defaultScoringConfig.staleConfidenceMultiplier).toBe(0.7);
+    expect(defaultScoringConfig.capacityFreshnessDays).toBe(30);
+    expect(defaultScoringConfig.capacitySafetyBufferGb).toBe(5);
+    expect(defaultScoringConfig.capacitySafetyBufferRatio).toBe(0.1);
   });
 
   it("差し替え値を受理する", () => {

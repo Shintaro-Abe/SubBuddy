@@ -8,6 +8,7 @@ import { categoryLabel, formatDate, formatYen, safeHttpUrl } from "@/lib/display
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton";
 import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
+import { CapacityInput } from "@/components/CapacityInput";
 import { parseMatchedPatterns } from "@/domain/scoring/matchedPatterns";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +47,11 @@ export default async function SubscriptionDetailPage({
   const recs = await listLatestRecommendations(userId);
   const rec = recs.find((r) => r.subscriptionId === id) ?? null;
   const cancelUrl = safeHttpUrl(s.cancellationUrl);
-  const usageType = (s as Record<string, unknown>).usageType as string | undefined;
+  const sRec = s as Record<string, unknown>;
+  const usageType = sRec.usageType as string | undefined;
   const showQr = usageType === "active_foreground" || usageType === "active_background";
+  const isCapacity = usageType === "capacity";
+  const capacityCheckedAt = sRec.capacityCheckedAt as Date | null | undefined;
 
   return (
     <div>
@@ -84,7 +88,11 @@ export default async function SubscriptionDetailPage({
             amount
           />
           <Row label="月額換算" value={formatYen(toMonthlyAmount(s.amount, s.billingCycle))} amount />
-          <Row label="年額換算" value={formatYen(toYearlyAmount(s.amount, s.billingCycle))} amount />
+          <Row
+            label={isCapacity ? "年額換算（月額×12の目安）" : "年額換算"}
+            value={formatYen(toYearlyAmount(s.amount, s.billingCycle))}
+            amount
+          />
           <Row label="次回更新日" value={formatDate(s.nextRenewalDate)} />
           <Row label="重要度" value={`${s.importance} / 5`} />
           <Row
@@ -154,6 +162,15 @@ export default async function SubscriptionDetailPage({
           )}
         </section>
       </div>
+
+      {isCapacity && (
+        <CapacityInput
+          subscriptionId={s.id}
+          initialPlanGb={(sRec.planCapacityGb as number | null) ?? null}
+          initialUsedGb={(sRec.usedCapacityGb as number | null) ?? null}
+          checkedAt={capacityCheckedAt ? capacityCheckedAt.toISOString().slice(0, 10) : null}
+        />
+      )}
 
       <div className="mt-5 flex flex-wrap gap-3">
         {cancelUrl && (

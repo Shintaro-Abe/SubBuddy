@@ -183,10 +183,10 @@
     "usageType": "capacity",
     "commonAliases": "アイクラウド,iCloud",
     "plans": [
-      { "name": "50GB", "monthlyPrice": 130, "isFreeTier": false },
-      { "name": "200GB", "monthlyPrice": 400, "isFreeTier": false },
-      { "name": "2TB", "monthlyPrice": 1300, "isFreeTier": false },
-      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true }
+      { "name": "50GB", "monthlyPrice": 130, "isFreeTier": false, "capacityGb": 50 },
+      { "name": "200GB", "monthlyPrice": 400, "isFreeTier": false, "capacityGb": 200 },
+      { "name": "2TB", "monthlyPrice": 1300, "isFreeTier": false, "capacityGb": 2000 },
+      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true, "capacityGb": 5 }
     ],
     "alternatives": ["Google One", "Dropbox", "OneDrive"]
   },

@@ -38,6 +38,20 @@ describe("parseMatchedPatterns", () => {
     expect(result[0]).not.toHaveProperty("caveat");
   });
 
+  it("status（容量ゲート）を読み戻しで保持する", () => {
+    const result = parseMatchedPatterns([
+      { pattern: "P3", label: "安いプランがある", evidence: "確認を", status: "needs_capacity_check" },
+    ]);
+    expect(result[0].status).toBe("needs_capacity_check");
+  });
+
+  it("不正な status は除外する", () => {
+    const result = parseMatchedPatterns([
+      { pattern: "P3", label: "安いプランがある", evidence: "x", status: "bogus" },
+    ]);
+    expect(result).toEqual([]);
+  });
+
   it("整合（ready 限定）：保存した matchedPatterns から buildReason すると保存 reason に一致する", () => {
     // 更新間近の年額契約 → ready で P5 が立つ
     const input: RecommendationInput = {
@@ -58,6 +72,9 @@ describe("parseMatchedPatterns", () => {
       cheaperAlternative: null,
       cheapestInCategory: null,
       initialValueAnswer: null,
+      usedCapacityGb: null,
+      daysSinceCapacityCheck: null,
+      cheaperPlanCandidates: [],
     };
     const result = computeRecommendation(input, defaultScoringConfig);
     expect(result.dataStatus).toBe("ready");

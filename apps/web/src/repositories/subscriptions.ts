@@ -46,6 +46,9 @@ export function createSubscription(
     matchedServiceId: input.matchedServiceId ?? null,
     usageType: input.usageType ?? "active_foreground",
     initialValueAnswer: input.initialValueAnswer ?? null,
+    planCapacityGb: input.planCapacityGb ?? null,
+    usedCapacityGb: input.usedCapacityGb ?? null,
+    capacityCheckedAt: input.capacityCheckedAt ? new Date(input.capacityCheckedAt) : null,
   };
   return db.subscription.create({ data });
 }
@@ -74,6 +77,11 @@ export async function updateSubscription(
     ...(input.notes !== undefined && { notes: input.notes }),
     ...(input.signupChannel !== undefined && { signupChannel: input.signupChannel }),
     ...(input.status !== undefined && { status: input.status }),
+    ...(input.planCapacityGb !== undefined && { planCapacityGb: input.planCapacityGb }),
+    ...(input.usedCapacityGb !== undefined && { usedCapacityGb: input.usedCapacityGb }),
+    ...(input.capacityCheckedAt !== undefined && {
+      capacityCheckedAt: input.capacityCheckedAt ? new Date(input.capacityCheckedAt) : null,
+    }),
   };
   return db.subscription.update({ where: { id }, data });
 }

@@ -40,6 +40,10 @@ export const subscriptionCreateSchema = z.object({
   matchedServiceId: z.string().trim().min(1).optional(),
   usageType: usageTypeSchema.default("active_foreground"),
   initialValueAnswer: initialValueAnswerSchema.optional(),
+  // 容量型（iCloud+）の容量情報。任意・just-in-time 入力（容量ゲート用）。
+  planCapacityGb: z.number().int().min(1).optional(),
+  usedCapacityGb: z.number().int().min(0).optional(),
+  capacityCheckedAt: z.string().regex(ISO_DATE).optional(),
 });
 
 // 更新は全項目任意（部分更新）。

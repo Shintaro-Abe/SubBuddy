@@ -7,6 +7,7 @@ import {
   type InitialValueAnswer,
 } from "@/domain/scoring/computeRecommendation";
 import { defaultScoringConfig, type ScoringConfig } from "@/config/scoring";
+import type { PlanCandidate } from "@/domain/capacity/fit";
 import { toUsageBucketWire } from "@/lib/usage-bucket";
 import { toMonthlyAmount } from "@/lib/money";
 import { listSubscriptions } from "@/repositories/subscriptions";
@@ -94,6 +95,7 @@ export async function recomputeRecommendations(
     // P3/P4 用：知識ベースから取得
     let cheaperPlan: CheaperOption | null = null;
     let cheaperAlternative: CheaperOption | null = null;
+    let cheaperPlanCandidates: PlanCandidate[] = [];
 
     const matchedServiceId = s.matchedServiceId;
     if (matchedServiceId) {
@@ -105,15 +107,24 @@ export async function recomputeRecommendations(
         },
         orderBy: { monthlyPrice: "asc" },
       });
+      const planConfidence = (verifiedAt: Date) =>
+        Math.floor((asOf.getTime() - verifiedAt.getTime()) / DAY_MS) > config.knowledgeBaseStaleDays
+          ? config.staleConfidenceMultiplier
+          : 1.0;
       if (plans.length > 0) {
-        const staleDays = Math.floor((asOf.getTime() - plans[0].verifiedAt.getTime()) / DAY_MS);
-        const confidence = staleDays > config.knowledgeBaseStaleDays
-          ? config.staleConfidenceMultiplier : 1.0;
         cheaperPlan = {
           name: plans[0].name,
-          monthlyPrice: Math.round(plans[0].monthlyPrice * confidence),
+          monthlyPrice: Math.round(plans[0].monthlyPrice * planConfidence(plans[0].verifiedAt)),
         };
       }
+      // 容量ゲート用：容量(GB)を持つ安い有料プラン候補（iCloud+ など容量型で使用）
+      cheaperPlanCandidates = plans
+        .filter((p) => p.capacityGb !== null)
+        .map((p) => ({
+          name: p.name,
+          monthlyPrice: Math.round(p.monthlyPrice * planConfidence(p.verifiedAt)),
+          capacityGb: p.capacityGb as number,
+        }));
 
       const alts = await prisma.serviceAlternative.findMany({
         where: { fromServiceId: matchedServiceId },
@@ -173,6 +184,11 @@ export async function recomputeRecommendations(
         cheaperAlternative,
         cheapestInCategory: cheapestInCat,
         initialValueAnswer: (s.initialValueAnswer as InitialValueAnswer | null) ?? null,
+        usedCapacityGb: s.usedCapacityGb ?? null,
+        daysSinceCapacityCheck: s.capacityCheckedAt
+          ? Math.floor((asOf.getTime() - s.capacityCheckedAt.getTime()) / DAY_MS)
+          : null,
+        cheaperPlanCandidates,
       },
       config,
     );
