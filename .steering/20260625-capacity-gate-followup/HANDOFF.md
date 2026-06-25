@@ -37,6 +37,14 @@
 - `apps/web/src/domain/scoring/computeRecommendation.test.ts`（+3ケース：容量型P3+P4→downgrade／needs_check時はP4勝ち／非容量型P3+P4→cancelは不変）。テスト 99 件全緑。
 - `docs/functional-design.md` §8.2（優先順位の例外・容量ゲートの記述を更新）
 
+### ✅ プラン容量UXの扱いを確定（Claude×Codex レビュー）＝**コミット済み `a1ba119`**
+「プラン容量ドロップダウンを変えても判定が変わらない」混乱への対処。案①（プラン容量で候補を絞る）は Claude の批判的所見＋Codex 独立レビューで却下：iCloud+ の日本プラン構成では価格フィルタが既に候補を一意に絞り効果ゼロ、かつ最小ティア誤選択時にむしろ悪化。結論＝**案②（判定ロジック不変）＋第3案（プラン容量は確定文言の具体化にのみ使用）**。
+- 判定基準は従来どおり：**月額・使用容量・鮮度・カタログ**。プラン容量は下げ先の絞り込みに使わない。
+- `resolveP3` の確定 evidence を「現在の使用容量なら◯◯から△△で足ります」と具体化（`formatCapacityLabel`：1000GB以上はTB表記）。未入力(null)は従来文言。
+- `CapacityInput` に「判定は使用容量で行う／プラン容量は表示用」の注記。
+- `docs/functional-design.md` §8.2 に「プラン容量は判定入力でない」旨を明記。
+- 実DBで end-to-end 確認済み（iCloud+：consider_downgrade／文言「6TBから50GB…」）。テスト100件パス。
+
 ### ✅ 設計ドキュメント（別スパイク・実装はしない）
 - `.steering/20260625-capacity-gate-followup/design-family-scope.md`
   家族共有スコープの最小モデリング。`CapacityUsageSnapshot` への非破壊移行、`usageScope`/`costScope` 分離が判定に与える意味、移行5段階。
