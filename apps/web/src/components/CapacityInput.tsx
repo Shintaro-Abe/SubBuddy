@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { defaultScoringConfig } from "@/config/scoring";
 
 /**
  * iCloud+ の容量を just-in-time で入力するフォーム（容量ゲート用）。
@@ -18,16 +19,25 @@ const PLAN_OPTIONS = [
   { gb: 12000, label: "12TB" },
 ];
 
+// 鮮度判定のしきい値はコードに直書きせず config に集約（CLAUDE.md：しきい値の設定外出し）。
+const FRESHNESS_DAYS = defaultScoringConfig.capacityFreshnessDays;
+
+// Apple 公式：iCloud ストレージの確認・管理（日本語）。検証済み 2026-06-25。
+const APPLE_STORAGE_HELP_URL = "https://support.apple.com/ja-jp/108922";
+
 export function CapacityInput({
   subscriptionId,
   initialPlanGb,
   initialUsedGb,
   checkedAt,
+  daysSinceCheck,
 }: {
   subscriptionId: string;
   initialPlanGb: number | null;
   initialUsedGb: number | null;
   checkedAt: string | null;
+  // 確認日からの経過日数。現在時刻依存の計算はサーバ（描画外）で行い prop で受け取る。
+  daysSinceCheck: number | null;
 }) {
   const router = useRouter();
   const [planGb, setPlanGb] = useState<number | "">(initialPlanGb ?? "");
@@ -36,6 +46,14 @@ export function CapacityInput({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = pending || saving;
+
+  const isStale = daysSinceCheck !== null && daysSinceCheck > FRESHNESS_DAYS;
+
+  // 使用率（入力中の値で即時に反映する）。プラン容量が無効なら出さない。
+  const usagePercent =
+    planGb !== "" && usedGb !== "" && Number(planGb) > 0
+      ? Math.min(100, Math.round((Number(usedGb) / Number(planGb)) * 100))
+      : null;
 
   async function handleSave() {
     if (planGb === "" || usedGb === "") {
@@ -72,7 +90,15 @@ export function CapacityInput({
         使用容量を確認
       </p>
       <p className="caption" style={{ marginTop: 0 }}>
-        設定 ＞ iCloud のストレージ画面の数値を入れると、下位プランで足りるかを判定します。
+        <a
+          href={APPLE_STORAGE_HELP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "underline" }}
+        >
+          設定 ＞ iCloud のストレージ画面 ↗
+        </a>
+        の数値を入れると、下位プランで足りるかを判定します。
       </p>
 
       <div className="rowitem">
@@ -111,19 +137,49 @@ export function CapacityInput({
         />
       </div>
 
+      {usagePercent !== null && (
+        <div style={{ marginTop: 12 }}>
+          <p className="caption" style={{ margin: 0 }}>
+            使用率 {usagePercent}%（{Number(usedGb).toLocaleString()} / {Number(planGb).toLocaleString()} GB）
+          </p>
+          <div
+            aria-hidden
+            style={{
+              height: 6,
+              background: "var(--track)",
+              borderRadius: 999,
+              marginTop: 6,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ width: `${usagePercent}%`, height: "100%", background: "var(--sage)" }} />
+          </div>
+        </div>
+      )}
+
       {error && (
         <p className="caption" style={{ color: "var(--danger, #c0392b)", marginTop: 8 }}>
           {error}
         </p>
       )}
 
-      <div className="flex items-center gap-3" style={{ marginTop: 12 }}>
+      <div className="flex items-center gap-3" style={{ marginTop: 12, flexWrap: "wrap" }}>
         <button type="button" onClick={handleSave} disabled={busy} className="btn">
           {busy ? "保存中…" : "保存して判定する"}
         </button>
         {checkedAt && (
           <span className="caption" style={{ margin: 0 }}>
             最終確認：{checkedAt}
+            {daysSinceCheck !== null && `（${daysSinceCheck}日前）`}
+          </span>
+        )}
+        {isStale && (
+          <span
+            className="chip"
+            style={{ color: "var(--amber)", background: "#efe6d2" }}
+            title={`前回確認から${daysSinceCheck}日。容量は変わります。最新の数値で再確認をおすすめします。`}
+          >
+            再確認をおすすめ
           </span>
         )}
       </div>

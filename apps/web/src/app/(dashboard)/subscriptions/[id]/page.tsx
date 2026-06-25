@@ -4,7 +4,7 @@ import { getCurrentUserId } from "@/lib/user";
 import { getSubscription } from "@/repositories/subscriptions";
 import { listLatestRecommendations } from "@/repositories/recommendations";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
-import { categoryLabel, formatDate, formatYen, safeHttpUrl } from "@/lib/display";
+import { categoryLabel, daysSince, formatDate, formatYen, safeHttpUrl } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton";
 import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
@@ -169,6 +169,7 @@ export default async function SubscriptionDetailPage({
           initialPlanGb={(sRec.planCapacityGb as number | null) ?? null}
           initialUsedGb={(sRec.usedCapacityGb as number | null) ?? null}
           checkedAt={capacityCheckedAt ? capacityCheckedAt.toISOString().slice(0, 10) : null}
+          daysSinceCheck={daysSince(capacityCheckedAt)}
         />
       )}
 
