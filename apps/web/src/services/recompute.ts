@@ -189,6 +189,7 @@ export async function recomputeRecommendations(
           ? Math.floor((asOf.getTime() - s.capacityCheckedAt.getTime()) / DAY_MS)
           : null,
         cheaperPlanCandidates,
+        planCapacityGb: s.planCapacityGb ?? null,
       },
       config,
     );

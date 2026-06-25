@@ -25,6 +25,7 @@ function input(overrides: Partial<RecommendationInput> = {}): RecommendationInpu
     usedCapacityGb: null,
     daysSinceCapacityCheck: null,
     cheaperPlanCandidates: [],
+    planCapacityGb: null,
     ...overrides,
   };
 }
@@ -375,6 +376,27 @@ describe("容量ゲート（iCloud+＝capacity の P3）", () => {
     expect(p3?.evidence).toContain("50GB");
     expect(p3?.caveat).toContain("Apple");
     expect(r.annualSavingsIfDowngraded).toBe((1300 - 130) * 12);
+  });
+
+  it("プラン容量があると確定文言に現在プランを差し込む（判定は不変）", () => {
+    const withPlan = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 5, planCapacityGb: 2000 }),
+      cfg,
+    );
+    const p3 = withPlan.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("confirmed");
+    expect(p3?.evidence).toContain("2TBから"); // 1000GB以上はTB表記
+    expect(p3?.evidence).toContain("50GB");
+    expect(withPlan.decision).toBe(Decision.consider_downgrade);
+
+    // planCapacityGb=null（未入力）なら「◯◯から」は付かない＝従来文言
+    const withoutPlan = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 5, planCapacityGb: null }),
+      cfg,
+    );
+    const p3b = withoutPlan.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3b?.evidence).toContain("現在の使用容量なら50GB");
+    expect(p3b?.evidence).not.toContain("から50GB");
   });
 
   it("容量型でP3(confirmed)とP4(他社代替)が同時 → consider_downgrade（安全ダウングレードをP4より優先）", () => {

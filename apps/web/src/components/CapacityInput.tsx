@@ -121,6 +121,10 @@ export function CapacityInput({
         </select>
       </div>
 
+      <p className="caption" style={{ marginTop: 4 }}>
+        ※下げられるかの判定は「使用容量」で行います。プラン容量は表示と確認メッセージ用です。
+      </p>
+
       <div className="rowitem">
         <label className="caption" style={{ margin: 0 }} htmlFor="usedGb">
           使用容量（GB）

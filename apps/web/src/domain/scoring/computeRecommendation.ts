@@ -67,6 +67,8 @@ export interface RecommendationInput {
   usedCapacityGb: number | null;
   daysSinceCapacityCheck: number | null;
   cheaperPlanCandidates: PlanCandidate[]; // 自分より安い有料プラン（容量つき）
+  // 現在の契約プラン容量(GB)。判定には使わず、確定提案の文言を具体化する表示用途のみ。
+  planCapacityGb: number | null;
 }
 
 export interface RecommendationResult {
@@ -189,6 +191,11 @@ const P3_HIDDEN: ResolvedP3 = { show: false, evidence: "", savingsPlan: null };
 const CAPACITY_DOWNGRADE_CAVEAT =
   "変更後は同期・バックアップ・新規保存に影響する可能性があります。変更前に Apple の画面で確認してください";
 
+// 容量(GB)を表示用ラベルに（1,000GB以上は TB 表記）。判定には使わない表示専用。
+function formatCapacityLabel(gb: number): string {
+  return gb >= 1000 ? `${gb / 1000}TB` : `${gb}GB`;
+}
+
 function resolveP3(
   input: RecommendationInput,
   monthlyAmount: number,
@@ -241,10 +248,13 @@ function resolveP3(
   });
   if (!fit) return P3_HIDDEN; // どの下位プランにも安全に収まらない → 提案しない
 
+  // 現在の契約プランが分かれば「◯◯から」を添えて具体化する（判定には影響しない表示のみ）。
+  const fromPlan =
+    input.planCapacityGb !== null ? `${formatCapacityLabel(input.planCapacityGb)}から` : "";
   return {
     show: true,
     status: "confirmed",
-    evidence: `現在の使用容量なら${fit.name}（¥${fit.monthlyPrice.toLocaleString()}/月の目安）で足ります`,
+    evidence: `現在の使用容量なら${fromPlan}${fit.name}（¥${fit.monthlyPrice.toLocaleString()}/月の目安）で足ります`,
     caveat: CAPACITY_DOWNGRADE_CAVEAT,
     savingsPlan: { name: fit.name, monthlyPrice: fit.monthlyPrice },
   };

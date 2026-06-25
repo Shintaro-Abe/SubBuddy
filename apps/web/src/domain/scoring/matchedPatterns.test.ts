@@ -75,6 +75,7 @@ describe("parseMatchedPatterns", () => {
       usedCapacityGb: null,
       daysSinceCapacityCheck: null,
       cheaperPlanCandidates: [],
+      planCapacityGb: null,
     };
     const result = computeRecommendation(input, defaultScoringConfig);
     expect(result.dataStatus).toBe("ready");
