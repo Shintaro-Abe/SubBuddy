@@ -63,7 +63,7 @@ async function main() {
     category: string;
     usageType: string;
     commonAliases: string;
-    plans: { name: string; monthlyPrice: number; isFreeTier: boolean }[];
+    plans: { name: string; monthlyPrice: number; isFreeTier: boolean; capacityGb?: number }[];
     alternatives: string[];
   }
   const catalogPath = join(__dirname, "seed", "service-catalog.json");
@@ -88,6 +88,7 @@ async function main() {
           name: p.name,
           monthlyPrice: p.monthlyPrice,
           isFreeTier: p.isFreeTier,
+          capacityGb: p.capacityGb ?? null,
           verifiedAt: now,
         })),
       });
@@ -247,15 +248,20 @@ async function main() {
     lastUsedDaysAgo: 4,
   });
 
-  // 6. iCloud+ 容量ベース（consider_downgrade のルール枠。容量データは今回未投入）
+  // 6. iCloud+ 容量ベース：Dropbox と同じ cloud_storage カテゴリ → 重複で割高（P2）。
+  //    カタログ紐付け＋容量データ投入で、容量ゲート（38GB → 50GB で足りる）も動く。
   const icloud = await prisma.subscription.create({
     data: {
       userId: user.id,
       name: "iCloud+ 200GB",
       normalizedName: "iCloud+",
-      category: "storage",
+      category: "cloud_storage",
       amount: 400,
       usageType: "capacity",
+      matchedServiceId: serviceIdMap.get("iCloud+") ?? null,
+      planCapacityGb: 200,
+      usedCapacityGb: 38,
+      capacityCheckedAt: daysAgo(3),
       billingCycle: BillingCycle.monthly,
       importance: 3,
       nextRenewalDate: daysAhead(5),
@@ -307,6 +313,7 @@ async function main() {
       category: "cloud_storage",
       amount: 1500,
       usageType: "passive",
+      matchedServiceId: serviceIdMap.get("Dropbox") ?? null,
       billingCycle: BillingCycle.monthly,
       importance: 3,
       nextRenewalDate: daysAhead(12),

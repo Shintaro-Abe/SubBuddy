@@ -81,6 +81,19 @@ export function formatDate(value: Date | string | null | undefined): string {
 }
 
 /**
+ * 指定日から今日までの経過日数。未指定・不正・未来日は null。
+ * 現在時刻（Date.now）に依存するため、コンポーネント描画内ではなく
+ * このユーティリティ層で読む（描画の純粋性・ハイドレーション一致を保つ）。
+ */
+export function daysSince(value: Date | string | null | undefined): number | null {
+  if (!value) return null;
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return null;
+  const diff = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  return diff >= 0 ? diff : null;
+}
+
+/**
  * href として安全な URL のみ通す（XSS 対策：javascript: 等を弾く）。
  * http/https 以外は null を返す。
  */

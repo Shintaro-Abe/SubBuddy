@@ -22,6 +22,10 @@ function input(overrides: Partial<RecommendationInput> = {}): RecommendationInpu
     cheaperAlternative: null,
     cheapestInCategory: null,
     initialValueAnswer: null,
+    usedCapacityGb: null,
+    daysSinceCapacityCheck: null,
+    cheaperPlanCandidates: [],
+    planCapacityGb: null,
     ...overrides,
   };
 }
@@ -154,6 +158,16 @@ describe("P3：安いプランがある", () => {
     expect(r.matchedPatterns.some((p) => p.pattern === "P3")).toBe(true);
     expect(r.decision).toBe(Decision.consider_downgrade);
     expect(r.annualSavingsIfDowngraded).toBe(6000);
+  });
+
+  it("非容量型で P3＋P4 が同時 → consider_cancel（P4優先・従来どおり）", () => {
+    const r = computeRecommendation(input({
+      cheaperPlan: { name: "広告つき", monthlyPrice: 500 },
+      cheaperAlternative: { name: "安い競合", monthlyPrice: 300 },
+    }), cfg);
+    expect(r.matchedPatterns.some((p) => p.pattern === "P3")).toBe(true);
+    expect(r.matchedPatterns.some((p) => p.pattern === "P4")).toBe(true);
+    expect(r.decision).toBe(Decision.consider_cancel);
   });
 });
 
@@ -325,5 +339,153 @@ describe("RE-8.5：無料プラン除外", () => {
       cheaperAlternative: null,
     }), cfg);
     expect(r.matchedPatterns.some((p) => p.pattern === "P4")).toBe(false);
+  });
+});
+
+describe("容量ゲート（iCloud+＝capacity の P3）", () => {
+  // 2TB(¥1300)契約で、下位候補 200GB(¥400)/50GB(¥130) を持つ iCloud+ を模す
+  const capacityInput = (overrides: Partial<RecommendationInput> = {}) =>
+    input({
+      usageType: "capacity",
+      amount: 1300,
+      cheaperPlan: null, // 容量型は cheaperPlanCandidates を使う
+      cheaperPlanCandidates: [
+        { name: "50GB", monthlyPrice: 130, capacityGb: 50 },
+        { name: "200GB", monthlyPrice: 400, capacityGb: 200 },
+      ],
+      ...overrides,
+    });
+
+  it("使用容量なし → P3該当・needs_capacity_check・review（断定しない）", () => {
+    const r = computeRecommendation(capacityInput({ usedCapacityGb: null }), cfg);
+    const p3 = r.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("needs_capacity_check");
+    expect(r.decision).toBe(Decision.review);
+    expect(p3?.evidence).toContain("使用容量を確認");
+    expect(r.annualSavingsIfDowngraded).toBeNull();
+  });
+
+  it("鮮度OK＋収まる → P3該当・confirmed・consider_downgrade", () => {
+    const r = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 5 }),
+      cfg,
+    );
+    const p3 = r.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("confirmed");
+    expect(r.decision).toBe(Decision.consider_downgrade);
+    expect(p3?.evidence).toContain("50GB");
+    expect(p3?.caveat).toContain("Apple");
+    expect(r.annualSavingsIfDowngraded).toBe((1300 - 130) * 12);
+  });
+
+  it("プラン容量があると確定文言に現在プランを差し込む（判定は不変）", () => {
+    const withPlan = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 5, planCapacityGb: 2000 }),
+      cfg,
+    );
+    const p3 = withPlan.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("confirmed");
+    expect(p3?.evidence).toContain("2TBから"); // 1000GB以上はTB表記
+    expect(p3?.evidence).toContain("50GB");
+    expect(withPlan.decision).toBe(Decision.consider_downgrade);
+
+    // planCapacityGb=null（未入力）なら「◯◯から」は付かない＝従来文言
+    const withoutPlan = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 5, planCapacityGb: null }),
+      cfg,
+    );
+    const p3b = withoutPlan.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3b?.evidence).toContain("現在の使用容量なら50GB");
+    expect(p3b?.evidence).not.toContain("から50GB");
+  });
+
+  it("容量型でP3(confirmed)とP4(他社代替)が同時 → consider_downgrade（安全ダウングレードをP4より優先）", () => {
+    const r = computeRecommendation(
+      capacityInput({
+        usedCapacityGb: 38,
+        daysSinceCapacityCheck: 5,
+        cheaperAlternative: { name: "Google One", monthlyPrice: 250 },
+      }),
+      cfg,
+    );
+    expect(r.matchedPatterns.some((p) => p.pattern === "P4")).toBe(true);
+    expect(r.matchedPatterns.find((p) => p.pattern === "P3")?.status).toBe("confirmed");
+    expect(r.decision).toBe(Decision.consider_downgrade);
+  });
+
+  it("容量型でも P3 が needs_capacity_check のときは P4 が勝つ → consider_cancel", () => {
+    const r = computeRecommendation(
+      capacityInput({
+        usedCapacityGb: null, // 容量未確認 → needs_capacity_check
+        cheaperAlternative: { name: "Google One", monthlyPrice: 250 },
+      }),
+      cfg,
+    );
+    expect(r.matchedPatterns.find((p) => p.pattern === "P3")?.status).toBe("needs_capacity_check");
+    expect(r.decision).toBe(Decision.consider_cancel);
+  });
+
+  it("鮮度OK＋最小プランに収まらないが次に収まる → 収まる最小を選ぶ", () => {
+    const r = computeRecommendation(
+      capacityInput({ usedCapacityGb: 120, daysSinceCapacityCheck: 5 }),
+      cfg,
+    );
+    const p3 = r.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("confirmed");
+    expect(p3?.evidence).toContain("200GB");
+    expect(r.annualSavingsIfDowngraded).toBe((1300 - 400) * 12);
+  });
+
+  it("鮮度OK＋どの下位プランにも収まらない → P3非該当（提案しない）", () => {
+    const r = computeRecommendation(
+      capacityInput({ usedCapacityGb: 500, daysSinceCapacityCheck: 5 }),
+      cfg,
+    );
+    expect(r.matchedPatterns.some((p) => p.pattern === "P3")).toBe(false);
+  });
+
+  it("鮮度切れ → P3該当・needs_capacity_check・review", () => {
+    const r = computeRecommendation(
+      capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 200 }),
+      cfg,
+    );
+    const p3 = r.matchedPatterns.find((p) => p.pattern === "P3");
+    expect(p3?.status).toBe("needs_capacity_check");
+    expect(r.decision).toBe(Decision.review);
+    expect(p3?.evidence).toContain("再確認");
+  });
+
+  it("下位プラン候補が無ければ何も出さない", () => {
+    const r = computeRecommendation(
+      capacityInput({ cheaperPlanCandidates: [], usedCapacityGb: 38, daysSinceCapacityCheck: 5 }),
+      cfg,
+    );
+    expect(r.matchedPatterns.some((p) => p.pattern === "P3")).toBe(false);
+  });
+
+  it("鮮度しきい値を config で差し替えると判定が変わる", () => {
+    const base = capacityInput({ usedCapacityGb: 38, daysSinceCapacityCheck: 20 });
+    // 既定(30日)なら鮮度OK → confirmed
+    expect(
+      computeRecommendation(base, cfg).matchedPatterns.find((p) => p.pattern === "P3")?.status,
+    ).toBe("confirmed");
+    // しきい値を10日に縮めると鮮度切れ → needs_capacity_check
+    const strict = scoringConfigSchema.parse({ capacityFreshnessDays: 10 });
+    expect(
+      computeRecommendation(base, strict).matchedPatterns.find((p) => p.pattern === "P3")?.status,
+    ).toBe("needs_capacity_check");
+  });
+
+  it("安全バッファを config で差し替えると収まり判定が変わる", () => {
+    // 使用45GB・50GB候補のみ。既定バッファ(5GB)なら 45+5=50 ≤ 50 で収まる
+    const base = capacityInput({
+      usedCapacityGb: 45,
+      daysSinceCapacityCheck: 5,
+      cheaperPlanCandidates: [{ name: "50GB", monthlyPrice: 130, capacityGb: 50 }],
+    });
+    expect(computeRecommendation(base, cfg).matchedPatterns.some((p) => p.pattern === "P3")).toBe(true);
+    // バッファ下限を10GBに上げると 45+10>50 で収まらず提案しない
+    const strict = scoringConfigSchema.parse({ capacitySafetyBufferGb: 10 });
+    expect(computeRecommendation(base, strict).matchedPatterns.some((p) => p.pattern === "P3")).toBe(false);
   });
 });

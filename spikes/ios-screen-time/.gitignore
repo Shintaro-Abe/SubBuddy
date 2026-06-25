@@ -1,0 +1,23 @@
+# XcodeGen 生成物（project.yml から再生成できる）
+*.xcodeproj
+# 生成される Info.plist / entitlements（project.yml の properties から再生成）
+SubBuddySpike/Info.plist
+SubBuddySpike/SubBuddySpike.entitlements
+MonitorExtension/Info.plist
+MonitorExtension/MonitorExtension.entitlements
+
+# ビルド成果物
+build/
+DerivedData/
+
+# E2E 依存・成果物・実値の環境変数
+e2e/node_modules/
+e2e/artifacts/
+e2e/.env.local
+# refresh-ip.sh が現 IP を埋めて生成するショートカット（実 IP を含む）
+e2e/.generated/
+
+# 実 IP・トークンを含む（コミット禁止）
+SubBuddySpike/Shared/Constants.swift
+
+.DS_Store

@@ -1,6 +1,7 @@
 import { Decision, DataStatus } from "@prisma/client";
 import { toMonthlyAmount, toYearlyAmount, type BillingCycle } from "@/lib/money";
 import { type ScoringConfig } from "@/config/scoring";
+import { smallestFittingPlan, type PlanCandidate } from "@/domain/capacity/fit";
 import { buildReason, reasonObserving } from "./reasons";
 
 /**
@@ -30,11 +31,16 @@ export interface CheaperOption {
 
 // type エイリアスにすることで暗黙の索引シグネチャが付き、Prisma の Json 入力型
 // （InputJsonValue）へキャストなしで保存できる（.steering/20260616-matched-patterns-persistence/design.md §2.1）。
+export type P3Status = "confirmed" | "needs_capacity_check";
+
 export type MatchedPattern = {
   pattern: "P1" | "P2" | "P3" | "P4" | "P5" | "P6";
   label: string;
   evidence: string;
   caveat?: string;
+  // P3（容量型 iCloud+）専用。confirmed=容量確認済みで安全に提案／needs_capacity_check=容量未確認や鮮度切れで保留。
+  // 既定（非容量型）は付けない＝confirmed 相当。
+  status?: P3Status;
 };
 
 export interface RecommendationInput {
@@ -56,6 +62,13 @@ export interface RecommendationInput {
   cheaperAlternative: CheaperOption | null;
   cheapestInCategory: number | null;
   initialValueAnswer: InitialValueAnswer | null;
+
+  // 容量ゲート（iCloud+＝usageType "capacity"）用。非容量型では used=null・候補は空配列。
+  usedCapacityGb: number | null;
+  daysSinceCapacityCheck: number | null;
+  cheaperPlanCandidates: PlanCandidate[]; // 自分より安い有料プラン（容量つき）
+  // 現在の契約プラン容量(GB)。判定には使わず、確定提案の文言を具体化する表示用途のみ。
+  planCapacityGb: number | null;
 }
 
 export interface RecommendationResult {
@@ -91,6 +104,9 @@ export function computeRecommendation(
   const renewalSoon =
     input.daysUntilRenewal !== null && input.daysUntilRenewal <= config.renewalSoonDays;
 
+  // P3（安いプランがある）の解決。容量型(iCloud+)はここで容量ゲートを通す。
+  const p3 = resolveP3(input, monthlyAmount, config);
+
   const base = {
     observationDays: input.observationDays,
     monthlyAmount,
@@ -114,7 +130,7 @@ export function computeRecommendation(
       0.99,
     );
 
-    const immediatePatterns = matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount);
+    const immediatePatterns = matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount, p3);
 
     return {
       ...base,
@@ -123,7 +139,7 @@ export function computeRecommendation(
       daysUntilReady,
       matchedPatterns: immediatePatterns,
       annualSavingsIfCancelled: yearlyAmount,
-      annualSavingsIfDowngraded: calcDowngradeSavings(input.cheaperPlan, monthlyAmount),
+      annualSavingsIfDowngraded: calcDowngradeSavings(p3.savingsPlan, monthlyAmount),
       confidence,
       reason: immediatePatterns.length > 0
         ? buildReason(immediatePatterns)
@@ -136,7 +152,7 @@ export function computeRecommendation(
   }
 
   // --- 確定（全パターン判定） ---
-  const patterns = matchAllPatterns(input, config, monthlyAmount, yearlyAmount);
+  const patterns = matchAllPatterns(input, config, monthlyAmount, yearlyAmount, p3);
   const decision = patterns.length > 0
     ? determineDecision(patterns, input, config)
     : Decision.keep;
@@ -148,7 +164,7 @@ export function computeRecommendation(
     daysUntilReady: 0,
     matchedPatterns: patterns,
     annualSavingsIfCancelled: yearlyAmount,
-    annualSavingsIfDowngraded: calcDowngradeSavings(input.cheaperPlan, monthlyAmount),
+    annualSavingsIfDowngraded: calcDowngradeSavings(p3.savingsPlan, monthlyAmount),
     confidence: patterns.length > 0 ? 1.0 : 0.5,
     reason: buildReason(patterns),
   };
@@ -160,11 +176,96 @@ function canApplyP1(usageType: UsageType): boolean {
   return usageType === "active_foreground" || usageType === "active_background";
 }
 
+// ---- P3（安いプランがある）の解決：容量型は容量ゲートを通す ----
+
+interface ResolvedP3 {
+  show: boolean;
+  evidence: string;
+  caveat?: string;
+  status?: P3Status;
+  savingsPlan: CheaperOption | null; // 確定提案時のみ非null（節約額の根拠）
+}
+
+const P3_HIDDEN: ResolvedP3 = { show: false, evidence: "", savingsPlan: null };
+
+const CAPACITY_DOWNGRADE_CAVEAT =
+  "変更後は同期・バックアップ・新規保存に影響する可能性があります。変更前に Apple の画面で確認してください";
+
+// 容量(GB)を表示用ラベルに（1,000GB以上は TB 表記）。判定には使わない表示専用。
+function formatCapacityLabel(gb: number): string {
+  return gb >= 1000 ? `${gb / 1000}TB` : `${gb}GB`;
+}
+
+function resolveP3(
+  input: RecommendationInput,
+  monthlyAmount: number,
+  config: ScoringConfig,
+): ResolvedP3 {
+  // 非容量型：従来どおり cheaperPlan があり安くなるなら表示（断定）。
+  if (input.usageType !== "capacity") {
+    const cp = input.cheaperPlan;
+    if (cp && monthlyAmount - cp.monthlyPrice > 0) {
+      return {
+        show: true,
+        evidence: `${cp.name}（¥${cp.monthlyPrice.toLocaleString()}/月）に変更できます`,
+        savingsPlan: cp,
+      };
+    }
+    return P3_HIDDEN;
+  }
+
+  // 容量型（iCloud+）：安い下位プラン候補が無ければ何も出さない。
+  const candidates = input.cheaperPlanCandidates;
+  if (candidates.length === 0) return P3_HIDDEN;
+
+  // 使用容量が無い → 断定せず「容量確認を促す」。
+  if (input.usedCapacityGb === null) {
+    return {
+      show: true,
+      status: "needs_capacity_check",
+      evidence: "もっと安い下位プランがあります。使用容量を確認すると、下げられるか判定できます",
+      savingsPlan: null,
+    };
+  }
+
+  // 使用容量はあるが鮮度切れ（確認日時不明 or しきい値超過）→ 再確認を促す。
+  const fresh =
+    input.daysSinceCapacityCheck !== null &&
+    input.daysSinceCapacityCheck <= config.capacityFreshnessDays;
+  if (!fresh) {
+    return {
+      show: true,
+      status: "needs_capacity_check",
+      evidence: "前回確認時点では足りそうでしたが、今の使用容量を再確認しましょう",
+      savingsPlan: null,
+    };
+  }
+
+  // 使用容量あり＋鮮度OK → 安全に収まる最小プランがあれば断定提案。
+  const fit = smallestFittingPlan(input.usedCapacityGb, candidates, {
+    bufferGb: config.capacitySafetyBufferGb,
+    bufferRatio: config.capacitySafetyBufferRatio,
+  });
+  if (!fit) return P3_HIDDEN; // どの下位プランにも安全に収まらない → 提案しない
+
+  // 現在の契約プランが分かれば「◯◯から」を添えて具体化する（判定には影響しない表示のみ）。
+  const fromPlan =
+    input.planCapacityGb !== null ? `${formatCapacityLabel(input.planCapacityGb)}から` : "";
+  return {
+    show: true,
+    status: "confirmed",
+    evidence: `現在の使用容量なら${fromPlan}${fit.name}（¥${fit.monthlyPrice.toLocaleString()}/月の目安）で足ります`,
+    caveat: CAPACITY_DOWNGRADE_CAVEAT,
+    savingsPlan: { name: fit.name, monthlyPrice: fit.monthlyPrice },
+  };
+}
+
 function matchAllPatterns(
   input: RecommendationInput,
   config: ScoringConfig,
   monthlyAmount: number,
   yearlyAmount: number,
+  p3: ResolvedP3,
 ): MatchedPattern[] {
   const patterns: MatchedPattern[] = [];
 
@@ -173,7 +274,7 @@ function matchAllPatterns(
   if (p1) patterns.push(p1);
 
   // P2〜P6
-  patterns.push(...matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount));
+  patterns.push(...matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount, p3));
 
   return patterns;
 }
@@ -224,6 +325,7 @@ function matchPatternsP2toP6(
   config: ScoringConfig,
   monthlyAmount: number,
   yearlyAmount: number,
+  p3: ResolvedP3,
 ): MatchedPattern[] {
   const patterns: MatchedPattern[] = [];
 
@@ -238,16 +340,15 @@ function matchPatternsP2toP6(
     }
   }
 
-  // P3
-  if (input.cheaperPlan) {
-    const saving = monthlyAmount - input.cheaperPlan.monthlyPrice;
-    if (saving > 0) {
-      patterns.push({
-        pattern: "P3",
-        label: "安いプランがある",
-        evidence: `${input.cheaperPlan.name}（¥${input.cheaperPlan.monthlyPrice.toLocaleString()}/月）に変更できます`,
-      });
-    }
+  // P3（容量型は resolveP3 で容量ゲート済み）
+  if (p3.show) {
+    patterns.push({
+      pattern: "P3",
+      label: "安いプランがある",
+      evidence: p3.evidence,
+      ...(p3.caveat ? { caveat: p3.caveat } : {}),
+      ...(p3.status ? { status: p3.status } : {}),
+    });
   }
 
   // P4
@@ -310,8 +411,22 @@ function determineDecision(
     return Decision.review;
   }
 
-  if (hasP2 || hasP4) return Decision.consider_cancel;
-  if (hasP3) return Decision.consider_downgrade;
+  if (hasP2) return Decision.consider_cancel;
+
+  const p3 = patterns.find((p) => p.pattern === "P3");
+  // 容量型（iCloud+）で「安全に下げられる」と確認できている（P3 confirmed）ときは、
+  // 他社への乗り換え（P4）より、同じエコシステム内での安全なダウングレードを優先する。
+  // 本機能の狙い＝「怖くて下げられない固定費を安全に下げる」に沿う。容量型以外は不変。
+  if (input.usageType === "capacity" && p3?.status === "confirmed") {
+    return Decision.consider_downgrade;
+  }
+
+  if (hasP4) return Decision.consider_cancel;
+  if (hasP3) {
+    // 容量未確認/鮮度切れのダウングレード候補は断定せず様子見にとどめる。
+    if (p3?.status === "needs_capacity_check") return Decision.review;
+    return Decision.consider_downgrade;
+  }
 
   return Decision.review;
 }

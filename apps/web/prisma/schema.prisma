@@ -84,6 +84,9 @@ model Subscription {
   matchedServiceId String?            @map("matched_service_id")
   usageType       String              @default("active_foreground") @map("usage_type")
   initialValueAnswer String?          @map("initial_value_answer")
+  planCapacityGb    Int?              @map("plan_capacity_gb") // 契約プラン容量(GB)。容量型(iCloud+)のみ・任意
+  usedCapacityGb    Int?              @map("used_capacity_gb") // 使用容量(GB)。手入力/OCR確認値・任意
+  capacityCheckedAt DateTime?         @map("capacity_checked_at") // 容量を確認した日時（鮮度判定用）・任意
   createdAt       DateTime           @default(now()) @map("created_at") // 利用量集計の起点（§8.5）
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
@@ -196,6 +199,7 @@ model ServicePlan {
   name          String
   monthlyPrice  Int            @map("monthly_price")
   isFreeTier    Boolean        @default(false) @map("is_free_tier")
+  capacityGb    Int?           @map("capacity_gb") // 容量型サービスのプラン容量(GB)。容量ゲート用・任意
   verifiedAt    DateTime       @map("verified_at")
   sourceUrl     String?        @map("source_url")
 

@@ -7,6 +7,7 @@ import type { MatchedPattern } from "./computeRecommendation";
  */
 
 const VALID_PATTERNS = new Set(["P1", "P2", "P3", "P4", "P5", "P6"]);
+const VALID_STATUSES = new Set(["confirmed", "needs_capacity_check"]);
 
 function isMatchedPattern(value: unknown): value is MatchedPattern {
   if (typeof value !== "object" || value === null) return false;
@@ -16,7 +17,8 @@ function isMatchedPattern(value: unknown): value is MatchedPattern {
     VALID_PATTERNS.has(v.pattern) &&
     typeof v.label === "string" &&
     typeof v.evidence === "string" &&
-    (v.caveat === undefined || typeof v.caveat === "string")
+    (v.caveat === undefined || typeof v.caveat === "string") &&
+    (v.status === undefined || (typeof v.status === "string" && VALID_STATUSES.has(v.status)))
   );
 }
 
@@ -27,5 +29,6 @@ export function parseMatchedPatterns(value: unknown): MatchedPattern[] {
     label: p.label,
     evidence: p.evidence,
     ...(p.caveat !== undefined ? { caveat: p.caveat } : {}),
+    ...(p.status !== undefined ? { status: p.status } : {}),
   }));
 }

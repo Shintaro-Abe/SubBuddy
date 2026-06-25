@@ -1,0 +1,85 @@
+# XcodeGen プロジェクト定義（GUI を使わず .xcodeproj を生成するための spec）。
+#   生成: `xcodegen generate`（spikes/ios-screen-time/ で実行）
+#
+# 次の環境変数を生成時に展開する（run-e2e-real-device.sh が export する）:
+#   IOS_BUNDLE_ID  … 本体アプリの Bundle Identifier（例: com.yourname.SubBuddySpike）
+#   APPLE_TEAM_ID  … 署名に使う Apple Developer Team ID（10 桁）
+#   IOS_APP_GROUP  … App Group ID（既定 group.$IOS_BUNDLE_ID）。Constants.swift の appGroupID と一致必須。
+#
+# 注意: 拡張の Bundle ID は「本体 ID + .MonitorExtension」。本体と拡張で同じ App Group を共有する。
+name: SubBuddySpike
+options:
+  # iOS 17.4 以上が必要: MonitorScheduler の DeviceActivityEvent(includesPastActivity:) は iOS 17.4+ API。
+  deploymentTarget:
+    iOS: "17.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ${APPLE_TEAM_ID}
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"        # iPhone
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  # ── 本体アプリ ──
+  SubBuddySpike:
+    type: application
+    platform: iOS
+    sources:
+      - path: SubBuddySpike/App
+      - path: SubBuddySpike/Shared
+    dependencies:
+      - target: MonitorExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ${IOS_BUNDLE_ID}
+        PRODUCT_NAME: SubBuddySpike
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: SubBuddySpike/SubBuddySpike.entitlements
+    # ATS（ローカル Mac への http 送信を許可）を含む Info.plist を生成する
+    info:
+      path: SubBuddySpike/Info.plist
+      properties:
+        CFBundleDisplayName: SubBuddy Spike
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    # Family Controls / App Groups を付与
+    entitlements:
+      path: SubBuddySpike/SubBuddySpike.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - ${IOS_APP_GROUP}
+
+  # ── DeviceActivityMonitor 拡張（裏で閾値到達を受け取る） ──
+  MonitorExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MonitorExtension
+      - path: SubBuddySpike/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ${IOS_BUNDLE_ID}.MonitorExtension
+        PRODUCT_NAME: MonitorExtension
+        CODE_SIGN_ENTITLEMENTS: MonitorExtension/MonitorExtension.entitlements
+    info:
+      path: MonitorExtension/Info.plist
+      properties:
+        CFBundleDisplayName: MonitorExtension
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
+          # README の注意点: principal class は $(PRODUCT_MODULE_NAME).<クラス名> に一致させる
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).DeviceActivityMonitorExtension
+    entitlements:
+      path: MonitorExtension/MonitorExtension.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - ${IOS_APP_GROUP}

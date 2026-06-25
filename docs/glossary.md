@@ -38,6 +38,11 @@
 | 利用の性質 | Usage Type | `usage_type` | サブスクの使い方の分類（`active_foreground` / `active_background` / `active_other_device` / `passive` / `entitlement` / `capacity`）。P1 の適用可否を決定する。 |
 | なくなったら困るか | Initial Value Answer | `initial_value_answer` | 登録時の1問（`very_important` / `somewhat` / `not_much`）。将来の判定拡張用に保持。 |
 | カタログ紐付け | Matched Service | `matched_service_id` | サブスクがサービスカタログのどのサービスに対応するか。プラン・代替の自動取得に使う。 |
+| プラン容量 | Plan Capacity | `plan_capacity_gb` | iCloud+ 等で契約中プランの容量（GB）。価格から逆算せず明示的に持つ（実効額が一意でないため）。任意。 |
+| 使用容量 | Used Capacity | `used_capacity_gb` | 現在使用しているストレージ量（GB）。手入力／スクリーンショット読取で得る。容量ゲートの中心入力。任意。 |
+| 容量確認日時 | Capacity Checked At | `capacity_checked_at` | 使用容量を確認した日時。鮮度判定に使う（しきい値超過で判定を弱める）。任意。 |
+| 容量ゲート | Capacity Gate | — | 「安いプランがある」判定に使用容量の安全確認を足す仕組み。新パターンではなく既存判定の安全弁。収まる最小プランがあるときだけダウングレードを断定する。 |
+| 容量ゲート確認状態 | Capacity Gate Status | `status`（判定根拠内） | ダウングレード提案の確からしさ。`confirmed`（容量確認済みで安全に提案）／`needs_capacity_check`（未確認・鮮度切れで様子見）。 |
 | 重要度 | Importance | `importance` | ユーザーが付与する主観的な重要度。判定の補正係数に用いる。 |
 | 利用量センサー | Usage Sensor | — | 利用量を計測する側の総称。iPhone（Screen Time・位置情報）が担う。 |
 | コネクタ / アダプタ | Connector / Adapter | `connectors/<source>` | 取得源ごとに利用量・請求を取り込む実装。原本を保持し、共通モデルへ正規化（`architecture.md` §5.1）。 |
@@ -103,6 +108,8 @@
 | `entitlement` | 権利として保有 | しない |
 | `capacity` | 容量ベース（iCloud+） | しない |
 
+**判定根拠（Matched Pattern / `matchedPatterns`）**：判定時に当てはまったパターンの一覧。各要素は `pattern`（P1〜P6 の記号）・`label`（画面の根拠タグ文言。例「使っていない」）・`evidence`（具体的な根拠文）・`caveat`（任意の注意書き）を持つ。`recommendation_snapshots.matched_patterns`（jsonb）に保存し、画面の根拠タグと `reason`（理由文）の出どころになる（`reason` は `matchedPatterns` から組み立てる）。
+
 ---
 
 ## 5. 指標・計算用語
@@ -115,6 +122,10 @@
 | 更新日 | `renewal_date` | 次回課金日。接近時に確認を促す。 |
 | 信頼度 / 近似フラグ | `confidence` / `is_approximate` | 値が確定値か近似（例：位置情報ベースの `visit`、観測期間が短い間の暫定値）かを表す。 |
 | 観測日数 | `observation_days` | 登録時点からの利用量集計の経過日数。確定までの残り日数は `days_until_ready`。 |
+| 支出可視化 | （画面 `/spending`・F-12） | 継続中サブスクの支出を複数の切り口で見せる機能。`domain/spending` が集計。 |
+| 月次推移 | `monthlyTrend` | 各月末時点で登録済みかつ継続中の契約の月額換算合計（登録の積み上がりを表す）。 |
+| カテゴリ別内訳 | `byCategory` | カテゴリごとの月額合計と構成比（`share`）。 |
+| 年額見込み | `yearlyTotal` | 継続中契約の年額換算合計。 |
 
 ---
 

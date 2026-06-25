@@ -28,6 +28,13 @@ export const scoringConfigSchema = z.object({
   knowledgeBaseStaleDays: z.number().int().min(1).default(180),
   /** 陳腐化時の信頼度係数（0〜1）。 */
   staleConfidenceMultiplier: z.number().min(0).max(1).default(0.7),
+
+  /** 容量ゲート（iCloud+）：使用容量がこの日数以内に確認されていれば鮮度OK。 */
+  capacityFreshnessDays: z.number().int().min(1).default(30),
+  /** 容量ゲート：安全バッファの下限GB。 */
+  capacitySafetyBufferGb: z.number().int().min(0).default(5),
+  /** 容量ゲート：下位プラン容量に対する安全バッファ割合（0〜1）。 */
+  capacitySafetyBufferRatio: z.number().min(0).max(1).default(0.1),
 });
 
 export type ScoringConfig = z.infer<typeof scoringConfigSchema>;
