@@ -13,6 +13,7 @@ import { toMonthlyAmount } from "@/lib/money";
 import { listSubscriptions } from "@/repositories/subscriptions";
 import { listUsageForSubscription } from "@/repositories/usage";
 import { appendRecommendationSnapshot } from "@/repositories/recommendations";
+import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
 import { prisma } from "@/lib/prisma";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -189,7 +190,8 @@ export async function recomputeRecommendations(
           ? Math.floor((asOf.getTime() - s.capacityCheckedAt.getTime()) / DAY_MS)
           : null,
         cheaperPlanCandidates,
-        planCapacityGb: s.planCapacityGb ?? null,
+        // プラン容量は登録情報（金額→カタログ）から導出。手入力に依存させない。
+        planCapacityGb: await getCurrentPlanCapacityGb(matchedServiceId, monthlyAmt),
       },
       config,
     );

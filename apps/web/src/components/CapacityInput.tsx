@@ -5,19 +5,13 @@ import { useRouter } from "next/navigation";
 import { defaultScoringConfig } from "@/config/scoring";
 
 /**
- * iCloud+ の容量を just-in-time で入力するフォーム（容量ゲート用）。
+ * iCloud+ の「使用容量」を just-in-time で入力するフォーム（容量ゲート用）。
  * 保存（PUT）→ 判定の再計算（POST）→ 画面更新 の順で反映する。
- * オンボーディング必須にはせず、容量型サブスクの詳細でのみ表示する。
+ *
+ * 契約プラン容量はここで入力させない。プランは登録（名前・金額）が唯一の出所で、
+ * 表示用の値は登録情報（金額→カタログ）から導出して prop で受け取る。
+ * この画面が聞くのは「使用容量」だけ。
  */
-
-// 無料枠5GBは選択肢に出さない（誤入力源を断つ）。
-const PLAN_OPTIONS = [
-  { gb: 50, label: "50GB" },
-  { gb: 200, label: "200GB" },
-  { gb: 2000, label: "2TB" },
-  { gb: 6000, label: "6TB" },
-  { gb: 12000, label: "12TB" },
-];
 
 // 鮮度判定のしきい値はコードに直書きせず config に集約（CLAUDE.md：しきい値の設定外出し）。
 const FRESHNESS_DAYS = defaultScoringConfig.capacityFreshnessDays;
@@ -25,22 +19,27 @@ const FRESHNESS_DAYS = defaultScoringConfig.capacityFreshnessDays;
 // Apple 公式：iCloud ストレージの確認・管理（日本語）。検証済み 2026-06-25。
 const APPLE_STORAGE_HELP_URL = "https://support.apple.com/ja-jp/108922";
 
+// 容量(GB)を表示用ラベルに（1,000GB以上は TB 表記）。
+function formatGb(gb: number): string {
+  return gb >= 1000 ? `${gb / 1000}TB` : `${gb}GB`;
+}
+
 export function CapacityInput({
   subscriptionId,
-  initialPlanGb,
+  planCapacityGb,
   initialUsedGb,
   checkedAt,
   daysSinceCheck,
 }: {
   subscriptionId: string;
-  initialPlanGb: number | null;
+  // 現在の契約プラン容量(GB)。登録情報（金額→カタログ）から導出した表示専用の値。
+  planCapacityGb: number | null;
   initialUsedGb: number | null;
   checkedAt: string | null;
   // 確認日からの経過日数。現在時刻依存の計算はサーバ（描画外）で行い prop で受け取る。
   daysSinceCheck: number | null;
 }) {
   const router = useRouter();
-  const [planGb, setPlanGb] = useState<number | "">(initialPlanGb ?? "");
   const [usedGb, setUsedGb] = useState<number | "">(initialUsedGb ?? "");
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
@@ -49,15 +48,15 @@ export function CapacityInput({
 
   const isStale = daysSinceCheck !== null && daysSinceCheck > FRESHNESS_DAYS;
 
-  // 使用率（入力中の値で即時に反映する）。プラン容量が無効なら出さない。
+  // 使用率（入力中の値で即時に反映する）。プラン容量が分からなければ出さない。
   const usagePercent =
-    planGb !== "" && usedGb !== "" && Number(planGb) > 0
-      ? Math.min(100, Math.round((Number(usedGb) / Number(planGb)) * 100))
+    planCapacityGb !== null && planCapacityGb > 0 && usedGb !== ""
+      ? Math.min(100, Math.round((Number(usedGb) / planCapacityGb) * 100))
       : null;
 
   async function handleSave() {
-    if (planGb === "" || usedGb === "") {
-      setError("プラン容量と使用容量を入力してください");
+    if (usedGb === "") {
+      setError("使用容量を入力してください");
       return;
     }
     setError(null);
@@ -68,13 +67,12 @@ export function CapacityInput({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planCapacityGb: Number(planGb),
           usedCapacityGb: Number(usedGb),
           capacityCheckedAt: today,
         }),
       });
       if (!res.ok) throw new Error("save failed");
-      // 容量が変わると判定（安全に下げられるか）も変わるので再計算する。
+      // 使用容量が変わると判定（安全に下げられるか）も変わるので再計算する。
       await fetch("/api/recommendations/recompute", { method: "POST" });
       startTransition(() => router.refresh());
     } catch {
@@ -98,32 +96,17 @@ export function CapacityInput({
         >
           設定 ＞ iCloud のストレージ画面 ↗
         </a>
-        の数値を入れると、下位プランで足りるかを判定します。
+        で「使用済み」の数値を入れると、下位プランで足りるかを判定します。
       </p>
 
       <div className="rowitem">
-        <label className="caption" style={{ margin: 0 }} htmlFor="planGb">
-          契約プラン容量
-        </label>
-        <select
-          id="planGb"
-          className="input"
-          style={{ maxWidth: 160 }}
-          value={planGb}
-          onChange={(e) => setPlanGb(e.target.value === "" ? "" : Number(e.target.value))}
-        >
-          <option value="">選択</option>
-          {PLAN_OPTIONS.map((p) => (
-            <option key={p.gb} value={p.gb}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+        <span className="caption" style={{ margin: 0 }}>
+          現在のプラン
+        </span>
+        <span className="caption" style={{ margin: 0 }}>
+          {planCapacityGb !== null ? `${formatGb(planCapacityGb)}（登録情報より）` : "—"}
+        </span>
       </div>
-
-      <p className="caption" style={{ marginTop: 4 }}>
-        ※下げられるかの判定は「使用容量」で行います。プラン容量は表示と確認メッセージ用です。
-      </p>
 
       <div className="rowitem">
         <label className="caption" style={{ margin: 0 }} htmlFor="usedGb">
@@ -141,10 +124,10 @@ export function CapacityInput({
         />
       </div>
 
-      {usagePercent !== null && (
+      {usagePercent !== null && planCapacityGb !== null && (
         <div style={{ marginTop: 12 }}>
           <p className="caption" style={{ margin: 0 }}>
-            使用率 {usagePercent}%（{Number(usedGb).toLocaleString()} / {Number(planGb).toLocaleString()} GB）
+            使用率 {usagePercent}%（{Number(usedGb).toLocaleString()} / {planCapacityGb.toLocaleString()} GB）
           </p>
           <div
             aria-hidden

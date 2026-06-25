@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCurrentUserId } from "@/lib/user";
 import { getSubscription } from "@/repositories/subscriptions";
 import { listLatestRecommendations } from "@/repositories/recommendations";
+import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 import { categoryLabel, daysSince, formatDate, formatYen, safeHttpUrl } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
@@ -52,6 +53,13 @@ export default async function SubscriptionDetailPage({
   const showQr = usageType === "active_foreground" || usageType === "active_background";
   const isCapacity = usageType === "capacity";
   const capacityCheckedAt = sRec.capacityCheckedAt as Date | null | undefined;
+  // プラン容量は登録情報（金額→カタログ）から導出する。容量パネルで再入力させない。
+  const currentPlanCapacityGb = isCapacity
+    ? await getCurrentPlanCapacityGb(
+        sRec.matchedServiceId as string | null | undefined,
+        toMonthlyAmount(s.amount, s.billingCycle),
+      )
+    : null;
 
   return (
     <div>
@@ -166,7 +174,7 @@ export default async function SubscriptionDetailPage({
       {isCapacity && (
         <CapacityInput
           subscriptionId={s.id}
-          initialPlanGb={(sRec.planCapacityGb as number | null) ?? null}
+          planCapacityGb={currentPlanCapacityGb}
           initialUsedGb={(sRec.usedCapacityGb as number | null) ?? null}
           checkedAt={capacityCheckedAt ? capacityCheckedAt.toISOString().slice(0, 10) : null}
           daysSinceCheck={daysSince(capacityCheckedAt)}
