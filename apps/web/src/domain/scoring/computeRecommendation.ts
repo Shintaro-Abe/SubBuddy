@@ -401,10 +401,19 @@ function determineDecision(
     return Decision.review;
   }
 
-  if (hasP2 || hasP4) return Decision.consider_cancel;
+  if (hasP2) return Decision.consider_cancel;
+
+  const p3 = patterns.find((p) => p.pattern === "P3");
+  // 容量型（iCloud+）で「安全に下げられる」と確認できている（P3 confirmed）ときは、
+  // 他社への乗り換え（P4）より、同じエコシステム内での安全なダウングレードを優先する。
+  // 本機能の狙い＝「怖くて下げられない固定費を安全に下げる」に沿う。容量型以外は不変。
+  if (input.usageType === "capacity" && p3?.status === "confirmed") {
+    return Decision.consider_downgrade;
+  }
+
+  if (hasP4) return Decision.consider_cancel;
   if (hasP3) {
     // 容量未確認/鮮度切れのダウングレード候補は断定せず様子見にとどめる。
-    const p3 = patterns.find((p) => p.pattern === "P3");
     if (p3?.status === "needs_capacity_check") return Decision.review;
     return Decision.consider_downgrade;
   }

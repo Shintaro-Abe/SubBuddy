@@ -158,6 +158,16 @@ describe("P3：安いプランがある", () => {
     expect(r.decision).toBe(Decision.consider_downgrade);
     expect(r.annualSavingsIfDowngraded).toBe(6000);
   });
+
+  it("非容量型で P3＋P4 が同時 → consider_cancel（P4優先・従来どおり）", () => {
+    const r = computeRecommendation(input({
+      cheaperPlan: { name: "広告つき", monthlyPrice: 500 },
+      cheaperAlternative: { name: "安い競合", monthlyPrice: 300 },
+    }), cfg);
+    expect(r.matchedPatterns.some((p) => p.pattern === "P3")).toBe(true);
+    expect(r.matchedPatterns.some((p) => p.pattern === "P4")).toBe(true);
+    expect(r.decision).toBe(Decision.consider_cancel);
+  });
 });
 
 describe("P4：安い競合がある", () => {
@@ -365,6 +375,32 @@ describe("容量ゲート（iCloud+＝capacity の P3）", () => {
     expect(p3?.evidence).toContain("50GB");
     expect(p3?.caveat).toContain("Apple");
     expect(r.annualSavingsIfDowngraded).toBe((1300 - 130) * 12);
+  });
+
+  it("容量型でP3(confirmed)とP4(他社代替)が同時 → consider_downgrade（安全ダウングレードをP4より優先）", () => {
+    const r = computeRecommendation(
+      capacityInput({
+        usedCapacityGb: 38,
+        daysSinceCapacityCheck: 5,
+        cheaperAlternative: { name: "Google One", monthlyPrice: 250 },
+      }),
+      cfg,
+    );
+    expect(r.matchedPatterns.some((p) => p.pattern === "P4")).toBe(true);
+    expect(r.matchedPatterns.find((p) => p.pattern === "P3")?.status).toBe("confirmed");
+    expect(r.decision).toBe(Decision.consider_downgrade);
+  });
+
+  it("容量型でも P3 が needs_capacity_check のときは P4 が勝つ → consider_cancel", () => {
+    const r = computeRecommendation(
+      capacityInput({
+        usedCapacityGb: null, // 容量未確認 → needs_capacity_check
+        cheaperAlternative: { name: "Google One", monthlyPrice: 250 },
+      }),
+      cfg,
+    );
+    expect(r.matchedPatterns.find((p) => p.pattern === "P3")?.status).toBe("needs_capacity_check");
+    expect(r.decision).toBe(Decision.consider_cancel);
   });
 
   it("鮮度OK＋最小プランに収まらないが次に収まる → 収まる最小を選ぶ", () => {
