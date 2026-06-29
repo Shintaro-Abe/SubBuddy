@@ -210,7 +210,7 @@ async function main() {
       name: "Spotify",
       normalizedName: "Spotify",
       category: "music",
-      amount: 980,
+      amount: 1080,
       usageType: "active_background",
       billingCycle: BillingCycle.monthly,
       importance: 2,
@@ -256,7 +256,7 @@ async function main() {
       name: "iCloud+ 200GB",
       normalizedName: "iCloud+",
       category: "cloud_storage",
-      amount: 400,
+      amount: 450,
       usageType: "capacity",
       matchedServiceId: serviceIdMap.get("iCloud+") ?? null,
       planCapacityGb: 200,
@@ -346,7 +346,7 @@ async function main() {
   });
 
   // 11. 知識ベース連携（matchedServiceId 付き）：プレミアム契約で十分利用。
-  //     P3（広告つきスタンダード ¥790 へのダウングレード）と P4（安い競合）の提案が出る
+  //     P3（広告つきスタンダード ¥890 へのダウングレード）と P4（安い競合）の提案が出る
   const netflix = await prisma.subscription.create({
     data: {
       userId: user.id,

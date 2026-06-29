@@ -5,7 +5,7 @@
     "usageType": "active_foreground",
     "commonAliases": "ネットフリックス,ネトフリ",
     "plans": [
-      { "name": "広告つきスタンダード", "monthlyPrice": 790, "isFreeTier": false },
+      { "name": "広告つきスタンダード", "monthlyPrice": 890, "isFreeTier": false },
       { "name": "スタンダード", "monthlyPrice": 1590, "isFreeTier": false },
       { "name": "プレミアム", "monthlyPrice": 2290, "isFreeTier": false }
     ],
@@ -81,9 +81,9 @@
     "usageType": "active_background",
     "commonAliases": "スポティファイ",
     "plans": [
-      { "name": "Individual", "monthlyPrice": 980, "isFreeTier": false },
-      { "name": "Duo", "monthlyPrice": 1280, "isFreeTier": false },
-      { "name": "Family", "monthlyPrice": 1580, "isFreeTier": false },
+      { "name": "Individual", "monthlyPrice": 1080, "isFreeTier": false },
+      { "name": "Duo", "monthlyPrice": 1480, "isFreeTier": false },
+      { "name": "Family", "monthlyPrice": 1880, "isFreeTier": false },
       { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
     ],
     "alternatives": ["Amazon Music Unlimited", "Apple Music", "YouTube Music"]
@@ -117,7 +117,7 @@
     "commonAliases": "アマプラ,アマゾンプライム",
     "plans": [
       { "name": "月額", "monthlyPrice": 600, "isFreeTier": false },
-      { "name": "年額", "monthlyPrice": 408, "isFreeTier": false }
+      { "name": "年額（月換算）", "monthlyPrice": 492, "isFreeTier": false }
     ],
     "alternatives": []
   },
@@ -183,9 +183,9 @@
     "usageType": "capacity",
     "commonAliases": "アイクラウド,iCloud",
     "plans": [
-      { "name": "50GB", "monthlyPrice": 130, "isFreeTier": false, "capacityGb": 50 },
-      { "name": "200GB", "monthlyPrice": 400, "isFreeTier": false, "capacityGb": 200 },
-      { "name": "2TB", "monthlyPrice": 1300, "isFreeTier": false, "capacityGb": 2000 },
+      { "name": "50GB", "monthlyPrice": 150, "isFreeTier": false, "capacityGb": 50 },
+      { "name": "200GB", "monthlyPrice": 450, "isFreeTier": false, "capacityGb": 200 },
+      { "name": "2TB", "monthlyPrice": 1500, "isFreeTier": false, "capacityGb": 2000 },
       { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true, "capacityGb": 5 }
     ],
     "alternatives": ["Google One", "Dropbox", "OneDrive"]
