@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS 実機テスト 自動化ガイド（Screen Time × Shortcuts）</title>
+<style>
+  :root {
+    --ink: #1c1c1a;
+    --sub: #6b6b66;
+    --line: #e3e1da;
+    --bg: #faf9f5;
+    --accent: #3a3a36;
+    --warn-bg: #fbf3e8;
+    --warn-line: #d9a441;
+    --ok-bg: #eef3ec;
+    --ok-line: #5a7a5a;
+    --code-bg: #1e1e1c;
+    --code-ink: #f2f0e9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    line-height: 1.75;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: .02em; margin: 0 0 8px; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0; }
+  h2 {
+    font-size: 19px; font-weight: 600; margin: 48px 0 16px;
+    padding-top: 8px;
+  }
+  h2 .num {
+    display: inline-block; min-width: 1.6em; color: var(--sub);
+    font-variant-numeric: tabular-nums;
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 28px 0 10px; }
+  p { margin: 10px 0; }
+  ol, ul { margin: 10px 0; padding-left: 1.5em; }
+  li { margin: 6px 0; }
+  code.inline {
+    background: #efece4; padding: 1px 6px; border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+  }
+  .codeblock { position: relative; margin: 14px 0; }
+  .codeblock pre {
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 16px 18px; border-radius: 8px; overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+    line-height: 1.6; margin: 0;
+  }
+  .codeblock .copy {
+    position: absolute; top: 8px; right: 8px;
+    background: #34342f; color: #cfcdc4; border: 1px solid #4a4a44;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit; transition: background .15s;
+  }
+  .codeblock .copy:hover { background: #45453f; }
+  .codeblock .copy.done { color: #9ccc9c; border-color: #5a7a5a; }
+  .note {
+    background: var(--warn-bg); border-left: 3px solid var(--warn-line);
+    padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0;
+    font-size: 14px;
+  }
+  .note b { color: #9a6a16; }
+  .ok {
+    background: var(--ok-bg); border-left: 3px solid var(--ok-line);
+    padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0;
+    font-size: 14px;
+  }
+  .ok b { color: #3a6a3a; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f1efe8; font-weight: 600; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: 999px; margin-right: 6px; vertical-align: middle;
+  }
+  .tag.a { background: #e7eef3; color: #2f5a78; }
+  .tag.b { background: #efe9f3; color: #5a3a78; }
+  .tag.share { background: #e9f0e9; color: #3a6a3a; }
+  .tag.auto { background: #f0ece2; color: #6a5a2f; }
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--sub); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>iOS 実機テスト 自動化ガイド</h1>
+  <p class="lead">Screen Time（利用時間の取得）と Shortcuts（前面起動の検知）の配線を、Xcode の GUI 操作なしで <b>MacBook 上のコマンド一発</b>で通す。手動版（同時進行ガイド）の自動化版。配線（パイプライン）の結合スモークが対象で、利用量の「精度」は別途の手動フィールドテストが担う。</p>
+</header>
+
+<h2><span class="num">1</span>このガイドの対象範囲</h2>
+<p>自動化が確かめるのは「<b>iPhone アプリ → Mac → Web 管理画面</b>の配線が実機で end-to-end に動くか」。閾値到達に 15 分以上かかる利用量の精度や、OS のプライバシーシート操作は対象外。</p>
+<table>
+  <tr><th></th><th><span class="tag a">A</span>Screen Time</th><th><span class="tag b">B</span>Shortcuts</th></tr>
+  <tr><td>取得するもの</td><td>利用時間（◯分以上のバケット）</td><td>前面でアプリを開いた検知のみ（時間は測らない）</td></tr>
+  <tr><td>しくみ</td><td>DeviceActivity ＋専用アプリ（自動ビルド・自動インストール・Appium で UI 操作）</td><td>個人オートメーション（前面起動で <code class="inline">POST /api/usage/daily</code> を即送信）</td></tr>
+  <tr><td>DB の <code class="inline">source</code></td><td><code class="inline">ios_device_activity</code></td><td><code class="inline">ios_shortcut</code></td></tr>
+  <tr><td>自動化の度合い</td><td>ビルド〜操作〜Web 確認まで一括 <span class="tag auto">スクリプト</span></td><td>送信自体が自動。疎通は Safari／curl で確認</td></tr>
+</table>
+<div class="note"><b>重要な環境前提：</b>Claude Code / devcontainer は Linux。<b>iOS ビルド・実機・Appium は Mac のネイティブターミナルでしか動かない</b>（<code class="inline">xcodebuild</code>/<code class="inline">xcrun</code>/USB が無い）。Web アプリと PostgreSQL はコンテナ側で起動し、VS Code のポート転送で Mac/LAN から到達させる。</div>
+
+<h2><span class="num">2</span>スクリプト構成 <span class="tag auto">spikes/ios-screen-time/scripts</span></h2>
+<table>
+  <tr><th>スクリプト</th><th>役割</th></tr>
+  <tr><td><code class="inline">setup.sh</code></td><td>初回セットアップ。<code class="inline">e2e/.env.local</code> と <code class="inline">Constants.swift</code> を生成し、UDID・LAN IP・Team ID・サブスク ID・トークンを自動取得。<code class="inline">--run</code> で実行まで。</td></tr>
+  <tr><td><code class="inline">refresh-ip.sh</code></td><td>Mac の LAN IP を再検出し <code class="inline">Constants.swift</code> の <code class="inline">apiBaseURL</code> を更新。変化時は再ビルド／ショートカット変更を案内（<code class="inline">run-e2e</code> が自動で呼ぶ）。</td></tr>
+  <tr><td><code class="inline">preflight.sh</code></td><td>ビルド前の前提チェック（ツール・実機・Web 到達・サブスク実在・App Group 整合・LAN IP 整合）。非 macOS では即停止。</td></tr>
+  <tr><td><code class="inline">run-e2e-real-device.sh</code></td><td>本体。IP 同期 → 生成 → ビルド → インストール → Appium → E2E を一括。<code class="inline">SKIP_BUILD=1</code> でビルド省略。</td></tr>
+</table>
+
+<h2><span class="num">3</span>一度きりの手動準備（自動化対象外）</h2>
+<p>以下は人手でしか実施できない。<b>最初に 1 回だけ</b>。</p>
+<ul>
+  <li><b>iPhone</b>：Developer Mode 有効化／このコンピュータを信頼／アプリ内で <b>Screen Time 許可＋対象アプリ選択</b>（認可は保持される）。</li>
+  <li><b>Mac（ツール導入）</b>：下記。Node は <b>22 LTS</b>（24 系は undici で webdriverio が <code class="inline">UND_ERR_INVALID_ARG</code> になる）。</li>
+</ul>
+<div class="codeblock"><button class="copy">コピー</button><pre>brew install xcodegen
+npm install -g appium
+appium driver install xcuitest
+brew install node@22</pre></div>
+
+<h2><span class="num">4</span>実行手順 <span class="tag share">Mac のネイティブターミナル</span></h2>
+
+<h3>4-1. Web アプリと DB を起動（コンテナ側）</h3>
+<p>devcontainer 内で PostgreSQL と Web を起動し、LAN へ公開する。</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>sudo pg_ctlcluster 15 main start          # PostgreSQL
+cd apps/web && npm run dev -- --hostname 0.0.0.0   # Next.js</pre></div>
+<p>VS Code 転送を LAN に出すため、ユーザー設定（<code class="inline">Cmd+Shift+P</code> → Open User Settings (JSON)）に追記してウィンドウ再読込：</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>"remote.localPortHost": "allInterfaces"</pre></div>
+<div class="note"><b>注意：</b>iPhone にとって <code class="inline">127.0.0.1</code> は iPhone 自身。必ず Mac の LAN IP を使い、プロトコルは <code class="inline">http</code>。PORTS タブの Local Address が <code class="inline">0.0.0.0:3000</code> になっていれば公開済み。</div>
+
+<h3>4-2. 初回はセットアップ</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>cd spikes/ios-screen-time
+scripts/setup.sh            # 生成のみ（全値を自動取得）
+scripts/setup.sh --run      # 生成 → preflight → 実機 E2E まで</pre></div>
+
+<h3>4-3. 通常実行（コード変更を反映）</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>cd spikes/ios-screen-time
+scripts/run-e2e-real-device.sh</pre></div>
+
+<h3>4-4. 高速反復（再ビルドせず・認可を保持）</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>SKIP_BUILD=1 scripts/run-e2e-real-device.sh</pre></div>
+<p>成功すると <code class="inline">[e2e] PASSED</code> / <code class="inline">✅ E2E 成功</code>。失敗時は <code class="inline">e2e/artifacts/&lt;日時&gt;/</code> に <code class="inline">appium.log</code>・<code class="inline">xcodebuild.log</code>・<code class="inline">appium-failure.png</code>・<code class="inline">playwright-trace.zip</code>。</p>
+
+<h2><span class="num">5</span>LAN IP の自動同期（再起動対策）<span class="tag auto">refresh-ip.sh</span></h2>
+<p><b>Mac の LAN IP は再起動・DHCP で変わる。</b>変わると iPhone から届かず <code class="inline">request time out</code> になる。<code class="inline">run-e2e</code> は実行時に <code class="inline">refresh-ip.sh</code> を自動で呼び、現 IP を検出して <code class="inline">Constants.swift</code> の <code class="inline">apiBaseURL</code> を更新する。単体実行も可：</p>
+<div class="codeblock"><button class="copy">コピー</button><pre>scripts/refresh-ip.sh          # 検出 → 必要なら Constants.swift 更新 → 案内
+scripts/refresh-ip.sh --check  # 変更せず差分の有無だけ判定（preflight 用）</pre></div>
+<p>IP 検出は <b>デフォルトルートのインターフェース</b>を優先する（Wi-Fi が <code class="inline">en0</code> 以外＝Ethernet/Thunderbolt 併用時 <code class="inline">en1</code> 等でも正しく拾える）。</p>
+<div class="note"><b>IP が変わった回に必要な手当て（焼き込みは 2 箇所）：</b>
+  <ol>
+    <li><b>アプリの再ビルド・再インストール</b>。<code class="inline">apiBaseURL</code> はアプリにコンパイルされるため、<code class="inline">SKIP_BUILD=1</code> を使わず <code class="inline">run-e2e</code> を回す。</li>
+    <li><b>ショートカットの送信先 URL を変更</b>。ショートカット App で「URL の内容を取得」アクションの <code class="inline">http://&lt;旧IP&gt;:3000/api/usage/daily</code> を新 IP に直すか、<code class="inline">refresh-ip.sh</code> が生成する <code class="inline">e2e/.generated/subbuddy-usage.shortcut</code> を取り込み直す。</li>
+  </ol>
+  最後に iPhone(Wi-Fi) の Safari で <code class="inline">http://&lt;新IP&gt;:3000</code> が開けるか確認。
+</div>
+
+<h2><span class="num">6</span>トラックA：Screen Time の自動 E2E <span class="tag a">A</span></h2>
+<p><code class="inline">run-e2e</code> が XcodeGen → <code class="inline">xcodebuild</code> → <code class="inline">devicectl</code> インストール → Appium(XCUITest) でアプリ操作 → Playwright で Web 確認まで通す。利用時間の取得そのものは、対象アプリを前面で使って閾値を跨ぐことで発火する。</p>
+
+<h3>6-1. 閾値とバケットの対応</h3>
+<p>監視閾値は <code class="inline">Constants.swift</code> の <code class="inline">thresholdMinutes = [15, 30, 60, 120]</code>。到達した最上位段階が記録される。</p>
+<table>
+  <tr><th>フォアグラウンド累積</th><th>記録される bucket</th></tr>
+  <tr><td>〜15分未満</td><td><code class="inline">none</code></td></tr>
+  <tr><td>15分到達</td><td><code class="inline">m15_plus</code></td></tr>
+  <tr><td>30分到達</td><td><code class="inline">m30_plus</code></td></tr>
+  <tr><td>60分到達</td><td><code class="inline">m60_plus</code></td></tr>
+  <tr><td>120分到達（最上位）</td><td><code class="inline">m120_plus</code></td></tr>
+</table>
+<p>識別できる上限は <b>120 分</b>。配線確認だけなら 15／30／60 分のいずれかで止めても、その段階の bucket で経路は証明できる。</p>
+
+<h3>6-2. 計測の前提</h3>
+<ul>
+  <li>アプリの「<b>監視を開始</b>」で DeviceActivity を登録して初めて閾値が発火する。ボタンが「監視を停止」表示なら既にアーム済み。</li>
+  <li>監視イベントは <code class="inline">includesPastActivity: true</code>（iOS 17.4+）。<b>視聴後に「監視を開始」を押しても当日分はさかのぼって計上</b>される。だから <code class="inline">project.yml</code> は deploymentTarget iOS 17.4。</li>
+  <li>スケジュールは midnight〜midnight・<code class="inline">repeats: true</code> で毎日自動再アーム。ただし <b>iPhone 再起動で監視が落ちる</b>ことがあるので、再起動後はアプリを開いて状態を確認。</li>
+  <li><b>計測外</b>：ロック/スリープ中の背景音声、別端末での視聴、他アプリに切り替え中。</li>
+</ul>
+
+<h2><span class="num">7</span>トラックB：Shortcuts の起動シグナル <span class="tag b">B</span></h2>
+<p>個人オートメーション（対象アプリを開いたら実行）が <code class="inline">POST /api/usage/daily</code> を即送信する。送信自体が自動なので、確認は受信側で行う。記録は「今日使った」という事実だけ（<code class="inline">used=true</code> / <code class="inline">usage_bucket=none</code> / <code class="inline">source=ios_shortcut</code>）。</p>
+<div class="note"><b>意味の限界：</b>このシグナルは「前面で開いた」時しか出ない。<b>背景再生では発火しない</b>。「検知あり＝最近触った」には使えるが「検知なし＝使っていない」とは断定しない。</div>
+
+<h2><span class="num">8</span>結果の確認（受信側）</h2>
+<p>送信後、Web の <code class="inline">next dev</code> ログと DB を見る。</p>
+<h3>8-1. 送信が認証を通って届いたか（ログ）</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>grep "POST /api/usage/daily" &lt;next dev のログ&gt; | tail</pre></div>
+<p><code class="inline">200</code>＝成功。<code class="inline">401</code>＝トークン不一致、<code class="inline">400/422</code>＝本文不正、<b>ログに何も出ない</b>＝そもそも届いていない（経路＝LAN IP/到達性の問題）。</p>
+<h3>8-2. DB に入ったか</h3>
+<div class="codeblock"><button class="copy">コピー</button><pre>psql "$DATABASE_URL" -c "SELECT usage_date, used, usage_bucket, source
+  FROM ios_usage_daily_summaries
+  WHERE subscription_id='&lt;対象サブスクID&gt;'
+  ORDER BY usage_date DESC LIMIT 5;"</pre></div>
+<p>送信先は <code class="inline">subscription_id × usage_date</code> で冪等 upsert。<b>同じ日に複数回送っても行は増えず、最後の送信値で上書き</b>される（同日内は時間が増える一方なので値は下がらない）。</p>
+<div class="ok"><b>合格例（Screen Time・60 分テスト）：</b><code class="inline">used=true</code> / <code class="inline">usage_bucket=m60_plus</code> / <code class="inline">source=ios_device_activity</code> の行が当日分として 1 行入り、ログに <code class="inline">POST /api/usage/daily 200</code> が出ていれば、IP 修正 → 到達 → 認証通過 → 冪等 upsert まで配線が end-to-end で通ったことになる。</div>
+
+<h2><span class="num">9</span>突破済みの実機特有の壁（戻すと再発）</h2>
+<table>
+  <tr><th>症状</th><th>原因</th><th>対処（場所）</th></tr>
+  <tr><td>送信が <code class="inline">request time out</code> ／ ログに何も出ない</td><td>Mac の LAN IP が再起動で変わった</td><td><code class="inline">refresh-ip.sh</code> で更新 → 再ビルド＋ショートカット URL 変更</td></tr>
+  <tr><td>モバイル通信では届くのに Wi-Fi で届かない</td><td>iPhone の VPN／iCloud プライベートリレー、または AP アイソレーション</td><td>VPN/リレーをオフ。同一 Wi-Fi・ゲスト SSID を避ける。Mac の実 IP を Safari で先に確認</td></tr>
+  <tr><td>HTTP 401</td><td>トークン不一致</td><td><code class="inline">Constants.swift</code> の <code class="inline">syncToken</code> と <code class="inline">apps/web/.env</code> の <code class="inline">USAGE_SYNC_TOKEN</code> を一致</td></tr>
+  <tr><td>codesign <code class="inline">resource fork ... detritus not allowed</code></td><td>iCloud 同期フォルダの拡張属性</td><td>DerivedData を <code class="inline">${TMPDIR}</code> に＋<code class="inline">xattr -cr</code>（run-e2e が実施）</td></tr>
+  <tr><td><code class="inline">includesPastActivity is only available in iOS 17.4</code></td><td>デプロイ先が低い</td><td><code class="inline">project.yml</code> を iOS 17.4</td></tr>
+  <tr><td><code class="inline">UND_ERR_INVALID_ARG</code>（Appium /session）</td><td>Node 24 + undici が webdriverio v9 と非互換</td><td>Node 22 LTS</td></tr>
+  <tr><td>appium 起動後ハング／<code class="inline">code 65</code> 前のポート</td><td>VS Code が 4723 を占有</td><td>run-e2e がポート使用中なら自動で空きへ＋curl にタイムアウト</td></tr>
+  <tr><td>WDA <code class="inline">No profiles ...xctrunner</code></td><td>WDA 署名でプロファイル自動生成不可</td><td>capabilities に <code class="inline">updatedWDABundleId</code> ＋ <code class="inline">allowProvisioningDeviceRegistration: true</code></td></tr>
+  <tr><td>毎回「未認可」に戻る</td><td>起動時に認可状態を読んでいない</td><td><code class="inline">SpikeViewModel.init()</code> で <code class="inline">authorizationStatus</code> を反映</td></tr>
+</table>
+<div class="note"><b>UDID の注意：</b>Appium/xcodebuild が使うのは<b>ハードウェア UDID</b>（8桁-16桁、<code class="inline">xctrace</code> 表示）。<code class="inline">devicectl</code> の Identifier は CoreDevice UUID（8-4-4-4-12）で別物。検出は xctrace 優先。</div>
+
+<footer>
+  関連：<code class="inline">spikes/ios-screen-time/README.md</code>（自動 E2E の詳細）／<code class="inline">scripts/refresh-ip.sh</code>（IP 自動同期）／<code class="inline">.steering/20260606-ios-screen-time-spike/parallel-test-guide.html</code>（手動の同時進行ガイド）／<code class="inline">field-test-guide.md</code>（精度の手動フィールドテスト）／<code class="inline">e2e-automation-handoff.md</code>（引き継ぎ）。実 IP・トークン・利用傾向は Git に置かない（本ガイドの値はすべて例）。
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.codeblock .copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var code = btn.parentElement.querySelector('pre').innerText;
+      navigator.clipboard.writeText(code).then(function () {
+        btn.textContent = 'コピー済み';
+        btn.classList.add('done');
+        setTimeout(function () { btn.textContent = 'コピー'; btn.classList.remove('done'); }, 1500);
+      });
+    });
+  });
+</script>
+</body>
+</html>

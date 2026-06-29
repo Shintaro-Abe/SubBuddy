@@ -1,0 +1,3 @@
+[submodule ".tools/google-slides-mcp"]
+	path = .tools/google-slides-mcp
+	url = https://github.com/ryanvo162/google-slides-mcp.git

@@ -1,0 +1,14 @@
+{
+  "name": "subbuddy-spike-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "実機 E2E: Appium(XCUITest) でネイティブ操作 + Playwright で Web 確認",
+  "scripts": {
+    "test": "node real-device.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0",
+    "webdriverio": "^9.0.0"
+  }
+}

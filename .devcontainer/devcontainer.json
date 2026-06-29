@@ -1,0 +1,39 @@
+{
+  "name": "SubBuddy",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "workspaceFolder": "/workspaces/SubBuddy",
+
+  // ~/.codex を永続化 (Rebuild しても trust 設定・認証・gitleaks 確認フラグを保持)。
+  // localWorkspaceFolderBasename によりプロジェクトごとに独立ボリュームを自動派生。
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-codex-home,target=/home/vscode/.codex,type=volume"
+  ],
+
+  // MCP サーバ用のシークレットをローカル環境変数から引き継ぐ。
+  // .codex/config.toml 側で env_vars=["STITCH_API_KEY"]/["NAPKIN_API_KEY"] が
+  // ホスト変数の通過を許可しており、ここで実値をコンテナに注入する。
+  "containerEnv": {
+    "STITCH_API_KEY": "${localEnv:STITCH_API_KEY}",
+    "NAPKIN_API_KEY": "${localEnv:NAPKIN_API_KEY}"
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // macOptionClickForcesSelection: macOS で ⌥Option+ドラッグ選択を強制する。
+  //   フルスクリーンTUIがマウスを横取りすると選択コピーが OSC 52 経由で
+  //   文字化けする (日本語が "æ..." 化け)。Option+ドラッグでターミナル
+  //   ネイティブ選択になり、正しいUTF-8でコピーできる。
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.macOptionClickForcesSelection": true
+      }
+    }
+  },
+
+  "postCreateCommand": ".devcontainer/post_create.sh",
+  "postStartCommand": ".devcontainer/post_start.sh"
+}

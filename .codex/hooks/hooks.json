@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/wbs/scripts/detect-bolt-complete.mjs\"",
+            "timeout": 15,
+            "statusMessage": "tasklist 完了判定 (WBS 同期提案)"
+          }
+        ]
+      }
+    ]
+  }
+}

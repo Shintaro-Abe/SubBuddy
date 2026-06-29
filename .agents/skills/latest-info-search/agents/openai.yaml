@@ -1,0 +1,4 @@
+interface:
+  display_name: "Latest Info Search"
+  short_description: "最新情報を一次情報優先で検索・裏取りする"
+  default_prompt: "Use $latest-info-search to verify the latest official information with sources."

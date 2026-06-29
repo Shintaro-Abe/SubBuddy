@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Google Slides MCP 導入手順（ryanvo162）</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>Google Slides MCP 導入手順（ryanvo162）</h1>
+<div class="callout note"><p>Google スライドを AI（MCP）から直接作れるようにする手順書。所要 20〜30分。 必要なもの：Google アカウント、Node.js 18以上。 MCP（＝AIが外部ツールを操作する仕組み）の <code>ryanvo162/google-slides-mcp</code> を、自分のPCで動かして使う。</p></div>
+<h2>前提</h2>
+<ul><li>ブラウザ操作（Google Cloud の設定）は<strong>あなた自身</strong>が行う。</li><li>コマンド実行（クローン・ビルド・登録）は Claude が代行できる。</li><li>マネージド型（Composio 等）は使わない。スライド内容が第三者を経由しないよう、自分のPCで動かす（Google と直接）。</li></ul>
+<h2>手順</h2>
+<h3>ステップ1：MCP をダウンロードしてビルドする</h3>
+<p>AI から呼び出すプログラム本体を用意する。</p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>git clone https://github.com/ryanvo162/google-slides-mcp.git &amp;&amp; cd google-slides-mcp &amp;&amp; npm install &amp;&amp; npm run build</code></pre></div>
+<div class="callout warn"><p>置き場所は SubBuddy リポジトリの<strong>外</strong>にする（ビルド成果物や依存をうっかりコミットしないため）。</p></div>
+<div class="callout ok"><p>確認：<code>dist/index.js</code> ができていれば成功。</p></div>
+<h3>ステップ2：Google Cloud でプロジェクトを作る</h3>
+<p>スライドを操作する権限の入れ物を作る。</p>
+<ol class="gui"><li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> を開く。</li><li>画面上部のプロジェクト選択 →「新しいプロジェクト」→ 名前を付けて作成。</li><li>作ったプロジェクトを選択した状態にする。</li></ol>
+<div class="callout ok"><p>確認：画面上部に作ったプロジェクト名が表示されている。</p></div>
+<h3>ステップ3：必要な API を2つ有効にする</h3>
+<p>スライドとファイル操作の機能をオンにする。</p>
+<ol class="gui"><li>左メニュー →「API とサービス」→「ライブラリ」を開く。</li><li>「Google Slides API」を検索 →「有効にする」。</li><li>同じく「Google Drive API」を検索 →「有効にする」。</li></ol>
+<div class="callout warn"><p>Drive API も必要（サムネイル・エクスポート・ファイル操作で使う）。Slides だけだと一部が動かない。</p></div>
+<div class="callout ok"><p>確認：両方とも「有効」になっている。</p></div>
+<h3>ステップ4：OAuth 同意画面を設定する</h3>
+<p>自分のアカウントで認可できるようにする。</p>
+<ol class="gui"><li>「API とサービス」→「OAuth 同意画面」を開く。</li><li>User Type は「外部」を選んで作成。</li><li>アプリ名・サポートメール・デベロッパー連絡先を入力して保存。</li><li>「テストユーザー」に<strong>自分の Google アカウント</strong>を追加する。</li></ol>
+<div class="callout warn"><p>テストユーザーに自分を入れ忘れると、後の認可で弾かれる。</p></div>
+<h3>ステップ5：OAuth クライアントを作って鍵をダウンロードする</h3>
+<p>ログイン情報（クレデンシャル）を発行する。</p>
+<ol class="gui"><li>「API とサービス」→「認証情報」→「認証情報を作成」→「OAuth クライアント ID」。</li><li>アプリの種類は「<strong>デスクトップアプリ</strong>」を選ぶ。</li><li>作成後、「JSON をダウンロード」して <code>credentials.json</code> を保存する。</li></ol>
+<div class="callout warn"><p>種類は必ず「デスクトップアプリ」。「ウェブアプリ」を選ぶと手順が合わなくなる。</p></div>
+<div class="callout warn"><p><code>credentials.json</code> は秘密情報。リポジトリにコミットしない（リポジトリ外に置く）。</p></div>
+<h3>ステップ6：ブラウザで認可してトークンを取る</h3>
+<p>PCのMCPに「このアカウントを使ってよい」と許可を与える。</p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>node dist/index.js auth</code></pre></div>
+<ol class="gui"><li>ブラウザが開くので、対象の Google アカウントでログイン。</li><li>「許可」を押す。</li></ol>
+<div class="callout warn"><p>このコマンドはブラウザ認可を挟むので、他のコマンドと連結しない（単独で実行）。</p></div>
+<div class="callout ok"><p>確認：<code>~/.config/google-slides-mcp/token.json</code> が作られていれば成功。</p></div>
+<h3>ステップ7：MCP を登録する</h3>
+<p>SubBuddy の <code>.mcp.json</code> に追記する（パスは手順1で置いた絶対パスに置き換える）。</p>
+<pre class="plain"><code>{
+  "mcpServers": {
+    "google-slides": {
+      "command": "node",
+      "args": ["/絶対パス/google-slides-mcp/dist/index.js"]
+    }
+  }
+}</code></pre>
+<div class="callout ok"><p>確認：MCP を読み直すと <code>google-slides</code> が認識される。</p></div>
+<h3>ステップ8：動作確認する</h3>
+<p>実際に呼べるか試す。</p>
+<ul><li><code>createPresentation</code> でテスト用のデッキを1つ作り、確認できたら消す。</li><li>使える代表ツール：<code>createPresentation</code> / <code>addSlide</code> / <code>insertTextBox</code> / <code>insertImage</code> / <code>insertTable</code> / <code>updateText</code> / <code>exportPresentation</code>（PDF/PPTX/ODP）/ <code>getThumbnail</code>。</li></ul>
+<h2>困ったとき</h2>
+<ul><li>認可で弾かれる → ステップ4のテストユーザーに自分が入っているか確認。</li><li>トークン期限切れ → もう一度 <code>node dist/index.js auth</code> を実行（同意画面が「テスト」だと期限が付くことがある）。</li><li><code>dist/index.js</code> が無い → ステップ1の <code>npm run build</code> が成功しているか確認。</li></ul>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

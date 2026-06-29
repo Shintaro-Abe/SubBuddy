@@ -1,0 +1,540 @@
+[
+  {
+    "canonicalName": "Netflix",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "ネットフリックス,ネトフリ",
+    "plans": [
+      { "name": "広告つきスタンダード", "monthlyPrice": 790, "isFreeTier": false },
+      { "name": "スタンダード", "monthlyPrice": 1590, "isFreeTier": false },
+      { "name": "プレミアム", "monthlyPrice": 2290, "isFreeTier": false }
+    ],
+    "alternatives": ["Disney+", "Amazon Prime Video", "Hulu", "U-NEXT"]
+  },
+  {
+    "canonicalName": "Disney+",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "ディズニープラス,ディズニー+",
+    "plans": [
+      { "name": "スタンダード", "monthlyPrice": 990, "isFreeTier": false },
+      { "name": "プレミアム", "monthlyPrice": 1320, "isFreeTier": false }
+    ],
+    "alternatives": ["Netflix", "Amazon Prime Video", "Hulu", "U-NEXT"]
+  },
+  {
+    "canonicalName": "Amazon Prime Video",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "アマプラビデオ,プライムビデオ",
+    "plans": [
+      { "name": "Prime会員（月額）", "monthlyPrice": 600, "isFreeTier": false }
+    ],
+    "alternatives": ["Netflix", "Disney+", "Hulu", "U-NEXT"]
+  },
+  {
+    "canonicalName": "Hulu",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "フールー",
+    "plans": [
+      { "name": "Hulu", "monthlyPrice": 1026, "isFreeTier": false }
+    ],
+    "alternatives": ["Netflix", "Disney+", "Amazon Prime Video", "U-NEXT"]
+  },
+  {
+    "canonicalName": "U-NEXT",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "ユーネクスト,UNEXT",
+    "plans": [
+      { "name": "月額プラン", "monthlyPrice": 2189, "isFreeTier": false }
+    ],
+    "alternatives": ["Netflix", "Disney+", "Amazon Prime Video", "Hulu"]
+  },
+  {
+    "canonicalName": "ABEMA プレミアム",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "アベマ,ABEMA",
+    "plans": [
+      { "name": "プレミアム", "monthlyPrice": 960, "isFreeTier": false },
+      { "name": "無料（広告あり）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Netflix", "Hulu", "Amazon Prime Video"]
+  },
+  {
+    "canonicalName": "YouTube Premium",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "ユーチューブプレミアム,YouTubeプレミアム",
+    "plans": [
+      { "name": "個人", "monthlyPrice": 1280, "isFreeTier": false },
+      { "name": "ファミリー", "monthlyPrice": 2280, "isFreeTier": false },
+      { "name": "無料（広告あり）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": []
+  },
+  {
+    "canonicalName": "Spotify",
+    "category": "music",
+    "usageType": "active_background",
+    "commonAliases": "スポティファイ",
+    "plans": [
+      { "name": "Individual", "monthlyPrice": 980, "isFreeTier": false },
+      { "name": "Duo", "monthlyPrice": 1280, "isFreeTier": false },
+      { "name": "Family", "monthlyPrice": 1580, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Amazon Music Unlimited", "Apple Music", "YouTube Music"]
+  },
+  {
+    "canonicalName": "Amazon Music Unlimited",
+    "category": "music",
+    "usageType": "active_background",
+    "commonAliases": "アマゾンミュージック,Amazon Music",
+    "plans": [
+      { "name": "Individual", "monthlyPrice": 1080, "isFreeTier": false },
+      { "name": "Prime会員", "monthlyPrice": 980, "isFreeTier": false }
+    ],
+    "alternatives": ["Spotify", "Apple Music", "YouTube Music"]
+  },
+  {
+    "canonicalName": "YouTube Music",
+    "category": "music",
+    "usageType": "active_background",
+    "commonAliases": "ユーチューブミュージック",
+    "plans": [
+      { "name": "Premium", "monthlyPrice": 980, "isFreeTier": false },
+      { "name": "無料（広告あり）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Spotify", "Amazon Music Unlimited"]
+  },
+  {
+    "canonicalName": "Amazon Prime",
+    "category": "membership",
+    "usageType": "entitlement",
+    "commonAliases": "アマプラ,アマゾンプライム",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 600, "isFreeTier": false },
+      { "name": "年額", "monthlyPrice": 408, "isFreeTier": false }
+    ],
+    "alternatives": []
+  },
+  {
+    "canonicalName": "日経電子版",
+    "category": "news",
+    "usageType": "active_foreground",
+    "commonAliases": "日経新聞,日経デジタル,日経",
+    "plans": [
+      { "name": "スタンダード", "monthlyPrice": 4277, "isFreeTier": false },
+      { "name": "無料会員", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["NewsPicks", "東洋経済オンライン"]
+  },
+  {
+    "canonicalName": "NewsPicks",
+    "category": "news",
+    "usageType": "active_foreground",
+    "commonAliases": "ニューズピックス",
+    "plans": [
+      { "name": "プレミアム", "monthlyPrice": 1700, "isFreeTier": false },
+      { "name": "無料", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["日経電子版"]
+  },
+  {
+    "canonicalName": "ChatGPT Plus",
+    "category": "ai_tool",
+    "usageType": "active_foreground",
+    "commonAliases": "チャットGPT,ChatGPT,GPT",
+    "plans": [
+      { "name": "Plus", "monthlyPrice": 2960, "isFreeTier": false },
+      { "name": "Pro", "monthlyPrice": 29600, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Claude Pro", "Gemini Advanced"]
+  },
+  {
+    "canonicalName": "Claude Pro",
+    "category": "ai_tool",
+    "usageType": "active_foreground",
+    "commonAliases": "クロードプロ,Anthropic Claude",
+    "plans": [
+      { "name": "Pro", "monthlyPrice": 2960, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["ChatGPT Plus", "Gemini Advanced"]
+  },
+  {
+    "canonicalName": "Gemini Advanced",
+    "category": "ai_tool",
+    "usageType": "active_foreground",
+    "commonAliases": "ジェミニ,Google Gemini",
+    "plans": [
+      { "name": "Advanced（Google One AI Premium）", "monthlyPrice": 2900, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["ChatGPT Plus", "Claude Pro"]
+  },
+  {
+    "canonicalName": "iCloud+",
+    "category": "cloud_storage",
+    "usageType": "capacity",
+    "commonAliases": "アイクラウド,iCloud",
+    "plans": [
+      { "name": "50GB", "monthlyPrice": 130, "isFreeTier": false, "capacityGb": 50 },
+      { "name": "200GB", "monthlyPrice": 400, "isFreeTier": false, "capacityGb": 200 },
+      { "name": "2TB", "monthlyPrice": 1300, "isFreeTier": false, "capacityGb": 2000 },
+      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true, "capacityGb": 5 }
+    ],
+    "alternatives": ["Google One", "Dropbox", "OneDrive"]
+  },
+  {
+    "canonicalName": "Google One",
+    "category": "cloud_storage",
+    "usageType": "passive",
+    "commonAliases": "グーグルワン,Google Drive",
+    "plans": [
+      { "name": "100GB", "monthlyPrice": 250, "isFreeTier": false },
+      { "name": "2TB", "monthlyPrice": 1300, "isFreeTier": false },
+      { "name": "無料（15GB）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["iCloud+", "Dropbox", "OneDrive"]
+  },
+  {
+    "canonicalName": "Dropbox",
+    "category": "cloud_storage",
+    "usageType": "passive",
+    "commonAliases": "ドロップボックス",
+    "plans": [
+      { "name": "Plus", "monthlyPrice": 1500, "isFreeTier": false },
+      { "name": "Basic（無料）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Google One", "iCloud+", "OneDrive"]
+  },
+  {
+    "canonicalName": "OneDrive",
+    "category": "cloud_storage",
+    "usageType": "passive",
+    "commonAliases": "ワンドライブ,Microsoft OneDrive",
+    "plans": [
+      { "name": "Microsoft 365 Basic", "monthlyPrice": 260, "isFreeTier": false },
+      { "name": "Microsoft 365 Personal", "monthlyPrice": 1490, "isFreeTier": false },
+      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Google One", "Dropbox", "iCloud+"]
+  },
+  {
+    "canonicalName": "1Password",
+    "category": "password_manager",
+    "usageType": "passive",
+    "commonAliases": "ワンパスワード",
+    "plans": [
+      { "name": "Individual", "monthlyPrice": 450, "isFreeTier": false },
+      { "name": "Families", "monthlyPrice": 750, "isFreeTier": false }
+    ],
+    "alternatives": ["Bitwarden", "LastPass"]
+  },
+  {
+    "canonicalName": "Bitwarden",
+    "category": "password_manager",
+    "usageType": "passive",
+    "commonAliases": "ビットウォーデン",
+    "plans": [
+      { "name": "Premium", "monthlyPrice": 150, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["1Password", "LastPass"]
+  },
+  {
+    "canonicalName": "Adobe Creative Cloud",
+    "category": "creative_tool",
+    "usageType": "active_other_device",
+    "commonAliases": "アドビ,Adobe CC,Creative Cloud",
+    "plans": [
+      { "name": "コンプリートプラン", "monthlyPrice": 7780, "isFreeTier": false },
+      { "name": "フォトプラン", "monthlyPrice": 2380, "isFreeTier": false },
+      { "name": "単体（Photoshop）", "monthlyPrice": 3280, "isFreeTier": false }
+    ],
+    "alternatives": ["Canva Pro", "Figma"]
+  },
+  {
+    "canonicalName": "Canva Pro",
+    "category": "creative_tool",
+    "usageType": "active_foreground",
+    "commonAliases": "キャンバ",
+    "plans": [
+      { "name": "Pro", "monthlyPrice": 1500, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Adobe Creative Cloud", "Figma"]
+  },
+  {
+    "canonicalName": "Figma",
+    "category": "creative_tool",
+    "usageType": "active_other_device",
+    "commonAliases": "フィグマ",
+    "plans": [
+      { "name": "Professional", "monthlyPrice": 1800, "isFreeTier": false },
+      { "name": "Starter（無料）", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Adobe Creative Cloud", "Canva Pro"]
+  },
+  {
+    "canonicalName": "Notion",
+    "category": "productivity",
+    "usageType": "active_foreground",
+    "commonAliases": "ノーション",
+    "plans": [
+      { "name": "Plus", "monthlyPrice": 1200, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Evernote", "Obsidian"]
+  },
+  {
+    "canonicalName": "Evernote",
+    "category": "productivity",
+    "usageType": "active_foreground",
+    "commonAliases": "エバーノート",
+    "plans": [
+      { "name": "Personal", "monthlyPrice": 1100, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Notion", "Obsidian"]
+  },
+  {
+    "canonicalName": "Todoist",
+    "category": "productivity",
+    "usageType": "active_foreground",
+    "commonAliases": "トゥードゥイスト",
+    "plans": [
+      { "name": "Pro", "monthlyPrice": 588, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["TickTick", "Things"]
+  },
+  {
+    "canonicalName": "TickTick",
+    "category": "productivity",
+    "usageType": "active_foreground",
+    "commonAliases": "ティックティック",
+    "plans": [
+      { "name": "Premium", "monthlyPrice": 450, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Todoist", "Things"]
+  },
+  {
+    "canonicalName": "Duolingo Plus",
+    "category": "learning",
+    "usageType": "active_foreground",
+    "commonAliases": "デュオリンゴ,Duolingo",
+    "plans": [
+      { "name": "Super", "monthlyPrice": 1100, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": []
+  },
+  {
+    "canonicalName": "スタディサプリ",
+    "category": "learning",
+    "usageType": "active_foreground",
+    "commonAliases": "スタサプ",
+    "plans": [
+      { "name": "ベーシック", "monthlyPrice": 2178, "isFreeTier": false }
+    ],
+    "alternatives": []
+  },
+  {
+    "canonicalName": "Kindle Unlimited",
+    "category": "ebook",
+    "usageType": "active_foreground",
+    "commonAliases": "キンドルアンリミテッド,Kindle読み放題",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 980, "isFreeTier": false }
+    ],
+    "alternatives": ["楽天マガジン", "dマガジン"]
+  },
+  {
+    "canonicalName": "楽天マガジン",
+    "category": "ebook",
+    "usageType": "active_foreground",
+    "commonAliases": "楽天magazine",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 418, "isFreeTier": false }
+    ],
+    "alternatives": ["Kindle Unlimited", "dマガジン"]
+  },
+  {
+    "canonicalName": "dマガジン",
+    "category": "ebook",
+    "usageType": "active_foreground",
+    "commonAliases": "ディーマガジン",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 580, "isFreeTier": false }
+    ],
+    "alternatives": ["Kindle Unlimited", "楽天マガジン"]
+  },
+  {
+    "canonicalName": "NordVPN",
+    "category": "vpn",
+    "usageType": "passive",
+    "commonAliases": "ノードVPN",
+    "plans": [
+      { "name": "スタンダード（月額）", "monthlyPrice": 1960, "isFreeTier": false },
+      { "name": "スタンダード（2年）", "monthlyPrice": 440, "isFreeTier": false }
+    ],
+    "alternatives": ["ExpressVPN", "Surfshark"]
+  },
+  {
+    "canonicalName": "ExpressVPN",
+    "category": "vpn",
+    "usageType": "passive",
+    "commonAliases": "エクスプレスVPN",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 1800, "isFreeTier": false }
+    ],
+    "alternatives": ["NordVPN", "Surfshark"]
+  },
+  {
+    "canonicalName": "Surfshark",
+    "category": "vpn",
+    "usageType": "passive",
+    "commonAliases": "サーフシャーク",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 1738, "isFreeTier": false },
+      { "name": "2年プラン", "monthlyPrice": 328, "isFreeTier": false }
+    ],
+    "alternatives": ["NordVPN", "ExpressVPN"]
+  },
+  {
+    "canonicalName": "Microsoft 365",
+    "category": "productivity",
+    "usageType": "active_other_device",
+    "commonAliases": "Office 365,マイクロソフト365",
+    "plans": [
+      { "name": "Personal", "monthlyPrice": 1490, "isFreeTier": false },
+      { "name": "Family", "monthlyPrice": 2100, "isFreeTier": false }
+    ],
+    "alternatives": ["Google Workspace"]
+  },
+  {
+    "canonicalName": "Google Workspace",
+    "category": "productivity",
+    "usageType": "active_other_device",
+    "commonAliases": "グーグルワークスペース,G Suite",
+    "plans": [
+      { "name": "Business Starter", "monthlyPrice": 680, "isFreeTier": false }
+    ],
+    "alternatives": ["Microsoft 365"]
+  },
+  {
+    "canonicalName": "Slack",
+    "category": "communication",
+    "usageType": "active_foreground",
+    "commonAliases": "スラック",
+    "plans": [
+      { "name": "Pro", "monthlyPrice": 1050, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Discord", "Microsoft Teams"]
+  },
+  {
+    "canonicalName": "Discord Nitro",
+    "category": "communication",
+    "usageType": "active_foreground",
+    "commonAliases": "ディスコード",
+    "plans": [
+      { "name": "Nitro", "monthlyPrice": 1380, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Slack"]
+  },
+  {
+    "canonicalName": "Audible",
+    "category": "audiobook",
+    "usageType": "active_background",
+    "commonAliases": "オーディブル",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 1500, "isFreeTier": false }
+    ],
+    "alternatives": ["audiobook.jp"]
+  },
+  {
+    "canonicalName": "audiobook.jp",
+    "category": "audiobook",
+    "usageType": "active_background",
+    "commonAliases": "オーディオブック",
+    "plans": [
+      { "name": "聴き放題", "monthlyPrice": 1330, "isFreeTier": false }
+    ],
+    "alternatives": ["Audible"]
+  },
+  {
+    "canonicalName": "Cursor",
+    "category": "dev_tool",
+    "usageType": "active_other_device",
+    "commonAliases": "カーソル",
+    "plans": [
+      { "name": "Pro", "monthlyPrice": 2960, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["GitHub Copilot"]
+  },
+  {
+    "canonicalName": "GitHub Copilot",
+    "category": "dev_tool",
+    "usageType": "active_other_device",
+    "commonAliases": "コパイロット,Copilot",
+    "plans": [
+      { "name": "Individual", "monthlyPrice": 1480, "isFreeTier": false },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Cursor"]
+  },
+  {
+    "canonicalName": "Claude Code",
+    "category": "dev_tool",
+    "usageType": "active_other_device",
+    "commonAliases": "クロードコード",
+    "plans": [
+      { "name": "Max（5x）", "monthlyPrice": 14800, "isFreeTier": false },
+      { "name": "Max（20x）", "monthlyPrice": 29600, "isFreeTier": false },
+      { "name": "Pro", "monthlyPrice": 2960, "isFreeTier": false }
+    ],
+    "alternatives": ["Cursor", "GitHub Copilot"]
+  },
+  {
+    "canonicalName": "マネーフォワードME",
+    "category": "finance",
+    "usageType": "active_foreground",
+    "commonAliases": "マネフォ,MoneyForward",
+    "plans": [
+      { "name": "プレミアム", "monthlyPrice": 500, "isFreeTier": false },
+      { "name": "無料", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["Zaim"]
+  },
+  {
+    "canonicalName": "Zaim",
+    "category": "finance",
+    "usageType": "active_foreground",
+    "commonAliases": "ザイム",
+    "plans": [
+      { "name": "プレミアム", "monthlyPrice": 440, "isFreeTier": false },
+      { "name": "無料", "monthlyPrice": 0, "isFreeTier": true }
+    ],
+    "alternatives": ["マネーフォワードME"]
+  },
+  {
+    "canonicalName": "dアニメストア",
+    "category": "video_streaming",
+    "usageType": "active_foreground",
+    "commonAliases": "dアニメ",
+    "plans": [
+      { "name": "月額", "monthlyPrice": 550, "isFreeTier": false }
+    ],
+    "alternatives": ["Netflix", "U-NEXT", "ABEMA プレミアム"]
+  }
+]

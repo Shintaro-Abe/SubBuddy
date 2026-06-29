@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Napkin AI MCP 導入手順（louischancly）</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>Napkin AI MCP 導入手順（louischancly）</h1>
+<div class="callout note"><p>テキストから図版（フロー図・概念図など）を AI で作れるようにする手順書。所要 10〜15分。 必要なもの：Napkin AI アカウント（有料プラン）、Node.js 18以上。 MCP（＝AIが外部ツールを操作する仕組み）の <code>louischancly/napkin-ai-mcp</code>（非公式）を使う。図版の「部品」を作る用途で、スライド全体は作らない。</p></div>
+<h2>前提</h2>
+<ul><li>有料プランの契約とトークン発行は<strong>あなた自身</strong>が行う（Napkin アカウント本人）。</li><li>登壇資料に使うため<strong>最初から有料プラン</strong>にする（無料プランは図版に透かしが入る）。</li><li>申請メールや承認待ちは不要（セルフサービスで発行できる）。</li></ul>
+<h2>手順</h2>
+<h3>ステップ1：有料プランを契約する</h3>
+<p>透かしを消し、生成に使うクレジットを確保する。</p>
+<ol class="gui"><li><a href="https://app.napkin.ai" target="_blank" rel="noopener">app.napkin.ai</a> にログイン。</li><li>有料プランを契約する。</li></ol>
+<div class="callout warn"><p>無料のままだと生成図版に透かし（watermark）が入る。登壇資料には不向き。</p></div>
+<h3>ステップ2：API トークンを発行する</h3>
+<p>MCP が Napkin を呼ぶための鍵を作る。</p>
+<ol class="gui"><li>アカウント設定（または Team Space 設定）を開く。</li><li>「Developers」タブを開く。</li><li>「Create new API token」を押す。</li><li>表示されたトークンを安全に控える。</li></ol>
+<div class="callout warn"><p>トークンは再表示できない場合がある。発行直後に控える。</p></div>
+<div class="callout warn"><p>トークンは秘密情報。リポジトリにコミットしない。</p></div>
+<div class="callout ok"><p>確認：Developers タブにトークンが1件できている。</p></div>
+<h3>ステップ3：MCP を登録する</h3>
+<p>SubBuddy の <code>.mcp.json</code> に追記する（トークンは自分の値に置き換える）。</p>
+<pre class="plain"><code>{
+  "mcpServers": {
+    "napkin-ai": {
+      "command": "npx",
+      "args": ["-y", "napkin-ai-mcp"],
+      "env": {
+        "NAPKIN_API_KEY": "&lt;発行したトークン&gt;",
+        "NAPKIN_STORAGE_TYPE": "local",
+        "NAPKIN_STORAGE_LOCAL_DIR": "./visuals",
+        "NAPKIN_DEFAULT_FORMAT": "svg",
+        "NAPKIN_DEFAULT_LANGUAGE": "ja",
+        "NAPKIN_DEFAULT_COLOR_MODE": "light"
+      }
+    }
+  }
+}</code></pre>
+<div class="callout warn"><p>必須は <code>NAPKIN_API_KEY</code> だけ。他は任意（保存先や既定の見た目）。</p></div>
+<p>コマンドで追加する場合はこちら。</p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>claude mcp add napkin-ai -- npx -y napkin-ai-mcp</code></pre></div>
+<div class="callout warn"><p>コマンドで追加したときは、別途 <code>NAPKIN_API_KEY</code> を環境変数で設定する。</p></div>
+<h3>ステップ4：動作確認する</h3>
+<p>鍵が有効か確かめる。</p>
+<ul><li>MCP を読み直して <code>verify_api_key</code> を実行する。</li></ul>
+<div class="callout ok"><p>確認：<code>verify_api_key</code> が成功すればOK。</p></div>
+<h2>困ったとき</h2>
+<ul><li>図版に透かしが残る → 有料プランが有効か、正しいアカウントのトークンか確認。</li><li><code>verify_api_key</code> が失敗 → トークンの貼り間違い、または環境変数の設定漏れを確認。</li><li>図版生成が 429（回数制限） → プランのレート上限。少し待つか、バリエーション数を減らす。</li></ul>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>
