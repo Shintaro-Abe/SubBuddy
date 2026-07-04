@@ -35,3 +35,22 @@ key: id
 
 # spec から消えた行の扱い：archive（Archive シートへ移送） / keep（残す） / delete（削除）
 onMissing: archive
+
+# GitHub planning repo 同期の設定（非秘密。トークンは gh CLI 側で管理）
+github:
+  repo: "Shintaro-Abe/SubBuddy-planning"
+  projectNumber: 0
+  key: id
+  fields:
+    status: "Status"
+    phase: "Phase"
+    progress: "Progress"
+    plannedStart: "Start"
+    plannedEnd: "Target"
+    assignee: "Assignee"
+  gantt:
+    out: "roadmap/gantt.md"
+  diagrams:
+    out: "architecture"
+    er: "prisma"
+  onMissing: keep

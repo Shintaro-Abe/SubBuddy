@@ -9,7 +9,10 @@
     "typecheck": "tsc --noEmit",
     "init-sheets": "tsx scripts/init-sheets.ts",
     "sync": "tsx scripts/sync.ts",
-    "sync:apply": "tsx scripts/sync.ts --apply"
+    "sync:apply": "tsx scripts/sync.ts --apply",
+    "setup:github": "tsx scripts/setup-github.ts",
+    "sync:github": "tsx scripts/sync-github.ts",
+    "sync:github:apply": "tsx scripts/sync-github.ts --apply"
   },
   "dependencies": {
     "yaml": "^2.6.0"

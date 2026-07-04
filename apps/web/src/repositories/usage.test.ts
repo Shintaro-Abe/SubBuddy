@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import { UsageBucket } from "@prisma/client";
-import { upsertUsageDailyBatch } from "./usage";
+import { UsageSubscriptionNotFoundError, upsertUsageDailyBatch } from "./usage";
 import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
 
 /**
@@ -10,16 +10,19 @@ import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
  * → 同一バッチを再送しても、同じキーへの upsert になり行が増えないことを保証する。
  * （DB 実体での行数確認は Phase 5 の通し確認で実施。）
  */
-function fakeDb() {
+function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   const calls: { where: unknown }[] = [];
   const db = {
+    subscription: {
+      findMany: async () => ownedSubscriptionIds.map((id) => ({ id })),
+    },
     iosUsageDailySummary: {
       upsert: async (args: { where: unknown }) => {
         calls.push({ where: args.where });
         return {};
       },
     },
-  } as unknown as Pick<PrismaClient, "iosUsageDailySummary">;
+  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
   return { db, calls };
 }
 
@@ -65,5 +68,13 @@ describe("upsertUsageDailyBatch", () => {
     // 1回目と2回目で同じキーを指している（create ではなく upsert なので行は増えない）。
     expect(calls[0].where).toEqual(calls[2].where);
     expect(calls[1].where).toEqual(calls[3].where);
+  });
+
+  it("認証済み userId の所有サブスクでない場合は保存しない", async () => {
+    const { db, calls } = fakeDb(["sub_1"]);
+    await expect(upsertUsageDailyBatch("user_local", items, db)).rejects.toBeInstanceOf(
+      UsageSubscriptionNotFoundError,
+    );
+    expect(calls).toHaveLength(0);
   });
 });

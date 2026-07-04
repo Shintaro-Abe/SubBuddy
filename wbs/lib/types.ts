@@ -31,7 +31,30 @@ export interface WbsConfig {
     id: string;
     sheets: { wbs: string; archive: string; summary: string };
   };
+  github?: GitHubConfig;
   columns: ColumnDef[];
   key: keyof Task;
   onMissing: 'archive' | 'keep' | 'delete';
+}
+
+export interface GitHubConfig {
+  repo: string;
+  projectNumber: number | null;
+  key: keyof Task;
+  fields: {
+    status: string;
+    phase: string;
+    progress: string;
+    plannedStart: string;
+    plannedEnd: string;
+    assignee: string;
+  };
+  gantt: {
+    out: string;
+  };
+  diagrams: {
+    out: string;
+    er: 'prisma';
+  };
+  onMissing: 'keep' | 'close';
 }

@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-13
+> 最終更新：2026-06-30
 > 関連：`architecture.md`（技術仕様）、`repository-structure.md`（構成）、`functional-design.md`（機能設計）、`glossary.md`（用語）
 
 ---
@@ -14,7 +14,7 @@
 
 前提（他ドキュメントから継承）：
 
-- **PII・秘密情報を扱わない**：実データを参照・生成・コミットしない。合成データのみ（`CLAUDE.md`）。
+- **PII・秘密情報を扱わない**：実データを参照・生成・コミットしない。合成データのみ（`AGENTS.md`）。
 - **ドメイン分離**：判定ロジックは `src/domain/` に集約、UI/API に散在させない（`architecture.md` §7）。
 - **検証境界の一元化**：外部入力は Zod で検証してからドメインへ渡す（`architecture.md` §5.1 / §8.3）。
 
@@ -39,6 +39,9 @@
 - **秘密情報をコードに書かない**：トークン・資格情報は環境変数（`.env`、`.gitignore` 済）。`.env.example` はダミー値のみ。
 - **ログに PII・秘密情報を出力しない**。エラーログも同様。
 - **金額は整数（最小通貨単位）**で扱い、浮動小数で保持しない（`architecture.md` §5）。
+- **テナント分離を崩さない**：API / repository は認証済み `user_id` で必ず絞り込む。クライアント指定の `userId` を信じない。
+- **デバイス同期トークンを平文保存しない**：DB にはハッシュのみ保存し、ログ・エラー・テスト出力に平文トークンを残さない。
+- **local mode と cloud mode の差分を境界に閉じ込める**：認証 provider、DB 接続先、URL/TLS、secret 管理以外に実行モード差分を広げない。
 
 ---
 
@@ -85,7 +88,7 @@
 ## 5. テスト規約
 
 - **Vitest を中心に、ドメインロジック（スコアリング・正規化）を単体テスト**で担保する（`architecture.md` §3.1）。
-- **合成データのみ**：fixture・seed・スナップショットに実 PII を使わない（`CLAUDE.md`）。
+- **合成データのみ**：fixture・seed・スナップショットに実 PII を使わない（`AGENTS.md`）。
 - **テスト対象の優先度**：①スコアリング判定（keep/review/…）、②段階的提供の境界（観測中⇄確定＝`minObservationDays` の前後）、③利用量の正規化、④Zod スキーマ境界、⑤冪等 upsert。
 - 純粋関数はモック不要で入出力検証。I/O はリポジトリをモック。
 - 閾値変更の影響はテストで固定（`config` の値を流し込み、判定差分を検証）。
@@ -110,7 +113,7 @@
 
 ### 6.3 コミット前チェック（必須）
 
-1. **リント・型チェック・テストを通す**（`lint` / `typecheck` / `test`）。`CLAUDE.md`：コード変更後は必ず実施。
+1. **リント・型チェック・テストを通す**（`lint` / `typecheck` / `test`）。`AGENTS.md`：コード変更後は必ず実施。
 2. **シークレットスキャンを実行**し、秘密情報・PII の混入がないことを確認してからコミットする。
 3. `.env`・実データ・ビルド成果物が**ステージされていない**ことを確認（`.gitignore` で除外）。
 
@@ -118,7 +121,7 @@
 
 - 実 PII・秘密情報・本番 DB ダンプの**コミット禁止**。
 - `main` への直接の破壊的操作（force push 等）は避ける。
-- レビュー・承認なしの大規模設計変更を `docs/` に対して行わない（`CLAUDE.md` の段階承認プロセスに従う）。
+- レビュー・承認なしの大規模設計変更を `docs/` に対して行わない（`AGENTS.md` の段階承認プロセスに従う）。
 
 ---
 
@@ -126,7 +129,7 @@
 
 - 基本設計に影響する変更は、該当する `docs/` を**同時に更新**する（コードとドキュメントの乖離を防ぐ）。
 - 図表は変更時に対応する Mermaid も更新する。
-- 作業は `.steering/[YYYYMMDD]-[タイトル]/` に requirements → design → tasklist の順で起こし、各段階で承認を得る（`CLAUDE.md`）。
+- 作業は `.steering/[YYYYMMDD]-[タイトル]/` に requirements → design → tasklist の順で起こし、レビューパックでまとめて承認を得る（`AGENTS.md`）。
 
 ---
 
@@ -139,7 +142,7 @@
 - **正本は `wbs/wbs.yml` のみ**。進捗が変わったら、まず `wbs.yml` を編集してコミットする。スプレッドシートを手で直しても、次回同期で正本に上書きされる。
 - **片方向**：同期は spec → Sheets の一方向。Sheets から spec への逆流は行わない。
 - **冪等**：同じ `wbs.yml` を二度同期しても結果は変わらない（重複行を作らない）。
-- WBS に書くのは**開発タスクのメタ情報のみ**。エンドユーザーの PII・機微データを書かない（`CLAUDE.md`）。
+- WBS に書くのは**開発タスクのメタ情報のみ**。エンドユーザーの PII・機微データを書かない（`AGENTS.md`）。
 
 ### 8.2 同期の流れ（確認ゲート）
 
@@ -147,15 +150,15 @@
 
 ```
 wbs.yml 編集 → dry-run（差分のみ表示・無書き込み） → 差分を提示
-            → ユーザー承認（AskUserQuestion） → 承認時のみ apply（Sheets へ反映）
+            → ユーザー承認（Codex の確認ゲート） → 承認時のみ apply（Sheets へ反映）
 ```
 
-- 起動は `/wbs-sync` コマンド（`.claude/commands/wbs-sync.md`）。`npm --prefix wbs run sync`（既定 dry-run）→ 差分があれば確認 → `npm --prefix wbs run sync:apply`。
+- 起動は `wbs-sync` Skill または WBS 同期スクリプトで行う。`npm --prefix wbs run sync`（既定 dry-run）→ 差分があれば確認 → `npm --prefix wbs run sync:apply`。
 - spec から消えたタスクは `Archive` シートへ退避してから `WBS` から除去する（履歴を残す）。
 
 ### 8.3 自動トリガ
 
-- `.steering/*/tasklist.md` のチェックボックスが**全完了**になった編集を `PostToolUse` フック（`wbs/scripts/detect-bolt-complete.mjs`）が検知し、Claude に同期を提案する（提案のみ。書き込みは確認ゲートを必ず通る）。
+- `.steering/*/tasklist.md` のチェックボックスが**全完了**になった編集を `PostToolUse` フック（`wbs/scripts/detect-bolt-complete.mjs`）が検知し、エージェントに同期を提案する（提案のみ。書き込みは確認ゲートを必ず通る）。
 - 同一完了状態での重複提案は抑止する（`wbs/.sync-state.json` にハッシュ記録。gitignore 対象）。
 - 手動でも同じオーケストレータ（`/wbs-sync`）を起動できる。
 

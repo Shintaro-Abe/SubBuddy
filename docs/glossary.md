@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-13
+> 最終更新：2026-06-30
 > 関連：`product-requirements.md`、`functional-design.md`、`architecture.md`、`repository-structure.md`、`development-guidelines.md`
 
 ---
@@ -133,11 +133,20 @@
 
 | 用語 | 定義 |
 |---|---|
-| ローカルファースト | DB・API・Web・Worker を Mac ローカルで動かす MVP の基本方針（`architecture.md` §1）。 |
-| MVP | ローカル・単一ユーザーで成立させる最小構成。常設の Mac（Mac mini 等）をサーバーとする（機種は問わず、要件は常時起動の macOS。`product-requirements.md` §3）。 |
-| ポストMVP | クラウド多ユーザーの商品版リリース段階。マルチテナント・正式認証・PII 保護を伴う（`architecture.md` §4.2）。 |
+| ローカルファースト | まず local mode で価値を確認し、同一コードベースのまま cloud-testflight mode へ進める方針。 |
+| MVP | ローカル・単一ユーザーで成立させる最小構成。常設の Mac（Mac mini 等）をサーバーとする local mode で価値を確認する段階。 |
+| 小規模検証版 | TestFlight で 20〜50 人程度に配布する最初の検証版。一般公開前に、クラウド多ユーザー基盤・iPhone 連携・プライバシー説明・運用サポートの失敗パターンを集める段階。 |
+| local mode | 開発者・自分用に同一コードベースをローカル実行するモード。ローカル PostgreSQL とローカル簡易認証を使うが、API 契約・Prisma schema・Zod schema・ドメインロジックはクラウド版と共通にする。 |
+| cloud-testflight mode | 小規模検証版を動かすクラウド実行モード。PaaS、マネージド PostgreSQL、Apple サインイン、デバイス同期トークンを使い、TestFlight 配布の検証対象にする。 |
+| production mode | 将来の一般公開版を動かすクラウド実行モード。`cloud-testflight mode` を基礎に、監視・運用・法務/プライバシー対応・サポート体制を強化したもの。 |
+| ポストMVP | MVP 後の段階。まず小規模検証版をフルクラウドで配布し、その後 production mode の一般公開版へ進む。マルチテナント・正式認証・PII 保護を伴う。 |
 | マルチテナント | 1 つのアプリ/DB で複数ユーザーのデータを `user_id` で分離して扱う構成。 |
 | Worker | スコアリング等を実行する処理単位。MVP は API 内同居、フェーズ2 で分離可能（`architecture.md` §7）。 |
+| Apple サインイン | クラウド配布版の主ユーザー認証。Apple の stable identifier と SubBuddy の `users.id` を紐付け、メールアドレスを必須識別子にしない。 |
+| AuthenticatedActor | Route Handler 以降で使う認証済み主体の内部モデル。`user` と `device` を区別し、認証方式の違いをアプリ内部へ散らさない。 |
+| デバイス登録 | Apple サインイン済みユーザーが iPhone を SubBuddy アカウントに紐付け、利用量同期用のデバイス同期トークンを受け取る操作。 |
+| デバイス同期トークン | iPhone が利用量集計値を送るための bearer token。サーバーでは平文保存せず `token_hash` として保存し、失効・再発行できる。 |
+| テナント分離 | 複数ユーザーのデータを `user_id` で分離し、認証済みユーザーまたはデバイスに属するデータだけを読み書きさせる制約。 |
 
 ---
 
@@ -145,9 +154,9 @@
 
 | 用語 | 定義 |
 |---|---|
-| PII | 個人を特定し得る情報。実 PII はリポジトリに置かず、実行時に Mac ローカルにのみ保存（`CLAUDE.md`）。 |
+| PII | 個人を特定し得る情報。実 PII はリポジトリに置かず、実行モードに応じて local DB またはクラウド DB に保存する（`AGENTS.md`）。 |
 | 機微データ | 支出・利用状況・メール等の取り扱い注意データ。合成データのみを開発に使う。 |
-| 集計値 | iPhone が Mac へ送る、詳細ログを含まない要約値（利用日・バケット・来館日数等）。 |
+| 集計値 | iPhone が SubBuddy API へ送る、詳細ログを含まない要約値（利用日・バケット・来館日数等）。 |
 | 合成（ダミー）データ | 実在しない検証用データ。seed・fixture・テスト・スクショに用いる唯一のデータ。 |
 | 秘密情報 | トークン・資格情報・ID/PW 等。コミットせず環境変数で管理。外部 ID/PW は**保存しない**。 |
 
@@ -182,6 +191,8 @@
 | WBS 正本 | Source of Truth（`wbs/wbs.yml`） | 進捗の単一の真実。人と AI が編集し Git で履歴管理する。Sheets はここから生成される。 |
 | WBS ID | `id` | 各タスクの不変の識別子。並べ替え・改名しても変えない。同期の結合キー。 |
 | Sheets ビュー | Sheets View | `wbs.yml` から生成される人間向けの Google スプレッドシート表示。片方向同期の出力先。 |
+| 計画リポジトリ | Planning Repository（`SubBuddy-planning`） | 進捗・計画・構造図を非公開で見るための GitHub リポジトリ。正本ではなく、`wbs.yml` と公開 docs から生成される閲覧用の同期先。 |
+| 片方向整流 | One-way Reconciliation | 正本から同期先へ一方向に反映し、同期先を直接編集しても次回同期で正本の内容に戻す運用。 |
 | 同期 | Sync | `wbs.yml`（spec）の内容を Sheets へ反映する処理。片方向（spec → Sheets）・冪等。 |
 | 確認ゲート | Confirmation Gate | Sheets へ書き込む前に差分を提示し、ユーザー承認を必須とする仕組み（承認なしには書かない）。 |
 | 自動トリガ | Auto Trigger | `.steering/*/tasklist.md` の全完了を検知して同期を提案するフック。提案のみで、書き込みは確認ゲートを通る。 |

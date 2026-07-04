@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-13
+> 最終更新：2026-06-30
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -11,14 +11,14 @@
 
 本書は SubBuddy のリポジトリにおける **フォルダ・ファイル構成、各ディレクトリの役割、ファイル配置ルール** を定義する。
 `architecture.md` の技術スタック（Next.js App Router／Prisma＋PostgreSQL／Zod／Vitest／iOS Swift）と、
-`CLAUDE.md` のドキュメント運用（`docs/` 永続・`.steering/` 作業単位）に整合させる。
+`AGENTS.md` のドキュメント運用（`docs/` 永続・`.steering/` 作業単位）に整合させる。
 
 設計上の前提（`architecture.md` から継承）：
 
-- **Mac 側（Next.js）と iPhone 側（Swift）の 2 コードベース**を 1 リポジトリに同居（`apps/` 配下に分離）。
+- **Web/API 側（Next.js）と iPhone 側（Swift）の 2 コードベース**を 1 リポジトリに同居（`apps/` 配下に分離）。現時点で実体があるのは `apps/web` で、`apps/ios` は小規模検証版に向けて追加する計画上の配置。
 - **利用量取り込みはソース別コネクタ（Adapter）で一元化**（`architecture.md` §5.1）。配置場所を本書で固定する。
 - **ドメインロジックは API/Web から独立**（Worker 分離の可搬性。`architecture.md` §7）。
-- **PII・秘密情報はコミットしない**。合成データのみをリポジトリに置く（`CLAUDE.md` 準拠）。
+- **PII・秘密情報はコミットしない**。合成データのみをリポジトリに置く（`AGENTS.md` 準拠）。
 
 > **MVP は薄く始める**：本書のツリーは到達目標の構造を示す。MVP では未使用のディレクトリを先回りで作らず、必要になった時点で追加する（`architecture.md` §5.1「rule of three」）。空ディレクトリは作らない。
 
@@ -28,15 +28,13 @@
 
 ```
 SubBuddy/
-├── CLAUDE.md                  # プロジェクトメモリ（Claude Code 用・残置）
-├── AGENTS.md                  # プロジェクト指示（Codex CLI 用。CLAUDE.md＋ルール系メモリ＋索引を統合）
+├── AGENTS.md                  # プロジェクト指示（Codex CLI 用。主要な作業ルールとメモリ索引）
 ├── README.md                  # 概要・セットアップ手順
 ├── .gitignore                 # 実データ・秘密情報・ビルド成果物・migration/ を除外
 ├── .editorconfig              # エディタ共通設定
 ├── docs/                      # 永続的ドキュメント（北極星）
 ├── .steering/                 # 作業単位ドキュメント（[YYYYMMDD]-[タイトル]/）
-├── .claude/                   # Claude Code ハーネス（skills/agents/commands/hooks・残置）
-├── .agents/skills/            # Codex Skills（SKILL.md 標準。Claude の skills を移行）
+├── .agents/skills/            # リポジトリ管理の Codex Skills（SKILL.md 標準）
 ├── .codex/                    # Codex ハーネス（config.toml / agents/*.toml / hooks/ / harness/）
 ├── memory/                    # 旧自動メモリ（Codex は自動注入なし→明示 read。集約時に配置）
 ├── manuals/                   # 人手の操作手順書（外部サービスの GUI 設定など）
@@ -44,12 +42,12 @@ SubBuddy/
 ├── secrets/                   # SA 鍵等の秘密情報の置き場（.gitkeep のみ追跡。鍵はコミットしない）
 ├── migration/                 # Codex 移行の中継コピー集約先（.gitignore 除外。コミットしない）
 └── apps/
-    ├── web/                   # Mac 側：Next.js（Web + API + Worker 同居）
-    └── ios/                   # iPhone 側：Swift / SwiftUI（利用量センサー）
+    ├── web/                   # Web/API 側：Next.js（Web + API + Worker 同居。local mode は Mac、cloud mode は PaaS）
+    └── ios/                   # iPhone 側：Swift / SwiftUI（利用量センサー。現時点は計画）
 ```
 
-- **エージェント環境の二重構成**：`.claude/`（Claude Code）と `.agents/`+`.codex/`+`AGENTS.md`（Codex CLI）が並存する。Codex への移行に伴い前者は残置（Q-1）、開発の主体は Codex 側。構成の詳細は `.codex/harness/harness-map.md`。
-- **`apps/` で Mac 側と iPhone 側を物理分離**する。両者は言語・ツールチェーンが異なるため、依存とビルドを混在させない。
+- **エージェント環境**：`AGENTS.md`、`.agents/skills/`、`.codex/` を Codex 用の作業基盤とする。構成の詳細は `.codex/harness/harness-map.md`。
+- **`apps/` で Web/API 側と iPhone 側を物理分離**する。両者は言語・ツールチェーンが異なるため、依存とビルドを混在させない。
 - ルート直下には**設定・ドキュメント・アプリ群のみ**を置き、実装コードは各 `apps/*` に閉じ込める。
 - パッケージ共有機構（`packages/` 等のモノレポ化）は **MVP では導入しない**。必要が生じた時点で別途検討する（過剰構造の回避）。
 
@@ -57,7 +55,7 @@ SubBuddy/
 
 ## 3. ドキュメント構成（`docs/` / `.steering/`）
 
-`CLAUDE.md` の分類に従う。
+`AGENTS.md` の分類に従う。
 
 ```
 docs/                                  # 永続的ドキュメント（基本設計が変わらない限り更新しない）
@@ -67,21 +65,23 @@ docs/                                  # 永続的ドキュメント（基本設
 ├── repository-structure.md            # 本書
 ├── development-guidelines.md          # 開発ガイドライン（規約）
 ├── glossary.md                        # ユビキタス言語定義
+├── adr/                               # Architecture Decision Record（重要な設計判断）
 └── images/                            # （任意）複雑な図のみ。PNG/SVG。Mermaid 優先で原則不要
 
 .steering/                             # 作業単位ドキュメント
 └── [YYYYMMDD]-[開発タイトル]/
     ├── requirements.md                # 今回の要求
     ├── design.md                      # 今回の設計
-    └── tasklist.md                    # タスクと進捗
+    ├── tasklist.md                    # タスクと進捗
+    └── review-pack.md                 # まとめ承認用パック（区分・トレーサビリティ・未決事項・レビュー）
 ```
 
-- 図表は独立フォルダを作らず、**関連する永続ドキュメント内に Mermaid で直接記載**する（`CLAUDE.md` 図表ルール）。
+- 図表は独立フォルダを作らず、**関連する永続ドキュメント内に Mermaid で直接記載**する（`AGENTS.md` 図表ルール）。
 - `.steering/` のディレクトリは作業ごとに新規作成し、完了後も履歴として保持する（削除しない）。
 
 ---
 
-## 4. Mac 側：`apps/web/`（Next.js）
+## 4. Web/API 側：`apps/web/`（Next.js）
 
 ```
 apps/web/
@@ -116,7 +116,7 @@ apps/web/
 └── tests/                         # Vitest（domain 中心の単体テスト）。合成データのみ
 ```
 
-### 4.1 配置ルール（Mac 側）
+### 4.1 配置ルール（Web/API 側）
 
 - **ドメインロジックは `src/domain/` に集約**し、`app/api/` や `components/` にビジネスルールを散在させない（`architecture.md` §7 の分離点を守る）。
 - **アプリケーションサービスは `src/services/` に配置**。ドメインロジックとリポジトリを組み合わせたユースケース実行（レコメンド再計算等）を担い、Worker 分離の単位となる。
@@ -137,13 +137,13 @@ apps/ios/
 │   ├── Models/                    # SwiftData モデル（オンデバイス集計の保持）
 │   ├── Usage/                     # DeviceActivity / FamilyControls まわり
 │   ├── Location/                  # （採用時）ジオフェンス・来館検出
-│   └── Sync/                      # Mac API への集計値送信（URLSession / HTTPS）
+│   └── Sync/                      # SubBuddy API への集計値送信（URLSession / HTTPS）
 └── DeviceActivityMonitorExtension/ # しきい値超過イベント受信 Extension
 ```
 
 ### 5.1 配置ルール（iPhone 側）
 
-- iPhone から Mac へ送るのは **集計値のみ**（詳細ログ・生の位置情報は送らない。`product-requirements.md` 非機能要件 / `architecture.md` §3.2）。
+- iPhone から SubBuddy API へ送るのは **集計値のみ**（詳細ログ・生の位置情報は送らない。`product-requirements.md` 非機能要件 / `architecture.md` §3.2）。
 - entitlement・署名情報・プロビジョニングプロファイル等の**秘密情報はコミットしない**（`.gitignore` で除外）。
 
 ---
@@ -171,10 +171,10 @@ secrets/
 ### 6.1 配置ルール（WBS）
 
 - **正本は `wbs/wbs.yml` のみ**。スプレッドシートは生成物であり、人手で直接編集しても次回同期で正本に上書きされる。
-- `wbs.yml` には**開発タスクのメタ情報のみ**を書く。エンドユーザーの PII・機微データを記載しない（`CLAUDE.md` PII 方針）。
+- `wbs.yml` には**開発タスクのメタ情報のみ**を書く。エンドユーザーの PII・機微データを記載しない（`AGENTS.md` PII 方針）。
 - **秘密情報は `wbs.config.yml` に書かない**。SA 鍵パスは `wbs/.env`（gitignore）で `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` として指定し、鍵本体は `secrets/` に置く。
 - **`secrets/` 配下の鍵は絶対にコミットしない**（`.gitignore` で除外、`.gitleaks.toml` の allowlist 対象）。`.gitkeep` のみ追跡する。
-- `manuals/` には **Claude Code が自動実行できない人手の操作手順**（外部サービスの GUI 設定・認証）を置く。実在の鍵・トークンは記載しない。
+- `manuals/` には **エージェントが自動実行できない人手の操作手順**（外部サービスの GUI 設定・認証）を置く。実在の鍵・トークンは記載しない。
 
 ---
 
@@ -184,7 +184,7 @@ secrets/
 |---|---|---|
 | 永続ドキュメント | `docs/` | 基本設計の変更時のみ更新 |
 | 作業単位ドキュメント | `.steering/[YYYYMMDD]-[タイトル]/` | 作業ごとに新規・履歴保持 |
-| Mac 実装 | `apps/web/src/` | レイヤ別（domain / services / repositories / config / schemas / components） |
+| Web/API 実装 | `apps/web/src/` | レイヤ別（domain / services / repositories / config / schemas / components） |
 | iOS 実装 | `apps/ios/` | センサー・同期のみ。判定ロジックは持たせない |
 | DB スキーマ | `apps/web/prisma/schema.prisma` | 単一ソース |
 | 設定値（閾値等） | `apps/web/src/config/` | Zod 検証・外出し |
@@ -202,7 +202,7 @@ secrets/
 - ビルド成果物（`node_modules/`、`.next/`、`build/`、Xcode `DerivedData/` 等）
 - iOS 署名・プロビジョニング関連の秘密情報
 
-> **重要**：実在の個人データ・秘密情報は**読み取らない／生成しない／コミットしない**（`CLAUDE.md` PII 方針）。やむを得ず触れる必要が生じた場合は作業を止めて確認する。
+> **重要**：実在の個人データ・秘密情報は**読み取らない／生成しない／コミットしない**（`AGENTS.md` PII 方針）。やむを得ず触れる必要が生じた場合は作業を止めて確認する。
 
 ---
 
@@ -212,5 +212,5 @@ secrets/
 
 - **ディレクトリ**：ケバブケース（例：`gym-visit/`、`billing-email/`）。役割が一目で分かる名前にする。
 - **コネクタ名は取得源を表す**（`screen-time`／`icloud`／`gym-visit`／`billing-email`）。共通モデルの軸名（time/capacity/visit）と混同しない。
-- **ステアリングディレクトリ**：`[YYYYMMDD]-[開発タイトル]`（`CLAUDE.md` 命名規則に従う）。
+- **ステアリングディレクトリ**：`[YYYYMMDD]-[開発タイトル]`（`AGENTS.md` 命名規則に従う）。
 - TypeScript / Swift それぞれのファイル命名は `development-guidelines.md` を一次情報とする。

@@ -1,7 +1,7 @@
 // SubBuddy データモデル（Mac 側）
 // 一次情報：docs/functional-design.md §5（ER 図・テーブル定義）／§8.5（段階的な情報提供）
 // 方針：金額は整数（最小通貨単位）、テーブルは複数形 snake_case、全テーブルに user_id（マルチテナント余地）。
-//       実データは実行時にローカル DB のみ。seed は合成データのみ（CLAUDE.md PII 方針）。
+//       実データは実行モードに応じて local DB またはクラウド DB に保存。seed は合成データのみ（AGENTS.md PII 方針）。
 
 generator client {
   provider = "prisma-client-js"
@@ -54,41 +54,60 @@ enum UsageBucket {
 // ---- テーブル ----
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
+  id               String    @id @default(cuid())
+  name             String
+  appleSubjectHash String?   @unique @map("apple_subject_hash")
+  lastSignedInAt   DateTime? @map("last_signed_in_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
-  subscriptions  Subscription[]
-  billingEvents  BillingEvent[]
-  usageSummaries IosUsageDailySummary[]
+  subscriptions   Subscription[]
+  billingEvents   BillingEvent[]
+  usageSummaries  IosUsageDailySummary[]
   recommendations RecommendationSnapshot[]
+  devices         Device[]
 
   @@map("users")
 }
 
+model Device {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  name         String?
+  tokenHash    String    @unique @map("token_hash")
+  revokedAt    DateTime? @map("revoked_at")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("devices")
+}
+
 model Subscription {
-  id              String             @id @default(cuid())
-  userId          String             @map("user_id")
-  name            String
-  normalizedName  String?            @map("normalized_name")
-  category        String
-  amount          Int // 最小通貨単位の整数
-  currency        String             @default("JPY")
-  billingCycle    BillingCycle       @map("billing_cycle")
-  nextRenewalDate DateTime?          @map("next_renewal_date") @db.Date
-  signupChannel   String?            @map("signup_channel")
-  status          SubscriptionStatus @default(active)
-  importance      Int                @default(3) // 1..5（主観的重要度）
-  cancellationUrl String?            @map("cancellation_url")
-  notes           String?
-  matchedServiceId String?            @map("matched_service_id")
-  usageType       String              @default("active_foreground") @map("usage_type")
-  initialValueAnswer String?          @map("initial_value_answer")
-  planCapacityGb    Int?              @map("plan_capacity_gb") // 契約プラン容量(GB)。容量型(iCloud+)のみ・任意
-  usedCapacityGb    Int?              @map("used_capacity_gb") // 使用容量(GB)。手入力/OCR確認値・任意
-  capacityCheckedAt DateTime?         @map("capacity_checked_at") // 容量を確認した日時（鮮度判定用）・任意
-  createdAt       DateTime           @default(now()) @map("created_at") // 利用量集計の起点（§8.5）
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  id                 String             @id @default(cuid())
+  userId             String             @map("user_id")
+  name               String
+  normalizedName     String?            @map("normalized_name")
+  category           String
+  amount             Int // 最小通貨単位の整数
+  currency           String             @default("JPY")
+  billingCycle       BillingCycle       @map("billing_cycle")
+  nextRenewalDate    DateTime?          @map("next_renewal_date") @db.Date
+  signupChannel      String?            @map("signup_channel")
+  status             SubscriptionStatus @default(active)
+  importance         Int                @default(3) // 1..5（主観的重要度）
+  cancellationUrl    String?            @map("cancellation_url")
+  notes              String?
+  matchedServiceId   String?            @map("matched_service_id")
+  usageType          String             @default("active_foreground") @map("usage_type")
+  initialValueAnswer String?            @map("initial_value_answer")
+  planCapacityGb     Int?               @map("plan_capacity_gb") // 契約プラン容量(GB)。容量型(iCloud+)のみ・任意
+  usedCapacityGb     Int?               @map("used_capacity_gb") // 使用容量(GB)。手入力/OCR確認値・任意
+  capacityCheckedAt  DateTime?          @map("capacity_checked_at") // 容量を確認した日時（鮮度判定用）・任意
+  createdAt          DateTime           @default(now()) @map("created_at") // 利用量集計の起点（§8.5）
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
   user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   billingEvents   BillingEvent[]
@@ -101,18 +120,18 @@ model Subscription {
 }
 
 model BillingEvent {
-  id              String       @id @default(cuid())
-  userId          String       @map("user_id")
-  subscriptionId  String       @map("subscription_id")
-  serviceNameRaw  String?      @map("service_name_raw")
-  amount          Int
-  currency        String       @default("JPY")
-  chargedAt       DateTime     @map("charged_at")
-  billingCycle    BillingCycle @map("billing_cycle")
-  source          String       @default("manual") // manual / email / screenshot 等
-  confidence      Float        @default(1.0)
-  rawReference    String?      @map("raw_reference") // 抽出元参照（メール全文は保存しない）
-  createdAt       DateTime     @default(now()) @map("created_at")
+  id             String       @id @default(cuid())
+  userId         String       @map("user_id")
+  subscriptionId String       @map("subscription_id")
+  serviceNameRaw String?      @map("service_name_raw")
+  amount         Int
+  currency       String       @default("JPY")
+  chargedAt      DateTime     @map("charged_at")
+  billingCycle   BillingCycle @map("billing_cycle")
+  source         String       @default("manual") // manual / email / screenshot 等
+  confidence     Float        @default(1.0)
+  rawReference   String?      @map("raw_reference") // 抽出元参照（メール全文は保存しない）
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
@@ -144,27 +163,27 @@ model IosUsageDailySummary {
 }
 
 model RecommendationSnapshot {
-  id              String      @id @default(cuid())
-  userId          String      @map("user_id")
-  subscriptionId  String      @map("subscription_id")
+  id               String     @id @default(cuid())
+  userId           String     @map("user_id")
+  subscriptionId   String     @map("subscription_id")
   // 利用ベース判定。観測中（data_status=observing）の間は null。
-  decision        Decision?
-  dataStatus      DataStatus  @map("data_status")
-  observationDays Int         @map("observation_days") // 登録からの観測日数
-  daysUntilReady  Int         @map("days_until_ready") // 確定まで残り日数（ready なら 0）
-  cancelScore     Int         @map("cancel_score")
-  monthlyAmount   Int         @map("monthly_amount")
-  yearlyAmount    Int         @map("yearly_amount")
-  usageDays30d    Int         @map("usage_days_30d")
-  usageMinutes30d Int         @map("usage_minutes_30d")
+  decision         Decision?
+  dataStatus       DataStatus @map("data_status")
+  observationDays  Int        @map("observation_days") // 登録からの観測日数
+  daysUntilReady   Int        @map("days_until_ready") // 確定まで残り日数（ready なら 0）
+  cancelScore      Int        @map("cancel_score")
+  monthlyAmount    Int        @map("monthly_amount")
+  yearlyAmount     Int        @map("yearly_amount")
+  usageDays30d     Int        @map("usage_days_30d")
+  usageMinutes30d  Int        @map("usage_minutes_30d")
   daysSinceLastUse Int?       @map("days_since_last_use") // 未使用判定不能なら null
   daysUntilRenewal Int?       @map("days_until_renewal")
-  costPerUsageDay Float?      @map("cost_per_usage_day") // 利用日数0（未使用）なら null
-  hasOverlap      Boolean     @default(false) @map("has_overlap")
-  confidence      Float       @default(1.0) // 暫定/確定の確からしさ（§8.5）
-  reason          String
-  matchedPatterns Json?       @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
-  generatedAt     DateTime    @default(now()) @map("generated_at")
+  costPerUsageDay  Float?     @map("cost_per_usage_day") // 利用日数0（未使用）なら null
+  hasOverlap       Boolean    @default(false) @map("has_overlap")
+  confidence       Float      @default(1.0) // 暫定/確定の確からしさ（§8.5）
+  reason           String
+  matchedPatterns  Json?      @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
+  generatedAt      DateTime   @default(now()) @map("generated_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
@@ -175,46 +194,46 @@ model RecommendationSnapshot {
 }
 
 model ServiceCatalog {
-  id              String   @id @default(cuid())
-  canonicalName   String   @map("canonical_name")
+  id              String  @id @default(cuid())
+  canonicalName   String  @map("canonical_name")
   category        String
   domains         String? // 突合用ドメイン（カンマ区切り等）。iOS 計測対象との突合に使用
-  appBundleIds    String?  @map("app_bundle_ids")
-  commonAliases   String?  @map("common_aliases") // 表記揺れ
-  cancellationUrl String?  @map("cancellation_url")
-  isSupported     Boolean  @default(true) @map("is_supported")
-  isExcluded      Boolean  @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
+  appBundleIds    String? @map("app_bundle_ids")
+  commonAliases   String? @map("common_aliases") // 表記揺れ
+  cancellationUrl String? @map("cancellation_url")
+  isSupported     Boolean @default(true) @map("is_supported")
+  isExcluded      Boolean @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
   notes           String?
-  usageType       String   @default("active_foreground") @map("usage_type")
+  usageType       String  @default("active_foreground") @map("usage_type")
 
-  plans           ServicePlan[]
+  plans            ServicePlan[]
   alternativesFrom ServiceAlternative[] @relation("alt_from")
 
   @@map("service_catalog")
 }
 
 model ServicePlan {
-  id            String         @id @default(cuid())
-  serviceId     String         @map("service_id")
-  name          String
-  monthlyPrice  Int            @map("monthly_price")
-  isFreeTier    Boolean        @default(false) @map("is_free_tier")
-  capacityGb    Int?           @map("capacity_gb") // 容量型サービスのプラン容量(GB)。容量ゲート用・任意
-  verifiedAt    DateTime       @map("verified_at")
-  sourceUrl     String?        @map("source_url")
+  id           String   @id @default(cuid())
+  serviceId    String   @map("service_id")
+  name         String
+  monthlyPrice Int      @map("monthly_price")
+  isFreeTier   Boolean  @default(false) @map("is_free_tier")
+  capacityGb   Int?     @map("capacity_gb") // 容量型サービスのプラン容量(GB)。容量ゲート用・任意
+  verifiedAt   DateTime @map("verified_at")
+  sourceUrl    String?  @map("source_url")
 
-  service       ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  service ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@map("service_plans")
 }
 
 model ServiceAlternative {
-  id            String         @id @default(cuid())
-  fromServiceId String         @map("from_service_id")
-  toServiceId   String         @map("to_service_id")
-  relation      String         @default("same_category")
+  id            String @id @default(cuid())
+  fromServiceId String @map("from_service_id")
+  toServiceId   String @map("to_service_id")
+  relation      String @default("same_category")
 
-  fromService   ServiceCatalog @relation("alt_from", fields: [fromServiceId], references: [id], onDelete: Cascade)
+  fromService ServiceCatalog @relation("alt_from", fields: [fromServiceId], references: [id], onDelete: Cascade)
 
   @@map("service_alternatives")
 }

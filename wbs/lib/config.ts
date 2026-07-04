@@ -10,5 +10,12 @@ export function loadConfig(configPath: string): WbsConfig {
     throw new Error('wbs.config.yml: columns がありません');
   if (!cfg.key) cfg.key = 'id';
   if (!cfg.onMissing) cfg.onMissing = 'archive';
+  if (cfg.github) {
+    if (!cfg.github.repo) throw new Error('wbs.config.yml: github.repo がありません');
+    if (!cfg.github.key) cfg.github.key = 'id';
+    if (!cfg.github.onMissing) cfg.github.onMissing = 'keep';
+    if (!cfg.github.gantt?.out) throw new Error('wbs.config.yml: github.gantt.out がありません');
+    if (!cfg.github.diagrams?.out) throw new Error('wbs.config.yml: github.diagrams.out がありません');
+  }
   return cfg;
 }

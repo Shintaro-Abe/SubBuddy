@@ -1,6 +1,9 @@
 {
   "name": "SubBuddy",
-  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "workspaceFolder": "/workspaces/SubBuddy",
 
   // ~/.codex を永続化 (Rebuild しても trust 設定・認証・gitleaks 確認フラグを保持)。
@@ -14,8 +17,18 @@
   // ホスト変数の通過を許可しており、ここで実値をコンテナに注入する。
   "containerEnv": {
     "STITCH_API_KEY": "${localEnv:STITCH_API_KEY}",
-    "NAPKIN_API_KEY": "${localEnv:NAPKIN_API_KEY}"
+    "NAPKIN_API_KEY": "${localEnv:NAPKIN_API_KEY}",
+    "SAKANA_API_KEY": "${localEnv:SAKANA_API_KEY}"
   },
+
+  // Codex sandbox uses bubblewrap/user namespaces. Some container runtimes block
+  // unshare(CLONE_NEWUSER) unless seccomp/AppArmor are relaxed for this devcontainer.
+  "runArgs": [
+    "--security-opt",
+    "seccomp=unconfined",
+    "--security-opt",
+    "apparmor=unconfined"
+  ],
 
   "features": {
     "ghcr.io/devcontainers/features/node:1": {},

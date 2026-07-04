@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PORT="${SAKANA_FUGU_PROXY_PORT:-8787}"
+HOST="${SAKANA_FUGU_PROXY_HOST:-127.0.0.1}"
+
+if [[ -z "${SAKANA_API_KEY:-}" ]]; then
+  echo "SAKANA_API_KEY is not set." >&2
+  echo "Set it in your shell before running Codex with Sakana Fugu." >&2
+  exit 1
+fi
+
+if curl -fsS "http://$HOST:$PORT/health" >/dev/null 2>&1; then
+  codex --profile sakana "$@"
+  exit $?
+fi
+
+node "$ROOT_DIR/scripts/sakana-fugu-proxy.mjs" &
+PROXY_PID=$!
+
+cleanup() {
+  kill "$PROXY_PID" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT INT TERM
+
+for _ in {1..30}; do
+  if curl -fsS "http://$HOST:$PORT/health" >/dev/null 2>&1; then
+    codex --profile sakana "$@"
+    exit $?
+  fi
+  sleep 0.1
+done
+
+echo "Sakana Fugu proxy did not become ready on http://$HOST:$PORT." >&2
+exit 1
