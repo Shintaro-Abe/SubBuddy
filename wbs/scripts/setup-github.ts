@@ -7,7 +7,7 @@ import path from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../lib/config';
-import { ghApiJson, ghGraphql, parseRepo, runGh } from '../lib/github/gh';
+import { ghApiJson, ghGraphql, loadOwnerRef, parseRepo, runGh, type OwnerRef } from '../lib/github/gh';
 
 const wbsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const configPath = path.join(wbsDir, 'wbs.config.yml');
@@ -46,12 +46,12 @@ function ensureRepo(fullName: string): void {
 }
 
 function ensureProject(owner: string, projectTitle: string, configuredNumber: number | null): number {
-  if (configuredNumber && configuredNumber > 0 && projectExists(owner, configuredNumber)) {
+  const ownerRef = loadOwnerRef(owner);
+  if (configuredNumber && configuredNumber > 0 && projectExists(ownerRef, configuredNumber)) {
     console.log(`project exists: #${configuredNumber}`);
     return configuredNumber;
   }
 
-  const ownerId = loadOwnerId(owner);
   const mutation = `
     mutation($ownerId: ID!, $title: String!) {
       createProjectV2(input: { ownerId: $ownerId, title: $title }) {
@@ -59,36 +59,26 @@ function ensureProject(owner: string, projectTitle: string, configuredNumber: nu
       }
     }
   `;
-  const data = ghGraphql<{ createProjectV2: { projectV2: { number: number } } }>(mutation, { ownerId, title: projectTitle });
+  const data = ghGraphql<{ createProjectV2: { projectV2: { number: number } } }>(mutation, {
+    ownerId: ownerRef.id,
+    title: projectTitle,
+  });
   console.log(`project created: #${data.createProjectV2.projectV2.number}`);
   return data.createProjectV2.projectV2.number;
 }
 
-function projectExists(owner: string, number: number): boolean {
+function projectExists(owner: OwnerRef, number: number): boolean {
+  const rootField = owner.kind === 'user' ? 'user' : 'organization';
   const query = `
     query($login: String!, $number: Int!) {
-      user(login: $login) { projectV2(number: $number) { id } }
-      organization(login: $login) { projectV2(number: $number) { id } }
+      ${rootField}(login: $login) { projectV2(number: $number) { id } }
     }
   `;
-  const data = ghGraphql<{
-    user?: { projectV2?: { id: string } | null } | null;
-    organization?: { projectV2?: { id: string } | null } | null;
-  }>(query, { login: owner, number });
-  return Boolean(data.user?.projectV2?.id ?? data.organization?.projectV2?.id);
-}
-
-function loadOwnerId(owner: string): string {
-  const query = `
-    query($login: String!) {
-      user(login: $login) { id }
-      organization(login: $login) { id }
-    }
-  `;
-  const data = ghGraphql<{ user?: { id: string } | null; organization?: { id: string } | null }>(query, { login: owner });
-  const id = data.user?.id ?? data.organization?.id;
-  if (!id) throw new Error(`GitHub owner が見つかりません: ${owner}`);
-  return id;
+  const data = ghGraphql<Record<'user' | 'organization', { projectV2?: { id: string } | null } | null>>(query, {
+    login: owner.login,
+    number,
+  });
+  return Boolean(data[rootField]?.projectV2?.id);
 }
 
 function updateProjectNumber(file: string, projectNumber: number): void {

@@ -354,7 +354,7 @@
 | MUST-6 | 5-1〜5-3（安全上限） | 上限＝＿件 | |
 | MUST-7 | 6-2 / 6-3 | | |
 | MUST-8 | 3-3 | | |
-| MUST-9 | （机上完了・当面オフ） | 充足 | `stage7-distribution-guide.md` |
+| MUST-9 | （机上完了・当面オフ） | 充足 | `stage7-main-distribution-guide.md` |
 
 **ローカルファーストでの go 条件**：MUST-1〜5・7・8 が OK（MUST-6 は安全上限を記録、MUST-9 は充足済み）。
 → 満たせば **ローカルファーストで go**。確定スコープは `mvp-scope-draft.md` に反映する。

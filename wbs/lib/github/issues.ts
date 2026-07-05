@@ -132,20 +132,28 @@ export function listIssues(repo: string): GitHubIssue[] {
   return all;
 }
 
-export function applyIssueDiffs(repo: string, diffs: GitHubIssueDiff[], keyField: keyof Task = 'id'): Map<string, GitHubIssue> {
+export function applyIssueDiffs(
+  repo: string,
+  diffs: GitHubIssueDiff[],
+  keyField: keyof Task = 'id',
+  maxWrites = Number.POSITIVE_INFINITY,
+): Map<string, GitHubIssue> {
   const { owner, name } = parseRepo(repo);
   const result = new Map<string, GitHubIssue>();
+  let writes = 0;
 
   for (const diff of diffs) {
     if (diff.type === 'unchanged' && diff.issue) {
       result.set(diff.id, diff.issue);
       continue;
     }
+    if (isIssueWrite(diff) && writes >= maxWrites) continue;
     if (diff.type === 'close' && diff.issue) {
       const issue = ghApiJson<GitHubIssue>(`repos/${owner}/${name}/issues/${diff.issue.number}`, {
         method: 'PATCH',
         body: { state: 'closed' },
       });
+      writes += 1;
       if (issue) result.set(diff.id, issue);
       continue;
     }
@@ -154,6 +162,7 @@ export function applyIssueDiffs(repo: string, diffs: GitHubIssueDiff[], keyField
     const body = { title: issueTitle(diff.task, keyField), body: issueBody(diff.task, keyField), state: 'open' };
     if (diff.type === 'add') {
       const issue = ghApiJson<GitHubIssue>(`repos/${owner}/${name}/issues`, { method: 'POST', body });
+      writes += 1;
       if (issue) result.set(diff.id, issue);
       continue;
     }
@@ -162,11 +171,16 @@ export function applyIssueDiffs(repo: string, diffs: GitHubIssueDiff[], keyField
         method: 'PATCH',
         body,
       });
+      writes += 1;
       if (issue) result.set(diff.id, issue);
     }
   }
 
   return result;
+}
+
+function isIssueWrite(diff: GitHubIssueDiff): boolean {
+  return diff.type === 'add' || diff.type === 'update' || diff.type === 'close';
 }
 
 export function attachSubIssues(tasks: Task[], issuesById: Map<string, GitHubIssue>, keyField: keyof Task = 'id'): string[] {

@@ -1,7 +1,7 @@
 # 引き継ぎ書（進捗・計画を非公開 planning リポジトリで管理：GitHub 同期）
 
 > 作成：2026-07-03 / 次セッションはまずこの1枚を読めば再開できる。
-> 追記：2026-07-04 / 実装後、GitHub setup の owner 判定エラーまで反映。
+> 追記：2026-07-04 / 実装後、GitHub setup の owner 判定エラー修正、secondary rate limit 対策、Project #1 作成まで反映。
 > ブランチ：`main`
 > 前提：計画の実体は `.steering/20260703-github-planning-repo-sync/`（requirements / design / tasklist / review-pack）と `docs/adr/0003-progress-in-private-planning-repo.md`。
 
@@ -10,9 +10,14 @@
 ## 1. 現在地（ひとことで）
 
 - レビューパックはユーザー承認済み。`wbs` の GitHub planning repo 同期実装はローカル実装・検証まで完了。
-- `setup:github` 実行で repo 作成は成功したが、Project 作成前に GraphQL の owner 判定で停止した。
-- 原因は、個人アカウント `Shintaro-Abe` に対して `user` と `organization` を同一 GraphQL query で同時取得していること。`organization` 側が `NOT_FOUND` になり、`user.id` が返っていても `gh` が失敗扱いにする。
-- 次は `wbs/scripts/setup-github.ts` と `wbs/lib/github/project.ts` の owner 解決を「user を単独照会 → なければ organization を単独照会」に直す。
+- `setup:github` の GraphQL owner 判定エラーは修正済み。`Shintaro-Abe/SubBuddy-planning` の Project #1 作成と `wbs.config.yml` 更新まで完了。
+- ユーザー実行の `sync:github:apply` は GitHub secondary rate limit（短時間の Issue 作成連続実行）で停止した。
+- 対策として GitHub 書き込みに既定 2 秒待機を追加し、`--max-issue-writes=N` で Issue を分割反映できるようにした。
+- `--max-issue-writes=20` で残り 20 件の Issue 作成は完了。dry-run で `追加 0 / 変更なし 100` を確認済み。
+- 通常 apply 中に `Assignee` カスタムフィールドが GitHub 予約名衝突で拒否されたため、Project 表示名を `Task Assignee` に変更した。
+- GitHub 既定 `Status` は英語選択肢で WBS の日本語ステータスをそのまま表せないため、Project 表示名を `WBS Status` に変更した。
+- 通常 apply は完了。Project #1 に 100項目と各フィールド、planning repo に `roadmap/gantt.md` を確認済み。
+- Project view は既定の `View 1`（Table）のみ。2026-07-04 に GitHub GraphQL schema を再確認したが、view 作成・Roadmap layout 変更用の mutation は確認できず、Roadmap view は GitHub UI で手動作成が必要。
 
 ## 2. このセッションでやったこと
 
@@ -57,6 +62,60 @@
   - その後、GraphQL query の `organization(login: "Shintaro-Abe")` が `NOT_FOUND` で失敗。
   - これは script 側の owner 種別判定バグ。repo は作成済みなので、修正後の再実行では `repo exists: Shintaro-Abe/SubBuddy-planning` から再開される見込み。
 
+### 2026-07-04 追記（owner 判定修正）
+
+- `wbs/lib/github/gh.ts`:
+  - `loadOwnerRef(login)` を追加。
+  - `user(login)` を単独照会し、見つからない場合だけ `organization(login)` を単独照会する。
+  - `NOT_FOUND` / `Could not resolve to` は owner 種別違いとして扱い、次の照会へ進む。
+- `wbs/scripts/setup-github.ts`:
+  - `ensureProject` / `projectExists` を解決済み owner 種別に合わせて、`user.projectV2` または `organization.projectV2` の片方だけを照会するよう修正。
+- `wbs/lib/github/project.ts`:
+  - `loadProject` も同じ owner 種別解決に統一。
+- 実 GitHub setup はこの環境の `gh` 未ログインで停止:
+  - `npm --prefix wbs run setup:github`
+  - エラー: `You are not logged into any GitHub hosts.`
+
+### 2026-07-04 追記（secondary rate limit 対策）
+
+- ユーザー実行の `sync:github:apply` が以下で停止:
+  - `gh api --method POST repos/Shintaro-Abe/SubBuddy-planning/issues --input -`
+  - HTTP 403: `You have exceeded a secondary rate limit and have been temporarily blocked from content creation.`
+  - Request ID: `C191:BE117:5CF78F:6D4AD9:6A48B70A`
+  - timestamp: `2026-07-04 07:32:26 UTC`
+- `wbs/lib/github/gh.ts`:
+  - REST 書き込み（POST/PATCH/PUT/DELETE）と GraphQL mutation の間に既定 2 秒の待機を追加。
+  - `WBS_GITHUB_WRITE_DELAY_MS` で待機時間を上書き可能。
+- `wbs/scripts/sync-github.ts` / `adapter.ts` / `issues.ts`:
+  - `--max-issue-writes=N` を追加。
+  - 上限指定時は Issue のみ分割反映し、Sub-issue / Project / 生成ファイル同期はスキップする。
+
+### 2026-07-04 追記（GraphQL data unwrap 修正と setup 成功）
+
+- `gh api graphql` は成功時も `{ data: ... }` 形式で返す。
+- `wbs/lib/github/gh.ts`:
+  - `ghGraphql` が `response.data` を返すよう修正。
+  - これにより `loadOwnerRef("Shintaro-Abe")` が user ID を正しく読めるようになった。
+- `npm --prefix wbs run setup:github`: 成功。
+  - `repo exists: Shintaro-Abe/SubBuddy-planning`
+  - `project created: #1`
+  - `wbs.config.yml updated: github.projectNumber=1`
+- `npm --prefix wbs run sync:github:apply -- --max-issue-writes=20`: 成功。
+  - 残り 20 件の Issue を作成。
+  - 上限指定のため Sub-issue / Project / 生成ファイル同期はスキップ。
+- `npm --prefix wbs run sync:github`: 成功。
+  - `Issue: 追加 0 / 更新 0 / 変更なし 100 / close 0`
+- `npm --prefix wbs run sync:github:apply`: 成功。
+  - Sub-issue / Project / 生成ファイルを反映。
+  - Project #1: items totalCount = 100。
+  - フィールド確認済み: `WBS Status` / `Phase` / `Progress` / `Start` / `Target` / `Task Assignee`。
+  - planning repo の `roadmap/gantt.md` 反映を確認。
+  - Project views は `View 1`（TABLE_LAYOUT）のみ。Roadmap view は手動設定待ち。
+- `gh api graphql` で Project #1 と GraphQL mutation 一覧を再確認。
+  - Project #1 は `SubBuddy Planning`、view は `View 1`（`TABLE_LAYOUT`）のみ。
+  - `Start` / `Target` / `Phase` / `Progress` / `WBS Status` / `Task Assignee` は存在。
+  - mutation 一覧に Project view 作成・更新用 API は見当たらない。
+
 ## 3. 状態・検証結果
 
 - コミット状況：上記はすべて **working tree（未コミット）**。git 履歴は未確認（このセッションでコミットしていない）。
@@ -73,25 +132,31 @@
 - `gitleaks detect --no-git --config .gitleaks.toml --source docs`: no leaks。
 - 実 GitHub 反映は未完了。`setup:github` が Project 作成前に停止したため。
 
+### 2026-07-04 追記（owner 判定修正後）
+
+- `npm --prefix wbs run typecheck`: 成功。
+- `npm --prefix wbs run test`: 成功（2 files / 12 tests）。
+- `npm --prefix wbs run sync:github -- --offline`: 成功。Issue 100 件追加予定と、生成ファイル5件を確認。
+- `npm --prefix wbs run setup:github`: `gh auth status` で停止。現環境は GitHub 未ログイン。
+
+### 2026-07-04 追記（rate limit 対策後）
+
+- `npm --prefix wbs run typecheck`: 成功。
+- `npm --prefix wbs run test`: 成功（2 files / 12 tests）。
+- `npm --prefix wbs run sync:github -- --offline --max-issue-writes=20`: サンドボックス内は `tsx` IPC 制約で失敗、サンドボックス外で成功。
+
+### 2026-07-04 追記（setup 成功後）
+
+- `npm --prefix wbs run typecheck`: 成功。
+- `npm --prefix wbs run test`: 成功（2 files / 12 tests）。
+- `npm --prefix wbs run setup:github`: 成功。Project #1 作成、`wbs/wbs.config.yml` の `github.projectNumber=1` 更新。
+
 ## 4. 再開時の最初の一手
 
-1. `wbs/scripts/setup-github.ts` の owner 解決を修正する。
-   - `user(login:$login){id}` を単独 query。
-   - user が見つからない場合だけ `organization(login:$login){id}` を単独 query。
-   - `projectExists` も解決済み owner 種別に応じて、`user.projectV2` か `organization.projectV2` の片方だけを query。
-2. `wbs/lib/github/project.ts` の `loadProject` も同じ方針に直す。
-   - 現状は `user` と `organization` を同一 query で取得しており、`sync:github` の Project 同期でも同じ失敗が起きる見込み。
-3. 修正後に検証:
-   - `npm --prefix wbs run typecheck`
-   - `npm --prefix wbs run test`
-4. GitHub 実反映を再開:
-   - `npm --prefix wbs run setup:github`
-   - 成功時は `wbs.config.yml` の `github.projectNumber` が `0` から実 Project number に更新される。
-   - token scope 不足なら `gh auth refresh -s project,read:project` を実行してから再試行。
-5. setup 成功後:
-   - `npm --prefix wbs run sync:github`
-   - 問題なければ、ユーザーは既に一気通貫実装を承認済みなので `npm --prefix wbs run sync:github:apply` で planning repo へ反映。
-6. 実反映後、`.steering/20260703-github-planning-repo-sync/tasklist.md` の T-1〜T-3 と完了チェックを更新する。
+1. GitHub UI で Project #1 に Roadmap view を手動追加する。
+   - Date fields: `Start` / `Target` を使用。
+   - 表示・絞り込みは `WBS Status` / `Phase` / `Progress` を使う。
+2. 手動設定後、`.steering/20260703-github-planning-repo-sync/tasklist.md` の T-3 と完了チェックを更新する。
 
 ## 5. 残・別スコープ（今回やらないこと）
 

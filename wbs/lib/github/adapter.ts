@@ -18,6 +18,7 @@ export interface GitHubSyncOptions {
   offline?: boolean;
   skipProject?: boolean;
   skipDiagrams?: boolean;
+  maxIssueWrites?: number;
 }
 
 export function previewGitHubSync(options: GitHubSyncOptions): GitHubSyncPreview {
@@ -40,7 +41,12 @@ export function previewGitHubSync(options: GitHubSyncOptions): GitHubSyncPreview
 export function applyGitHubSync(options: GitHubSyncOptions, preview: GitHubSyncPreview): string[] {
   if (options.offline) throw new Error('--offline と --apply は同時に使えません');
   const warnings: string[] = [...preview.warnings];
-  const issuesById = applyIssueDiffs(options.config.repo, preview.diffs, options.config.key);
+  const issuesById = applyIssueDiffs(options.config.repo, preview.diffs, options.config.key, options.maxIssueWrites);
+  if (options.maxIssueWrites !== undefined) {
+    warnings.push(`Issue 書き込みを最大 ${options.maxIssueWrites} 件に制限しました。残りは再実行で反映してください`);
+    warnings.push('Issue 書き込み上限指定中のため、Sub-issue / Project / 生成ファイル同期はスキップしました');
+    return warnings;
+  }
   warnings.push(...attachSubIssues(options.tasks, issuesById, options.config.key));
 
   if (!options.skipProject) {

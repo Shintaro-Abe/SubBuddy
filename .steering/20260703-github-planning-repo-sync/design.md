@@ -41,12 +41,12 @@ github:
   projectNumber: 0                           # 作成後に採番して記入
   key: id                                    # 冪等キー（Issue 本文マーカー）
   fields:                                     # wbs.yml → Project フィールド
-    status:       "Status"
+    status:       "WBS Status"
     phase:        "Phase"
     progress:     "Progress"
     plannedStart: "Start"
     plannedEnd:   "Target"
-    assignee:     "Assignee"
+    assignee:     "Task Assignee"
   gantt:
     out: "roadmap/gantt.md"                  # Mermaid gantt 出力先（planning repo 内）
   diagrams:

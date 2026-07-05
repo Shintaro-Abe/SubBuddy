@@ -39,15 +39,15 @@ onMissing: archive
 # GitHub planning repo 同期の設定（非秘密。トークンは gh CLI 側で管理）
 github:
   repo: "Shintaro-Abe/SubBuddy-planning"
-  projectNumber: 0
+  projectNumber: 1
   key: id
   fields:
-    status: "Status"
+    status: "WBS Status"
     phase: "Phase"
     progress: "Progress"
     plannedStart: "Start"
     plannedEnd: "Target"
-    assignee: "Assignee"
+    assignee: "Task Assignee"
   gantt:
     out: "roadmap/gantt.md"
   diagrams:

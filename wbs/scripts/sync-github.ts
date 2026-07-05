@@ -14,6 +14,7 @@ const apply = process.argv.includes('--apply');
 const offline = process.argv.includes('--offline');
 const skipProject = process.argv.includes('--skip-project');
 const skipDiagrams = process.argv.includes('--skip-diagrams');
+const maxIssueWrites = parseNumberArg('--max-issue-writes');
 
 const wbsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(wbsDir, '..');
@@ -36,6 +37,7 @@ if (config.github.projectNumber) {
 } else {
   console.log('Project: 未設定（github.projectNumber を設定すると同期）');
 }
+if (maxIssueWrites !== undefined) console.log(`Issue 書き込み上限: ${maxIssueWrites}`);
 
 for (const warning of preview.warnings) console.log(`! ${warning}`);
 
@@ -51,6 +53,17 @@ if (!apply) {
   process.exit(0);
 }
 
-const warnings = applyGitHubSync({ repoRoot, config: config.github, tasks: spec, offline, skipProject, skipDiagrams }, preview);
+const warnings = applyGitHubSync({ repoRoot, config: config.github, tasks: spec, offline, skipProject, skipDiagrams, maxIssueWrites }, preview);
 for (const warning of warnings) console.log(`! ${warning}`);
 console.log('\nGitHub 同期完了。');
+
+function parseNumberArg(name: string): number | undefined {
+  const prefix = `${name}=`;
+  const arg = process.argv.find((value) => value.startsWith(prefix));
+  if (!arg) return undefined;
+  const value = Number(arg.slice(prefix.length));
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${name} は 0 以上の整数で指定してください`);
+  }
+  return value;
+}

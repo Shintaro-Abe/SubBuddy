@@ -1,6 +1,6 @@
 import type { GitHubConfig, Task } from '../types';
 import type { GitHubIssue } from './issues';
-import { ghGraphql, parseRepo } from './gh';
+import { ghGraphql, loadOwnerRef, parseRepo, type OwnerRef } from './gh';
 
 interface ProjectField {
   id: string;
@@ -54,25 +54,11 @@ export function syncProject(options: {
 
 function loadProject(repo: string, projectNumber: number): ProjectState {
   const { owner } = parseRepo(repo);
+  const ownerRef = loadOwnerRef(owner);
+  const rootField = ownerRef.kind === 'user' ? 'user' : 'organization';
   const query = `
     query($login: String!, $number: Int!, $after: String) {
-      user(login: $login) {
-        projectV2(number: $number) {
-          id
-          fields(first: 100) {
-            nodes {
-              __typename
-              ... on ProjectV2FieldCommon { id name dataType }
-              ... on ProjectV2SingleSelectField { id name dataType options { id name } }
-            }
-          }
-          items(first: 100, after: $after) {
-            nodes { id content { ... on Issue { id } } }
-            pageInfo { hasNextPage endCursor }
-          }
-        }
-      }
-      organization(login: $login) {
+      ${rootField}(login: $login) {
         projectV2(number: $number) {
           id
           fields(first: 100) {
@@ -96,12 +82,9 @@ function loadProject(repo: string, projectNumber: number): ProjectState {
   let projectId = '';
   let after: string | null = null;
   do {
-    type ProjectQueryResponse = {
-      user?: { projectV2?: ProjectResponse | null } | null;
-      organization?: { projectV2?: ProjectResponse | null } | null;
-    };
+    type ProjectQueryResponse = Record<OwnerRef['kind'], { projectV2?: ProjectResponse | null } | null>;
     const data: ProjectQueryResponse = ghGraphql<ProjectQueryResponse>(query, { login: owner, number: projectNumber, after });
-    const project: ProjectResponse | null | undefined = data.user?.projectV2 ?? data.organization?.projectV2;
+    const project: ProjectResponse | null | undefined = data[rootField]?.projectV2;
     if (!project) throw new Error(`GitHub Project が見つかりません: ${owner} #${projectNumber}`);
     projectId = project.id;
     if (!fields.length) fields.push(...project.fields.nodes.filter(Boolean) as ProjectField[]);

@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>段階7：iPhoneアプリ配布申請ガイド</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>段階7：iPhoneアプリ配布申請ガイド</h1>
+<p>SubBuddy を TestFlight / App Store で配る前に、本体アプリと DeviceActivityMonitor 拡張の配布設定、Family Controls 配布許可、App Store Connect の申告をそろえる。 ローカルファーストで自分の端末だけに入れる場合、この手順は不要。</p>
+<p>この手順書を最後まで実行しても、アプリは自動ではリリースされない。 到達点は「配布用の署名設定、Family Controls 配布許可、プライバシー申告、提出前のビルド確認が整った状態」まで。 実際のリリースには、この後に Archive のアップロード、TestFlight 確認、App Store Connect での審査提出、Apple の審査通過、公開操作が必要。</p>
+<div class="callout warn"><p>Spike 用の Bundle ID で申請しない。製品版の本体 Bundle ID と Monitor 拡張 Bundle ID を確定してから進める。 ⚠ App ID / App Group / Services ID / Sign in with Apple private key の登録は、この手順書では扱わない。先に <code>manuals/apple-sign-in-setup.md</code> を完了する。 ⚠ Services ID と Sign in with Apple private key は本体アプリ/Webログイン用。Monitor 拡張側では設定しない。</p></div>
+<h2>1. 事前に用意する</h2>
+<p>○ 目的：Apple Developer と App Store Connect で使う値を先にそろえる。</p>
+<p>□ 操作</p>
+<ul><li>Apple Developer Program の有料アカウント</li><li>App Store Connect に作成した SubBuddy のアプリ</li><li>製品版の本体 Bundle ID</li><li>製品版の Monitor 拡張 Bundle ID</li><li>App Group ID</li><li>App Apple ID</li><li>配布用証明書（なければ手順5で作成）</li><li>本番用の Xcode プロジェクト、または本番用の App ターゲットと Monitor 拡張ターゲット（なければ手順7で作成）</li><li>公式ページ URL または GitHub リポジトリ URL</li><li>プライバシーポリシー URL</li><li>申請用スクリーンショット</li><li><code>manuals/apple-sign-in-setup.md</code> に沿って登録済みの本体アプリ App ID</li><li><code>manuals/apple-sign-in-setup.md</code> に沿って登録済みの Monitor 拡張 App ID</li><li><code>manuals/apple-sign-in-setup.md</code> に沿って登録済みの App Group</li></ul>
+<p><strong>入力値の例</strong></p>
+<table><thead><tr><th>種類</th><th>値</th></tr></thead><tbody><tr><td>本体 Bundle ID</td><td><code>〔製品版の本体 Bundle ID〕</code></td></tr><tr><td>Monitor 拡張 Bundle ID</td><td><code>〔製品版のMonitor拡張 Bundle ID〕</code></td></tr><tr><td>App Group ID</td><td><code>group.〔製品版の本体 Bundle ID〕</code></td></tr></tbody></table>
+<div class="callout ok"><p>本体アプリと Monitor 拡張の App ID / App Group は、<code>manuals/apple-sign-in-setup.md</code> に沿って登録済みである。 ✅ 上の値がそろってから申請する。Bundle ID を後で変えると再申請・再署名になる。</p></div>
+<h2>2. Capability Requests の状態を確認する</h2>
+<p>○ 目的：Family Controls 配布許可の申請が必要か、すでに割り当て済みかを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Apple Developer にログインする。</li><li><code>Certificates, Identifiers &amp; Profiles</code> の Identifiers 一覧を開く。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/identifiers/list</code></pre></div>
+<ol class="gui"><li>本体アプリの App ID を開く。</li><li><code>Capability Requests</code> タブを開く。</li><li><code>Family Controls (Distribution)</code> または <code>Family Controls</code> の状態を見る。</li><li>Identifiers 一覧へ戻る。</li><li>Monitor 拡張の App ID でも同じ確認をする。</li></ol>
+<table><thead><tr><th>状態</th><th>判断</th><th>次にやること</th></tr></thead><tbody><tr><td><code>Assigned</code></td><td>Apple がその App ID に配布用 Family Controls を割り当て済み</td><td>手順4で Capability を有効化する</td></tr><tr><td><code>Request</code> が押せる</td><td>まだ割り当てられていない</td><td>手順3で申請する</td></tr><tr><td><code>Pending</code> など審査中の表示</td><td>申請済みで結果待ち</td><td>重複申請せず待つ</td></tr></tbody></table>
+<div class="callout warn"><p><code>Family Controls (development)</code> は開発用。TestFlight / App Store 配布には、配布用の <code>Family Controls (Distribution)</code> が必要。 ⚠ 本体アプリと Monitor 拡張は別 App ID。両方の状態を確認する。</p></div>
+<h2>3. Family Controls の配布許可を申請する</h2>
+<p>○ 目的：Screen Time / Family Controls を配布版で使う許可を Apple に申請する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Identifiers 一覧で、本体アプリの App ID を開く。</li><li><code>Capability Requests</code> タブを開く。</li><li><code>Family Controls</code> または <code>Family Controls (Distribution)</code> の <code>Request</code> を押す。</li><li>名前、Team ID、メールアドレスが正しいことを確認する。</li><li><code>Get Entitlement</code> を押す。</li><li>Identifiers 一覧へ戻る。</li><li>Monitor 拡張の App ID を開く。</li><li><code>Capability Requests</code> タブから、同じ手順でもう1件申請する。</li></ol>
+<div class="callout warn"><p>申請は Bundle ID ごとに必要。本体だけでなく Monitor 拡張も必ず申請する。 ⚠ Apple 公式ヘルプでは、managed capability の申請は Account Holder が行う必要がある。 ⚠ 2026-07-04 時点の画面では、用途説明文や URL を入力する欄が出ない場合がある。その場合は、表示済みの名前・Team ID・メールアドレスを確認して <code>Get Entitlement</code> を押す。 ✅ 本体と Monitor 拡張の2件を申請済みにする。承認メールが届くまで数日から数週間かかることがある。 ✅ 2026-07-04 の実績では、<code>Family Controls (Distribution)</code> の申請後すぐに承認メールが届いた。ただし Apple 側の審査時間は保証されないため、すぐ届かない場合も審査中として扱う。</p></div>
+<h3>本体アプリの確認値</h3>
+<table><thead><tr><th>欄</th><th>確認値</th></tr></thead><tbody><tr><td>Name</td><td>Apple Developer アカウントの名前</td></tr><tr><td>Team ID</td><td>対象チームの Team ID</td></tr><tr><td>Email</td><td>Apple から連絡を受け取れるメールアドレス</td></tr><tr><td>App ID</td><td><code>〔製品版の本体 Bundle ID〕</code> の App ID を開いていること</td></tr><tr><td>Requested capability</td><td><code>Family Controls (Distribution)</code> または <code>Family Controls</code></td></tr></tbody></table>
+<div class="callout ok"><p>画面に入力欄が名前・Team ID・メールアドレスしか無い場合は、そのまま <code>Get Entitlement</code> を押す。</p></div>
+<h3>求められた場合に使う説明文</h3>
+<p>Apple から追加説明を求められた場合、または App Review の審査メモに書く場合は、下の文を使う。</p>
+<p><strong>Describe your app</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>SubBuddy is a personal subscription-management app for a single user. The user maps each subscription they pay for to one app they choose, and the app shows coarse usage signals for that app so the user can decide whether the subscription is still worth paying for. It is a savings and decision-support tool for the user's own subscriptions, not a monitoring or parental-control product.</code></pre></div>
+<p><strong>How does your app use Family Controls?</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>The app uses Family Controls with individual authorization only (AuthorizationCenter.requestAuthorization(for: .individual)). The user selects one of their own apps with FamilyActivityPicker and authorizes monitoring on their own device. A DeviceActivityMonitor extension observes DeviceActivityEvent thresholds and produces a coarse daily usage bucket, such as "used 120+ minutes today". ApplicationTokens and detailed activity logs never leave the device. Only the coarse usage bucket is sent over the local network to the same user's own Mac. No data is sent to our servers or third parties, and the data is not used for advertising or tracking.</code></pre></div>
+<p><strong>Does the app provide parental controls?</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>No. SubBuddy has no parental-control, guardian, MDM, or child-supervision features. Authorization is individual (.individual): a person monitors only their own usage on their own device to make personal spending decisions.</code></pre></div>
+<h3>Monitor 拡張について求められた場合の説明文</h3>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>This request is for the DeviceActivityMonitor extension of SubBuddy (bundle ID: 〔製品版のMonitor拡張 Bundle ID〕). The extension has no user interface. It runs in the background to observe DeviceActivityEvent thresholds and writes coarse, bucketed usage values into the shared App Group container. The containing app reads those buckets and sends them only to the user's own Mac. A separate request is filed for the containing app's bundle ID.
+
+SubBuddy is a personal subscription-management app for a single user. The user maps each subscription they pay for to one app they choose, and the app shows coarse usage signals for that app so the user can decide whether the subscription is still worth paying for. It is a savings and decision-support tool for the user's own subscriptions, not a monitoring or parental-control product.</code></pre></div>
+<h2>4. App ID の配布用 Capability を有効化する</h2>
+<p>○ 目的：承認済みの Family Controls 配布許可を、実際の App ID 設定へ反映する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Apple Developer の Identifiers 一覧を開く。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/identifiers/list</code></pre></div>
+<ol class="gui"><li>本体アプリの App ID を開く。</li><li><code>Capabilities</code> タブを開く。</li><li><code>App Groups</code> が有効で、事前に登録済みの App Group が選ばれていることを確認する。</li><li><code>Family Controls (Distribution)</code> または <code>Family Controls</code> が有効化できる場合は、有効にして保存する。</li><li>Identifiers 一覧へ戻る。</li><li>Monitor 拡張の App ID を開く。</li><li><code>Capabilities</code> タブを開く。</li><li><code>App Groups</code> が有効で、本体と同じ App Group が選ばれていることを確認する。</li><li><code>Family Controls (Distribution)</code> または <code>Family Controls</code> が有効化できる場合は、有効にして保存する。</li></ol>
+<div class="callout warn"><p><code>Assigned</code> は割り当て済みという意味で、署名済みビルドに自動で入るという意味ではない。App ID の Capabilities、有効なプロビジョニングプロファイル、Xcode の Signing &amp; Capabilities まで反映する。 ⚠ Monitor 拡張に <code>Sign in with Apple</code> は付けない。Services ID と private key も Monitor 側では使わない。 ✅ 本体アプリと Monitor 拡張の両方で、App Group と配布用 Family Controls が有効になっている。</p></div>
+<h2>5. 配布用証明書を作る</h2>
+<p>○ 目的：TestFlight / App Store 提出ビルドへ署名するための <code>Apple Distribution</code> 証明書を用意する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Mac で <code>キーチェーンアクセス</code> を開く。</li><li>メニューから <code>キーチェーンアクセス &gt; 証明書アシスタント &gt; 認証局に証明書を要求...</code> を開く。</li><li><code>ユーザのメールアドレス</code> に Apple Developer アカウントのメールアドレスを入れる。</li><li><code>通称</code> に識別しやすい名前を入れる。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>SubBuddy Apple Distribution</code></pre></div>
+<ol class="gui"><li><code>CA のメールアドレス</code> は空欄にする。</li><li><code>ディスクに保存</code> を選ぶ。</li><li><code>続ける</code> を押し、<code>.certSigningRequest</code> ファイルを保存する。</li><li>Apple Developer の Certificates 一覧を開く。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/certificates/list</code></pre></div>
+<ol class="gui"><li><code>+</code> を押す。</li><li><code>Software</code> の <code>Apple Distribution</code> を選ぶ。</li><li><code>Continue</code> を押す。</li><li>この節の手順7で保存した <code>.certSigningRequest</code> ファイルをアップロードする。</li><li><code>Continue</code> または <code>Generate</code> を押す。</li><li>発行された <code>.cer</code> ファイルをダウンロードする。</li><li>キーチェーンアクセスの左側で <code>ログイン</code> キーチェーンを選ぶ。</li><li>ダウンロードした <code>.cer</code> ファイルを <code>ログイン</code> キーチェーンへドラッグ＆ドロップする。</li></ol>
+<div class="callout warn"><p>既に有効な <code>Apple Distribution</code> 証明書があり、その秘密鍵もこのMacのキーチェーンに入っている場合は、新しく作らず既存の証明書を使ってよい。 ⚠ Apple 公式ヘルプでは、配布用証明書の作成は Account Holder または Admin 権限が必要。 ⚠ <code>.cer</code> を追加するときに “システムルート” キーチェーンのエラーが出た場合は、<code>システムルート</code> ではなく <code>ログイン</code> キーチェーンを選び直してから追加する。<code>Apple Distribution</code> 証明書はルート証明書ではないため、システムルートの信頼設定を変更しない。 ⚠ 配布用証明書はチームの署名資産。<code>.certSigningRequest</code>、<code>.cer</code>、秘密鍵を書類やリポジトリに置かない。秘密鍵を共有する必要がある場合は、チーム内の安全な手段だけを使う。 ✅ キーチェーンアクセスで <code>Apple Distribution: 〔チーム名〕 (〔Team ID〕)</code> が表示され、秘密鍵がひも付いていることを確認する。</p></div>
+<h2>6. 配布用プロビジョニングプロファイルを作る</h2>
+<p>○ 目的：TestFlight / App Store 提出ビルドへ署名するための配布プロファイルを作る。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Profiles の一覧を開く。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/profiles/list</code></pre></div>
+<ol class="gui"><li><code>+</code> を押す。</li><li><code>Distribution</code> の <code>App Store Connect</code> または <code>App Store</code> を選ぶ。</li><li><code>Continue</code> を押す。</li><li>まず Monitor 拡張の App ID を選ぶ。</li><li>配布用証明書を選ぶ。</li><li>Profile Name に次の値を入れる。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>SubBuddy Monitor Extension Distribution</code></pre></div>
+<ol class="gui"><li><code>Generate</code> を押す。</li><li>同じ手順で本体アプリ用の配布プロファイルも作る。</li></ol>
+<p><strong>本体アプリ用の Profile Name</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>SubBuddy App Distribution</code></pre></div>
+<div class="callout warn"><p>本体用と Monitor 拡張用の2つが必要。片方だけだと提出時に署名エラーになる。 ⚠ Family Controls の承認・有効化前に作った配布プロファイルは古い可能性がある。Capability を直した後に作り直す。 ✅ 手順5で用意した配布用証明書を選んで、Monitor 拡張用と本体アプリ用の2つを作成する。</p></div>
+<h2>7. 本番用 Xcode プロジェクトまたはターゲットを用意する</h2>
+<p>○ 目的：Spike 用ではなく、製品版 Bundle ID で署名する本番用の App ターゲットと Monitor 拡張ターゲットを用意する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>現在の Xcode 構成を確認する。</li><li>Spike 用プロジェクトしかない場合は、次のどちらかを選ぶ。</li><li>新しい Xcode プロジェクトとして本番用アプリを作る。</li><li>または、既存の Xcode ワークスペース内に本番用 App ターゲットを追加する。</li><li>本番用 App ターゲットの Product Name を <code>SubBuddy</code> にする。</li><li>本番用 App ターゲットの Bundle Identifier を製品版の本体 Bundle ID にする。</li><li>本番用 App ターゲットに DeviceActivityMonitor 拡張ターゲットを追加する。</li><li>Monitor 拡張ターゲットの Bundle Identifier を製品版の Monitor 拡張 Bundle ID にする。</li><li>Spike で検証した必要な実装だけを、本番用 App ターゲットと Monitor 拡張ターゲットへ移す。</li></ol>
+<div class="callout warn"><p>Spike 用 Bundle ID や Spike 用ターゲットを、提出用ビルドに流用しない。製品版 Bundle ID は、本番用ターゲットだけに設定する。 ⚠ 新しい <code>.xcodeproj</code> を必ず作る必要はない。既存ワークスペース内に本番用ターゲットを分けてもよい。重要なのは、Spike 用ターゲットと提出用ターゲットを混ぜないこと。 ✅ 本番用 App ターゲットと本番用 Monitor 拡張ターゲットがあり、それぞれ製品版 Bundle ID になっている。</p></div>
+<h2>8. Xcode の Signing &amp; Capabilities を合わせる</h2>
+<p>○ 目的：Apple Developer ポータルで有効化した値を Xcode 側にも反映する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcode でプロジェクトを開く。</li><li>本体ターゲットの <code>Signing &amp; Capabilities</code> を開く。</li><li><code>Bundle Identifier</code> を製品版の本体 Bundle ID にする。</li><li><code>App Groups</code> を追加し、事前に登録済みの App Group にチェックを入れる。</li><li><code>Family Controls</code> を追加する。</li><li>Monitor 拡張ターゲットの <code>Signing &amp; Capabilities</code> を開く。</li><li><code>Bundle Identifier</code> を製品版の Monitor 拡張 Bundle ID にする。</li><li><code>App Groups</code> を追加し、本体と同じ App Group にチェックを入れる。</li><li><code>Family Controls</code> を追加する。</li><li>手動署名なら、手順6で作った配布プロファイルを各ターゲットへ割り当てる。</li></ol>
+<div class="callout warn"><p>Xcode に <code>Family Controls</code> を追加しても、Apple Developer 側で配布用 entitlement が未承認なら提出用ビルドは完成しない。 ✅ 本体と Monitor 拡張の両方に、同じ App Group と Family Controls が表示されている。</p></div>
+<h2>9. PrivacyInfo.xcprivacy を追加する</h2>
+<p>○ 目的：Apple のプライバシーマニフェスト（＝収集データと理由付き API の申告ファイル）を入れる。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcode で <code>File &gt; New &gt; File...</code> を開く。</li><li><code>Resource &gt; App Privacy File</code> を選ぶ。</li><li>本体ターゲットに <code>PrivacyInfo.xcprivacy</code> を追加する。</li><li>同じ手順で Monitor 拡張ターゲットにも追加する。</li><li>本体用ファイルに下の XML を貼る。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;NSPrivacyTracking&lt;/key&gt;
+    &lt;false/&gt;
+    &lt;key&gt;NSPrivacyTrackingDomains&lt;/key&gt;
+    &lt;array/&gt;
+    &lt;key&gt;NSPrivacyCollectedDataTypes&lt;/key&gt;
+    &lt;array&gt;
+        &lt;dict&gt;
+            &lt;key&gt;NSPrivacyCollectedDataType&lt;/key&gt;
+            &lt;string&gt;NSPrivacyCollectedDataTypeProductInteraction&lt;/string&gt;
+            &lt;key&gt;NSPrivacyCollectedDataTypeLinked&lt;/key&gt;
+            &lt;true/&gt;
+            &lt;key&gt;NSPrivacyCollectedDataTypeTracking&lt;/key&gt;
+            &lt;false/&gt;
+            &lt;key&gt;NSPrivacyCollectedDataTypePurposes&lt;/key&gt;
+            &lt;array&gt;
+                &lt;string&gt;NSPrivacyCollectedDataTypePurposeAppFunctionality&lt;/string&gt;
+            &lt;/array&gt;
+        &lt;/dict&gt;
+    &lt;/array&gt;
+    &lt;key&gt;NSPrivacyAccessedAPITypes&lt;/key&gt;
+    &lt;array&gt;
+        &lt;dict&gt;
+            &lt;key&gt;NSPrivacyAccessedAPIType&lt;/key&gt;
+            &lt;string&gt;NSPrivacyAccessedAPICategoryUserDefaults&lt;/string&gt;
+            &lt;key&gt;NSPrivacyAccessedAPITypeReasons&lt;/key&gt;
+            &lt;array&gt;
+                &lt;string&gt;CA92.1&lt;/string&gt;
+            &lt;/array&gt;
+        &lt;/dict&gt;
+    &lt;/array&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre></div>
+<ol class="gui"><li>Monitor 拡張用ファイルに下の XML を貼る。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;NSPrivacyTracking&lt;/key&gt;
+    &lt;false/&gt;
+    &lt;key&gt;NSPrivacyTrackingDomains&lt;/key&gt;
+    &lt;array/&gt;
+    &lt;key&gt;NSPrivacyCollectedDataTypes&lt;/key&gt;
+    &lt;array/&gt;
+    &lt;key&gt;NSPrivacyAccessedAPITypes&lt;/key&gt;
+    &lt;array&gt;
+        &lt;dict&gt;
+            &lt;key&gt;NSPrivacyAccessedAPIType&lt;/key&gt;
+            &lt;string&gt;NSPrivacyAccessedAPICategoryUserDefaults&lt;/string&gt;
+            &lt;key&gt;NSPrivacyAccessedAPITypeReasons&lt;/key&gt;
+            &lt;array&gt;
+                &lt;string&gt;CA92.1&lt;/string&gt;
+            &lt;/array&gt;
+        &lt;/dict&gt;
+    &lt;/array&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre></div>
+<div class="callout warn"><p>ファイル名は <code>PrivacyInfo.xcprivacy</code> のままにする。本体と Monitor 拡張の両方に入れる。</p></div>
+<h2>10. プライバシーポリシーを公開する</h2>
+<p>○ 目的：App Store Connect に貼る URL を用意する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>GitHub Pages、README、公式サイトなどに下の本文を公開する。</li><li>公開 URL を控える。</li><li>App Store Connect に同じ URL を入力する。Apple から追加説明を求められた場合も、この URL を使う。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code># SubBuddy プライバシーポリシー
+
+SubBuddy は、ユーザー自身が契約しているサブスクリプションを見直すための個人向けアプリです。
+
+## 取得する情報
+
+SubBuddy は、ユーザーが自分で選んだアプリの使用時間を、iPhone の中で段階化した集計値として扱います。
+例：その日に一定時間以上使ったかどうか、または「120分以上」のような大まかな使用量の目安。
+
+SubBuddy は、アプリ名そのもの、詳しい利用ログ、画面内容、通信内容、連絡先、位置情報を収集しません。
+
+## 情報の利用目的
+
+使用時間の集計値は、ユーザーが「このサブスクリプションを払い続ける価値があるか」を判断するためにだけ使います。
+広告、追跡、第三者向けの分析、プロファイリングには使いません。
+
+## 情報の送信先
+
+使用時間の集計値は、同じネットワーク上にあるユーザー自身の Mac にだけ送信します。
+開発者のサーバーや第三者のサーバーには送信しません。
+
+## 第三者提供
+
+SubBuddy は、取得した使用時間の集計値を第三者へ販売、共有、提供しません。
+
+## 子ども・他人の監視について
+
+SubBuddy は、保護者による子どもの見守り、従業員監視、MDM、第三者の行動監視を目的としたアプリではありません。
+使用時間の取得は、ユーザー本人の端末で、ユーザー本人の許可がある場合に限ります。
+
+## お問い合わせ
+
+本ポリシーに関する問い合わせ先：〔問い合わせ先URLまたはメール〕</code></pre></div>
+<h2>11. App Store Connect にアプリ情報を入れる</h2>
+<p>○ 目的：Family Controls 申請と矛盾しない説明で App Store Connect を埋める。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>App Store Connect を開く。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://appstoreconnect.apple.com/apps</code></pre></div>
+<ol class="gui"><li>対象アプリを開く。</li><li><code>App情報</code> と対象バージョンの情報を入力する。</li></ol>
+<table><thead><tr><th>欄</th><th>入力値</th></tr></thead><tbody><tr><td>App名</td><td><code>SubBuddy</code></td></tr><tr><td>サブタイトル</td><td><code>使ってないサブスクに気づく</code></td></tr><tr><td>プライマリカテゴリ</td><td><code>ファイナンス</code></td></tr><tr><td>セカンダリカテゴリ</td><td><code>ユーティリティ</code></td></tr><tr><td>サポートURL</td><td><code>〔GitHub Issues など問い合わせ先 URL〕</code></td></tr><tr><td>マーケティングURL</td><td><code>〔公式ページまたはGitHub URL〕</code></td></tr><tr><td>プライバシーポリシーURL</td><td><code>〔プライバシーポリシーURL〕</code></td></tr><tr><td>年齢制限</td><td><code>4+</code></td></tr><tr><td>キーワード</td><td><code>サブスク,サブスクリプション,解約,固定費,節約,家計,支出管理,使用時間,見直し,定期購入</code></td></tr></tbody></table>
+<p><strong>プロモーションテキスト</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>使っていないサブスクに気づけます。契約に「対応するアプリの使用時間の目安」を並べて表示し、解約か継続かをあなた自身で判断。使用時間は iPhone 内で集計値にし、あなたの Mac にだけ送ります。広告・追跡はありません。</code></pre></div>
+<p><strong>説明</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>SubBuddy（サブバディ）は、あなたが払っているサブスクを1つずつ見直すための、個人向けアプリです。
+
+契約中のサブスクに、あなたが選んだアプリを対応づけると、そのアプリを最近どれくらい使っているかを、段階化した目安で表示します。「あまり使っていないのに払い続けている」ものに気づき、解約するか続けるかを、あなた自身で判断できます。
+
+■ プライバシーへの配慮
+・使用時間は iPhone の中で段階化した集計値（例：「120分以上」）にします。
+・その集計値は、同じネットワーク上にあるあなた自身の Mac にだけ送ります。
+・アプリ名や詳しい利用ログを、当社や第三者に送ることはありません。
+・広告や追跡には一切利用しません。
+
+使用時間の計測には、iOS の Family Controls（スクリーンタイム）を、あなた自身の許可のもとでのみ使用します。他人を監視する機能はありません。</code></pre></div>
+<h2>12. App Privacy を登録する</h2>
+<p>○ 目的：App Store のプライバシー表示を登録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>App Store Connect で対象アプリを開く。</li><li><code>Appのプライバシー</code> を開く。</li><li><code>データを収集していますか？</code> は <code>はい</code> を選ぶ。</li><li>データタイプは <code>使用状況データ &gt; 製品とのやり取り</code> だけを選ぶ。</li><li>用途は <code>Appの機能</code> だけを選ぶ。</li><li><code>ユーザーに関連付けられますか？</code> は <code>はい</code> を選ぶ。</li><li><code>追跡に使用しますか？</code> は <code>いいえ</code> を選ぶ。</li><li>保存する。</li></ol>
+<div class="callout ok"><p>表示結果が「使用状況データ / ユーザーに関連付けられる / 追跡なし / Appの機能」だけになっていることを確認する。</p></div>
+<h2>13. ビルドに entitlement が入ったか確認する</h2>
+<p>○ 目的：提出するビルドに必要な権限が入っているか確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Release / Archive 用にビルドする。</li><li>本体 <code>.app</code> と Monitor 拡張 <code>.appex</code> のパスを確認する。</li><li>ターミナルで本体アプリを確認する。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>codesign -d --entitlements :- "〔SubBuddy.appのパス〕"</code></pre></div>
+<ol class="gui"><li>Monitor 拡張も確認する。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>codesign -d --entitlements :- "〔Monitor拡張.appexのパス〕"</code></pre></div>
+<p><strong><code>.appex</code> パスの例</strong></p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>~/Library/Developer/Xcode/DerivedData/〔プロジェクト〕/Build/Products/Release-iphoneos/SubBuddy.app/PlugIns/MonitorExtension.appex</code></pre></div>
+<div class="callout ok"><p>本体アプリと Monitor 拡張の両方で、出力に <code>com.apple.developer.family-controls</code> と <code>com.apple.security.application-groups</code> が含まれることを確認する。 ⚠ 出力に無い場合は、手順4〜8を直してから Archive し直す。</p></div>
+<h2>14. この手順書の後に残る作業</h2>
+<p>○ 目的：この手順書だけではリリース完了ではないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcode Organizer から Archive を App Store Connect へアップロードする。</li><li>App Store Connect でビルド処理が完了するのを待つ。</li><li>TestFlight で内部テスト、必要なら外部テストを行う。</li><li>対象バージョンに提出ビルドを紐づける。</li><li>スクリーンショット、審査情報、輸出コンプライアンス、年齢制限など未入力項目を埋める。</li><li><code>Submit for Review</code> で Apple に審査提出する。</li><li>Apple の審査に通った後、手動リリースまたは自動リリース設定に従って公開する。</li></ol>
+<div class="callout ok"><p>この手順書の完了は「リリース準備完了」。実際の公開は、App Store Connect での審査提出とApple審査通過後に行う。</p></div>
+<h2>15. 公式URL</h2>
+<ul><li>App ID / Capability Requests の入口</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/identifiers/list</code></pre></div>
+<ul><li>Capability Requests の公式手順</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/help/account/capabilities/capability-requests</code></pre></div>
+<ul><li>iOS supported capabilities</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/help/account/reference/supported-capabilities-ios/</code></pre></div>
+<ul><li>配布プロファイル作成の説明</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/help/account/manage-profiles/create-a-distribution-provisioning-profile</code></pre></div>
+<ul><li>Certificates 一覧</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/account/resources/certificates/list</code></pre></div>
+<ul><li>Certificates overview</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/help/account/certificates/certificates-overview</code></pre></div>
+<ul><li>CSR 作成の説明</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/help/account/certificates/create-a-certificate-signing-request</code></pre></div>
+<ul><li>Family Controls entitlement の説明</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.family-controls</code></pre></div>
+<ul><li>Family Controls entitlement 申請の説明</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/documentation/familycontrols/requesting-the-family-controls-entitlement</code></pre></div>
+<ul><li>App Store Connect</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://appstoreconnect.apple.com/apps</code></pre></div>
+<ul><li>App Privacy の説明</li></ul>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>https://developer.apple.com/app-store/app-privacy-details/</code></pre></div>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "WBS GitHub Sync"
+  short_description: "WBSをGitHub Issues/Projectへ同期"
+  default_prompt: "WBS同期"
