@@ -35,16 +35,16 @@ TestFlight 小規模検証版に向けたクリティカルチェーンの要は
 
 ## 受け入れ条件
 
-- [ ] AC-1: 同一 `(subscription_id, usage_date)` への再送・追加送信で、バケットは最大値へ収束し下がらない（`used` は OR、分推定は null 安全 max）。
-- [ ] AC-2: Apple identity token の `aud` が `{com.subbuddy.web, com.subbuddy.app}` のいずれかなら受理し、リスト外は拒否する。
-- [ ] AC-3: iOS 用サインイン検証エンドポイント `POST /api/auth/apple/native` が存在し、Web コールバックと分離されている。
-- [ ] AC-4: 同一 `(user_id, client_device_id)` のデバイス登録は 1 レコードに収束し、同期トークンは再発行される。
-- [ ] AC-5: `DELETE /api/account` が本人確認のうえ当該 `user_id` の全関連データを物理削除し、他ユーザーのデータは残る。
-- [ ] AC-6: `GET /api/health` が DB・secret に触れずに `{ ok, mode }` を返す。
-- [ ] AC-7: `npx prisma migrate deploy` が新規マイグレーション込みで空 DB にクリーン適用される。
-- [ ] AC-8: Render 手順書に `APPLE_ALLOWED_CLIENT_IDS` と `/api/health` 確認が反映され、HTML も再生成済み。
-- [ ] AC-9: `npm run build` / `typecheck` / `lint` / `test` が成功する。
-- [ ] AC-10: テナント越え（他ユーザーのサブスクへの書き込み）が拒否される。
+- [x] AC-1: 同一 `(subscription_id, usage_date)` への再送・追加送信で、バケットは最大値へ収束し下がらない（`used` は OR、分推定は null 安全 max）。
+- [x] AC-2: Apple identity token の `aud` が `{com.subbuddy.web, com.subbuddy.app}` のいずれかなら受理し、リスト外は拒否する。
+- [x] AC-3: iOS 用サインイン検証エンドポイント `POST /api/auth/apple/native` が存在し、Web コールバックと分離されている。
+- [x] AC-4: 同一 `(user_id, client_device_id)` のデバイス登録は 1 レコードに収束し、同期トークンは再発行される。
+- [x] AC-5: `DELETE /api/account` が本人確認のうえ当該 `user_id` の全関連データを物理削除し、他ユーザーのデータは残る。
+- [x] AC-6: `GET /api/health` が DB・secret に触れずに `{ ok, mode }` を返す。
+- [x] AC-7: `npx prisma migrate deploy` が新規マイグレーション込みで空 DB にクリーン適用される。
+- [x] AC-8: Render 手順書に `APPLE_ALLOWED_CLIENT_IDS` と `/api/health` 確認が反映され、HTML も再生成済み。
+- [x] AC-9: `npm run build` / `typecheck` / `lint` / `test` が成功する。
+- [x] AC-10: テナント越え（他ユーザーのサブスクへの書き込み）が拒否される。
 
 ## 制約事項
 

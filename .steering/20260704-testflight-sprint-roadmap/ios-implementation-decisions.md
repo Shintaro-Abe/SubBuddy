@@ -42,6 +42,16 @@
 
 ## 4. 実装前チェックリスト
 
+### サーバー側（2026-07-07 完了）
+- [x] Apple token 検証の `aud` 許可リスト（web/app）＋`iss` 検証（ADR 0004）
+- [x] iOS 用エンドポイント（`/api/auth/apple/native`）を Web と分離
+- [x] デバイス登録は `clientDeviceId` による同一ユーザー・同一端末 upsert
+- [x] `POST /api/usage/daily` は device token から user 解決、body の user_id を信じない
+- [x] 利用量同期はバケット最大値マージ
+- [x] `DELETE /api/account` とカスケード物理削除
+- [x] `GET /api/health` と Render 手順書
+- [x] `build` / `lint` / `typecheck` / `test` / 実 DB 通し検証
+
 ### iOS アプリ（apps/ios）
 - [ ] 2ターゲット構成・Bundle ID・App Group・Services ID を D1 どおり設定
 - [ ] Spike 移植：認可／Picker／対応付け／監視登録／Extension／送信
@@ -60,32 +70,32 @@
 
 ### Apple サインイン
 - [ ] iOS ネイティブ Sign in with Apple
-- [ ] サーバー `aud` 許可リスト（web/app）＋`iss` 検証（ADR 0004）
-- [ ] iOS 用エンドポイント（`/api/auth/apple/native`）を Web と分離
-- [ ] `sub` ハッシュで users 解決、メール非必須
+- [x] サーバー `aud` 許可リスト（web/app）＋`iss` 検証（ADR 0004）
+- [x] iOS 用エンドポイント（`/api/auth/apple/native`）を Web と分離
+- [x] サーバーは `sub` ハッシュで users 解決、メール非必須
 
 ### device sync token
 - [ ] サインイン直後に冪等デバイス登録
 - [ ] iOS は端末内生成の `clientDeviceId`（UUID）を Keychain 保存し、登録時に送る。サーバーは `(user_id, client_device_id)` で upsert
 - [ ] token は Keychain 保存（App Group 平文に置かない）
-- [ ] サーバーは `token_hash` のみ保存、平文をログ/DB に残さない
-- [ ] `POST /api/usage/daily` は token から user 解決、body の user_id 無視
+- [x] サーバーは `token_hash` のみ保存、平文をログ/DB に残さない
+- [x] `POST /api/usage/daily` は token から user 解決、body の user_id 無視
 
 ### cloud-testflight mode
 - [ ] `SUBBUDDY_MODE=cloud-testflight`、Render 事前設定（DB internal URL・secret）
-- [ ] テナント越え防止テスト（別 user token で他人データ不可）
+- [x] 実 DB 検証でテナント越え防止を確認（別 user token で他人データ不可）
 - [ ] Web の Apple サインイン導線
 - [ ] ログに PII/secret を出さない
 
 ### TestFlight / entitlement
-- [ ] 本体・Extension とも配布 entitlement 承認済み（D10：確認済）
+- [x] 本体・Extension とも配布 entitlement 承認済み（D10：確認済）
 - [ ] 配布プロビジョニング2種で Archive
 - [ ] codesign で両方に `family-controls`＋`application-groups` 確認
 - [ ] 内部テスト→Beta App Review→外部20〜50人
 - [ ] 開発実機＋開発 entitlement で7日連続計測を先行完了
 
 ### プライバシー・削除導線
-- [ ] `DELETE /api/account`＋全テーブルのカスケード物理削除
+- [x] サーバー側 `DELETE /api/account`＋全テーブルのカスケード物理削除
 - [ ] iOS 内アカウント削除 UI、削除後に Keychain/App Group をローカル消去
 - [ ] プライバシーポリシー/App説明/App Privacy/Family Controls 回答を cloud 送信で統一（D5）
 - [ ] 問い合わせ導線（サポート URL）を用意
@@ -94,10 +104,11 @@
 ## 5. 既知の是正（Spike → 正式移植）
 
 - `spikes/ios-screen-time/SubBuddySpike/App/UsageSyncService.swift` の `syncAll()` は送信後に当日分も削除する既知欠陥。正式版では当日分を残し、過去日かつ送信成功のみ削除する（ADR 0006）。
-- サーバー `POST /api/usage/daily` の upsert を「後勝ち」から「バケット最大値マージ」に実装変更する（要現行実装確認）。
+- サーバー `POST /api/usage/daily` の upsert は「後勝ち」から「バケット最大値マージ」へ変更済み（`../20260707-testflight-backend-readiness/`）。
 - `docs/functional-design.md` の「bundleId/domain 突合」記述は候補ヒントへ是正済み（ADR 0005）。
 
 ## 6. ロードマップへの影響（`roadmap.md`）
 
 - entitlement 本体・Extension とも審査完了済みのため、クリティカルチェーンの「審査待ち」ゲートは解消（D10）。7日連続計測を最優先で先行開始する（D9）。
+- サーバー側の未実装・不整合は 2026-07-07 に解消済み。以後の最短経路は Mac/Xcode での iOS 実装と Render 実デプロイ。
 - スリップの正当理由だった「entitlement 審査待ち」は消滅。以後の遅延は実装遅れとして管理する。
