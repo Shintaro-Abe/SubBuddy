@@ -73,6 +73,6 @@
 
 ## 承認
 
-- [ ] 未決事項ゼロを確認
-- [ ] トレーサビリティ表に漏れ・孤立なし
-- [ ] 上記をもって requirements / design / tasklist をまとめて承認
+- [x] 未決事項ゼロを確認
+- [x] トレーサビリティ表に漏れ・孤立なし
+- [x] 上記をもって requirements / design / tasklist をまとめて承認
