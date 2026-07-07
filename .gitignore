@@ -37,6 +37,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Local/manual operation notes
+manuals/
+
 # Real data / PII (実データはリポジトリに含めない — CLAUDE.md PII方針)
 data/
 *.db
