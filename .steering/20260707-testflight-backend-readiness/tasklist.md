@@ -31,4 +31,10 @@
 - [x] リント・型チェック実施（`lint` / `typecheck` green）
 - [x] テスト（16 files / 120 passed）・本番ビルド成功・実DB検証全PASS
 - [x] 必要な `docs/` 更新を反映
-- [ ] コミット（`pre-commit-secret-scan` 実行後・未実施）
+- [x] コミット（`pre-commit-secret-scan` で gitleaks クリーン確認後にコミット・`origin/main` へ push 済み）
+
+## 反映状況（2026-07-07）
+
+- gitleaks スキャン：no leaks found。
+- コミット：`36bd910`（48 files changed / +1560 / -163）。関連ワークストリーム一式を一括コミット。
+- push：`origin/main` に反映済み（`ee31764..36bd910`）。作業ツリーはクリーン。

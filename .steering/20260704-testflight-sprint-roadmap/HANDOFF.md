@@ -145,7 +145,13 @@ npx prisma validate
 - planning repo 停止バグは未着手。今日の判断として後回し。
 - iOS アプリ本体、Extension、実機7日計測は未着手。
 - `DELETE /api/account` の iOS UI は未着手。
-- 変更は未コミット。コミット前に必ず `pre-commit-secret-scan`（gitleaks）を実行する。
+- 本日分は gitleaks クリーン確認後にコミット・push 済み（`36bd910` → `origin/main`、48 files）。作業ツリーはクリーン。
+- 後追いステアリング `.steering/20260707-testflight-backend-readiness/` を作成済み（要求・設計・タスク・レビューパック）。
+
+### 次セッションの開始点（更新）
+
+- サーバー側は実装・実DB検証・本番ビルドまで完了し main に反映済み。次はクリティカルチェーン C：Apple サインイン値の用意 → Render 構築 → Web 単体でクラウド検証 → iOS 実装 → 7日連続計測。
+- iOS 実装は Mac/Xcode 必須でこの Linux コンテナ不可。
 
 ---
 
