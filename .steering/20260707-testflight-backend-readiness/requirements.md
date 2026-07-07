@@ -20,12 +20,12 @@ TestFlight 小規模検証版に向けたクリティカルチェーンの要は
   - Render 起動確認用 `GET /api/health` を追加。
   - Render 事前設定手順書を実装に合わせて是正（`APPLE_ALLOWED_CLIENT_IDS`・health 手順）。
   - 実 DB での通し検証スクリプトを追加。
-  - 本番ビルドのブロッカー（Web フォント外部取得依存）を解消。
+  - 本番ビルドのブロッカー（`next/font/google` によるビルド時外部取得依存）を解消。
 - やらないこと:
   - iOS アプリ本体・Extension の実装（Mac 作業）。
   - Render への実デプロイ・Apple Developer 設定（運用者の外部作業）。
   - 実機7日連続計測。
-  - フォントの自ホスト化（`next/font/local`）。今回は system fallback で対応し、後続判断とする。
+  - フォントの自ホスト化（`next/font/local`）。今回はブラウザ実行時の Google Fonts 読み込み＋system fallback で対応し、後続判断とする。
 
 ## ユーザーストーリー
 

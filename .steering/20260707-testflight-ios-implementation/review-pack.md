@@ -48,7 +48,7 @@
 - サーバー側整備は `../20260707-testflight-backend-readiness/` で完了済み。
 - iOS build / Archive / codesign は Mac/Xcode 上で実施する。
 - 実在の個人データは扱わず、確認は合成データと開発実機に限定する。
-- Render 実デプロイと Apple Developer 実設定は並行外部作業として残る。
+- Apple Developer 側の Apple サインイン準備は完了済み。Render 実デプロイと iOS 側の Xcode signing / provisioning 設定は並行外部作業として残る。
 
 ## 影響範囲
 

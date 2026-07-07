@@ -7,6 +7,7 @@
 
 | # | タスク | 対応AC | 状態 | 完了条件 |
 |---|---|---|---|---|
+| T-0 | Apple Developer 側の Apple サインイン準備を確認 | AC-2, AC-3, AC-11 | 完了 | `manuals/apple-sign-in-setup.md` の作業完了。Team ID / Bundle ID / App Group ID / Services ID / Key ID / Return URL / private key の管理先が揃っている |
 | T-1 | `apps/ios/` の Xcode project / workspace を作成し、本体アプリと Monitor Extension を追加 | AC-1, AC-2 | 未着手 | 2ターゲットが存在し、Bundle ID / App Group / Services ID の設定方針が確認できる |
 | T-2 | entitlement / signing / App Group 設定を入れる | AC-2, AC-11 | 未着手 | 本体・Extension の capability が D1 どおりで、Archive 後に codesign 確認できる |
 | T-3 | ネイティブ Sign in with Apple と `/api/auth/apple/native` の API client を実装 | AC-3 | 未着手 | identity token を送って API token を取得できる |
@@ -25,6 +26,10 @@
 ## 実装中の逸脱ログ
 
 - なし
+
+## 外部準備ログ
+
+- 2026-07-07: `manuals/apple-sign-in-setup.md` の手作業は完了済み。リポジトリには実値・秘密鍵・個人情報を書かず、iOS 実装では設定名と疎通だけを確認する。
 
 ## 7日連続計測ログ
 

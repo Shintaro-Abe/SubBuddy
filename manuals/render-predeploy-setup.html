@@ -107,7 +107,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>7. Render Postgres を作る</h2>
 <p>○ SubBuddy 用のクラウド DB を作る。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>Render Dashboard で <code>New</code> を選ぶ。</li><li><code>Postgres</code> を選ぶ。</li><li><code>Name</code> に <code>subbuddy-cloud-testflight-db</code> などを入れる。</li><li><code>Database</code> と <code>User</code> は Render の自動生成でもよい。自分で指定する場合は控えを安全に管理する。</li><li>Step 6 で決めたリージョンを選ぶ。</li><li>PostgreSQL version は既定の新しい安定版を使う。</li><li>Instance type は <code>Basic-1gb</code> を選ぶ。</li><li>Storage は最小から始める。増やすことはできるが、減らせない。</li><li><code>Create Database</code> を選ぶ。</li><li>DB の状態が <code>Available</code> になるまで待つ。</li></ol>
+<ol class="gui"><li>Render Dashboard で <code>New</code> を選ぶ。</li><li><code>Postgres</code> を選ぶ。</li><li><code>Name</code> に <code>subbuddy-cloud-testflight-db</code> を入れる。</li><li><code>Database</code> と <code>User</code> は Render の自動生成でもよい。自分で指定する場合は控えを安全に管理する。</li><li>Step 6 で決めたリージョンを選ぶ。</li><li>PostgreSQL version は既定の新しい安定版を使う。</li><li>Instance type は <code>Basic-1gb</code> を選ぶ。</li><li>Storage は最小から始める。増やすことはできるが、減らせない。</li><li><code>Create Database</code> を選ぶ。</li><li>DB の状態が <code>Available</code> になるまで待つ。</li></ol>
 <div class="callout warn"><p>Render Postgres の external URL は外部接続用。SubBuddy の Web Service からは internal URL を使う。</p></div>
 <div class="callout ok"><p>Postgres の詳細画面で <code>Internal Database URL</code> を確認できる。</p></div>
 <h2>8. DB 接続情報を控える</h2>
@@ -120,14 +120,14 @@ th{background:var(--accent-soft);font-weight:600}
 <p>○ Render Web Service 作成画面で迷わないようにする。</p>
 <p>□ 操作</p>
 <p>次の値を準備する。</p>
-<table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>Service type</td><td>Web Service</td></tr><tr><td>Repository</td><td>SubBuddy リポジトリ</td></tr><tr><td>Branch</td><td><code>main</code></td></tr><tr><td>Root Directory</td><td><code>apps/web</code></td></tr><tr><td>Runtime</td><td>Node</td></tr><tr><td>Build Command</td><td><code>npm ci &amp;&amp; npm run build</code></td></tr><tr><td>Pre-deploy Command</td><td><code>npx prisma migrate deploy</code></td></tr><tr><td>Start Command</td><td><code>npm run start</code></td></tr><tr><td>Instance type</td><td>Starter</td></tr><tr><td>Auto Deploy</td><td>初回は手動推奨。運用が安定したら有効化</td></tr></tbody></table>
+<table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>Name</td><td><code>subbuddy-cloud-testflight-web</code></td></tr><tr><td>Service type</td><td>Web Service</td></tr><tr><td>Repository</td><td>SubBuddy リポジトリ</td></tr><tr><td>Branch</td><td><code>main</code></td></tr><tr><td>Root Directory</td><td><code>apps/web</code></td></tr><tr><td>Runtime</td><td>Node</td></tr><tr><td>Build Command</td><td><code>npm ci &amp;&amp; npm run build</code></td></tr><tr><td>Pre-deploy Command</td><td><code>npx prisma migrate deploy</code></td></tr><tr><td>Start Command</td><td><code>npm run start</code></td></tr><tr><td>Instance type</td><td>Starter</td></tr><tr><td>Auto Deploy</td><td>初回は手動推奨。運用が安定したら有効化</td></tr></tbody></table>
 <div class="callout warn"><p>Pre-deploy Command は有料 Web Service で使う。DB migration を手動にしないために設定する。</p></div>
 <div class="callout warn"><p>今回の初期設定では <code>main</code> を使う。将来、検証用の <code>staging</code> や <code>develop</code> ブランチを作った場合だけ見直す。</p></div>
 <div class="callout ok"><p>Web Service 作成画面に入れる値がそろっている。</p></div>
 <h2>10. Web Service を作る</h2>
 <p>○ Next.js の実行先を作る。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>Render Dashboard で <code>New</code> を選ぶ。</li><li><code>Web Service</code> を選ぶ。</li><li>SubBuddy リポジトリを選ぶ。</li><li>Step 9 の値を入力する。</li><li>Instance type は <code>Starter</code> を選ぶ。</li><li>まだ環境変数がそろっていない場合は、初回デプロイをすぐ成功させようとしない。</li><li>作成後、Service の <code>Environment</code> 画面を開く。</li></ol>
+<ol class="gui"><li>Render Dashboard で <code>New</code> を選ぶ。</li><li><code>Web Service</code> を選ぶ。</li><li>SubBuddy リポジトリを選ぶ。</li><li>Step 9 の値を入力する。</li><li><code>Name</code> は <code>subbuddy-cloud-testflight-web</code> にする。</li><li>Instance type は <code>Starter</code> を選ぶ。</li><li>まだ環境変数がそろっていない場合は、初回デプロイをすぐ成功させようとしない。</li><li>作成後、Service の <code>Environment</code> 画面を開く。</li></ol>
 <div class="callout warn"><p>Web Service 作成後に自動デプロイが走る場合がある。環境変数不足で失敗しても、設定を入れて再デプロイすればよい。</p></div>
 <div class="callout ok"><p>Render Dashboard に SubBuddy の Web Service が作られている。</p></div>
 <h2>11. 環境変数を設定する</h2>

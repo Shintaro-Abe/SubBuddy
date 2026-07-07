@@ -123,7 +123,7 @@
 
 1. Render Dashboard で `New` を選ぶ。
 2. `Postgres` を選ぶ。
-3. `Name` に `subbuddy-cloud-testflight-db` などを入れる。
+3. `Name` に `subbuddy-cloud-testflight-db` を入れる。
 4. `Database` と `User` は Render の自動生成でもよい。自分で指定する場合は控えを安全に管理する。
 5. Step 6 で決めたリージョンを選ぶ。
 6. PostgreSQL version は既定の新しい安定版を使う。
@@ -161,6 +161,7 @@
 
 | 項目 | 値 |
 |---|---|
+| Name | `subbuddy-cloud-testflight-web` |
 | Service type | Web Service |
 | Repository | SubBuddy リポジトリ |
 | Branch | `main` |
@@ -188,9 +189,10 @@
 2. `Web Service` を選ぶ。
 3. SubBuddy リポジトリを選ぶ。
 4. Step 9 の値を入力する。
-5. Instance type は `Starter` を選ぶ。
-6. まだ環境変数がそろっていない場合は、初回デプロイをすぐ成功させようとしない。
-7. 作成後、Service の `Environment` 画面を開く。
+5. `Name` は `subbuddy-cloud-testflight-web` にする。
+6. Instance type は `Starter` を選ぶ。
+7. まだ環境変数がそろっていない場合は、初回デプロイをすぐ成功させようとしない。
+8. 作成後、Service の `Environment` 画面を開く。
 
 > ⚠ Web Service 作成後に自動デプロイが走る場合がある。環境変数不足で失敗しても、設定を入れて再デプロイすればよい。
 
@@ -209,15 +211,15 @@
 | Key | Value |
 |---|---|
 | `SUBBUDDY_MODE` | `cloud-testflight` |
-| `NODE_VERSION` | `24.16.0` |
-| `DATABASE_URL` | `<Render Postgres の Internal Database URL>` |
-| `APPLE_TEAM_ID` | `<Apple Developer Team ID>` |
+| `NODE_VERSION` | `24.18.0` |
+| `DATABASE_URL` | `postgresql://subbuddy_app:B9FSW2GWv2yWxcs3mEVJ5O0Wy0uQzort@dpg-d94r8alckfvc73afo8d0-a/subbuddy_cloud_testflight` |
+| `APPLE_TEAM_ID` | `7HA8N5R23N` |
 | `APPLE_ALLOWED_CLIENT_IDS` | `com.subbuddy.web,com.subbuddy.app`（Web の Services ID と iOS の Bundle ID。identity token の aud 許可リスト。ADR 0004） |
 | `APPLE_CLIENT_ID` | `<後方互換用。APPLE_ALLOWED_CLIENT_IDS を設定する場合は未設定でよい>` |
-| `APPLE_KEY_ID` | `<Apple Sign in key ID>` |
+| `APPLE_KEY_ID` | `LK5HW4G4S8` |
 | `APPLE_PRIVATE_KEY` | `<Apple private key。改行を含む場合は扱い方を後続実装で確定>` |
-| `APPLE_REDIRECT_URI` | `<Render の callback URL>` |
-| `APPLE_SUBJECT_HASH_SALT` | `<ランダムに生成した salt>` |
+| `APPLE_REDIRECT_URI` | `https://app.sub-buddy.com/api/auth/apple/callback` |
+| `APPLE_SUBJECT_HASH_SALT` | `ejPBQO0xDJz7X66UICdQw9Zy+Nqh22DXr6Hg6SzIoIc=` |
 
 > ⚠ `APPLE_PRIVATE_KEY`、`DATABASE_URL`、`APPLE_SUBJECT_HASH_SALT` は秘密情報。Render Dashboard 以外に貼らない。
 

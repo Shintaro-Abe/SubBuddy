@@ -15,13 +15,13 @@
 | T-7 | `GET /api/health` 追加 | AC-6 | 完了 | `{ ok, mode }` 応答・DB非依存 |
 | T-8 | Render 手順書 env 是正・health 手順・HTML 再生成 | AC-8 | 完了 | md/html に反映済み |
 | T-9 | 実DB通し検証スクリプト（`verify:cloud-apis`） | AC-1,4,5,10 | 完了 | 全項目 PASS |
-| T-10 | 本番ビルドの外部フォント依存を解消 | AC-9 | 完了 | `npm run build` 成功 |
+| T-10 | 本番ビルドの外部フォント依存を解消し、ブラウザ実行時読み込みへ切替 | AC-9 | 完了 | `npm run build` 成功 |
 | T-11 | `docs/` 反映（functional-design / architecture）・`.env.example` | AC-8 | 完了 | 差分反映済み |
 
 ## 実装中の逸脱ログ
 
 - T-1：Prisma upsert が既存値参照できないため、`findUnique`→純関数マージ→`upsert` に変更。根幹は不変（再承認不要）。
-- T-10：当初は build を外部取得許可で通す想定だったが、Render 環境での再現性のため next/font 自体を除去し system fallback に変更。表示フォントが変わる副作用あり（申し送り記録）。
+- T-10：当初は build を外部取得許可で通す想定だったが、Render 環境での再現性のため `next/font/google` を除去。2026-07-07 追補として、世界観維持のためブラウザ実行時の Google Fonts 読み込みに変更済み。build は外部取得に依存しない。
 - 環境制約：Xcode/iPhone 実機検証は Linux コンテナ不可。iOS 実装は本タスク対象外。
 
 ## 完了チェック
