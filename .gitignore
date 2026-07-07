@@ -39,6 +39,7 @@ coverage/
 
 # Local/manual operation notes
 manuals/
+memory/
 
 # Real data / PII (実データはリポジトリに含めない — CLAUDE.md PII方針)
 data/
