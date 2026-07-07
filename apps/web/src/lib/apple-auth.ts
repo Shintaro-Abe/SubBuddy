@@ -43,7 +43,15 @@ export class AppleIdentityTokenError extends Error {
 }
 
 export type VerifyAppleIdentityTokenOptions = {
+  /**
+   * 後方互換用の単一 client id。新規コードでは allowedClientIds を優先する。
+   */
   clientId?: string;
+  /**
+   * Apple identity token の aud 許可リスト。
+   * Web Services ID と iOS Bundle ID の両方を許可する（ADR 0004）。
+   */
+  allowedClientIds?: string[];
   expectedNonce?: string;
   now?: Date;
   jwksUrl?: string;
@@ -65,6 +73,27 @@ function decodeJsonPart<T>(input: string): T {
 function hasAudience(audience: string | string[] | undefined, clientId: string) {
   if (Array.isArray(audience)) return audience.includes(clientId);
   return audience === clientId;
+}
+
+function parseAllowedClientIdsFromEnv(): string[] {
+  const raw = process.env.APPLE_ALLOWED_CLIENT_IDS;
+  if (raw) {
+    return raw
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+  return process.env.APPLE_CLIENT_ID ? [process.env.APPLE_CLIENT_ID] : [];
+}
+
+function resolveAllowedClientIds(options: VerifyAppleIdentityTokenOptions): string[] {
+  const explicit = options.allowedClientIds ?? (options.clientId ? [options.clientId] : undefined);
+  const ids = explicit ?? parseAllowedClientIdsFromEnv();
+  return [...new Set(ids.filter(Boolean))];
+}
+
+function hasAllowedAudience(audience: string | string[] | undefined, allowedClientIds: string[]) {
+  return allowedClientIds.some((clientId) => hasAudience(audience, clientId));
 }
 
 async function fetchAppleJwk(
@@ -102,8 +131,8 @@ export async function verifyAppleIdentityToken(
   identityToken: string,
   options: VerifyAppleIdentityTokenOptions = {},
 ): Promise<AppleIdentity> {
-  const clientId = options.clientId ?? process.env.APPLE_CLIENT_ID;
-  if (!clientId) throw new AppleIdentityTokenError();
+  const allowedClientIds = resolveAllowedClientIds(options);
+  if (allowedClientIds.length === 0) throw new AppleIdentityTokenError();
 
   const parts = identityToken.split(".");
   if (parts.length !== 3) throw new AppleIdentityTokenError();
@@ -128,7 +157,7 @@ export async function verifyAppleIdentityToken(
 
   const nowSeconds = Math.floor((options.now ?? new Date()).getTime() / 1000);
   if (payload.iss !== APPLE_ISSUER) throw new AppleIdentityTokenError();
-  if (!hasAudience(payload.aud, clientId)) throw new AppleIdentityTokenError();
+  if (!hasAllowedAudience(payload.aud, allowedClientIds)) throw new AppleIdentityTokenError();
   if (!payload.exp || payload.exp <= nowSeconds - DEFAULT_CLOCK_SKEW_SECONDS) {
     throw new AppleIdentityTokenError();
   }

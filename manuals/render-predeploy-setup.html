@@ -120,8 +120,9 @@ th{background:var(--accent-soft);font-weight:600}
 <p>○ Render Web Service 作成画面で迷わないようにする。</p>
 <p>□ 操作</p>
 <p>次の値を準備する。</p>
-<table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>Service type</td><td>Web Service</td></tr><tr><td>Repository</td><td>SubBuddy リポジトリ</td></tr><tr><td>Branch</td><td><code>&lt;デプロイ対象ブランチ&gt;</code></td></tr><tr><td>Root Directory</td><td><code>apps/web</code></td></tr><tr><td>Runtime</td><td>Node</td></tr><tr><td>Build Command</td><td><code>npm ci &amp;&amp; npm run build</code></td></tr><tr><td>Pre-deploy Command</td><td><code>npx prisma migrate deploy</code></td></tr><tr><td>Start Command</td><td><code>npm run start</code></td></tr><tr><td>Instance type</td><td>Starter</td></tr><tr><td>Auto Deploy</td><td>初回は手動推奨。運用が安定したら有効化</td></tr></tbody></table>
+<table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>Service type</td><td>Web Service</td></tr><tr><td>Repository</td><td>SubBuddy リポジトリ</td></tr><tr><td>Branch</td><td><code>main</code></td></tr><tr><td>Root Directory</td><td><code>apps/web</code></td></tr><tr><td>Runtime</td><td>Node</td></tr><tr><td>Build Command</td><td><code>npm ci &amp;&amp; npm run build</code></td></tr><tr><td>Pre-deploy Command</td><td><code>npx prisma migrate deploy</code></td></tr><tr><td>Start Command</td><td><code>npm run start</code></td></tr><tr><td>Instance type</td><td>Starter</td></tr><tr><td>Auto Deploy</td><td>初回は手動推奨。運用が安定したら有効化</td></tr></tbody></table>
 <div class="callout warn"><p>Pre-deploy Command は有料 Web Service で使う。DB migration を手動にしないために設定する。</p></div>
+<div class="callout warn"><p>今回の初期設定では <code>main</code> を使う。将来、検証用の <code>staging</code> や <code>develop</code> ブランチを作った場合だけ見直す。</p></div>
 <div class="callout ok"><p>Web Service 作成画面に入れる値がそろっている。</p></div>
 <h2>10. Web Service を作る</h2>
 <p>○ Next.js の実行先を作る。</p>
@@ -133,7 +134,7 @@ th{background:var(--accent-soft);font-weight:600}
 <p>○ SubBuddy が <code>cloud-testflight mode</code> で動くための設定を入れる。</p>
 <p>□ 操作</p>
 <ol class="gui"><li>Web Service の <code>Environment</code> を開く。</li><li>次の環境変数を追加する。</li><li>保存する。</li></ol>
-<table><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody><tr><td><code>SUBBUDDY_MODE</code></td><td><code>cloud-testflight</code></td></tr><tr><td><code>NODE_VERSION</code></td><td><code>24.16.0</code></td></tr><tr><td><code>DATABASE_URL</code></td><td><code>&lt;Render Postgres の Internal Database URL&gt;</code></td></tr><tr><td><code>APPLE_TEAM_ID</code></td><td><code>&lt;Apple Developer Team ID&gt;</code></td></tr><tr><td><code>APPLE_CLIENT_ID</code></td><td><code>&lt;Apple Service ID または Bundle ID 方針に沿った Client ID&gt;</code></td></tr><tr><td><code>APPLE_KEY_ID</code></td><td><code>&lt;Apple Sign in key ID&gt;</code></td></tr><tr><td><code>APPLE_PRIVATE_KEY</code></td><td><code>&lt;Apple private key。改行を含む場合は扱い方を後続実装で確定&gt;</code></td></tr><tr><td><code>APPLE_REDIRECT_URI</code></td><td><code>&lt;Render の callback URL&gt;</code></td></tr><tr><td><code>APPLE_SUBJECT_HASH_SALT</code></td><td><code>&lt;ランダムに生成した salt&gt;</code></td></tr></tbody></table>
+<table><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody><tr><td><code>SUBBUDDY_MODE</code></td><td><code>cloud-testflight</code></td></tr><tr><td><code>NODE_VERSION</code></td><td><code>24.16.0</code></td></tr><tr><td><code>DATABASE_URL</code></td><td><code>&lt;Render Postgres の Internal Database URL&gt;</code></td></tr><tr><td><code>APPLE_TEAM_ID</code></td><td><code>&lt;Apple Developer Team ID&gt;</code></td></tr><tr><td><code>APPLE_ALLOWED_CLIENT_IDS</code></td><td><code>com.subbuddy.web,com.subbuddy.app</code>（Web の Services ID と iOS の Bundle ID。identity token の aud 許可リスト。ADR 0004）</td></tr><tr><td><code>APPLE_CLIENT_ID</code></td><td><code>&lt;後方互換用。APPLE_ALLOWED_CLIENT_IDS を設定する場合は未設定でよい&gt;</code></td></tr><tr><td><code>APPLE_KEY_ID</code></td><td><code>&lt;Apple Sign in key ID&gt;</code></td></tr><tr><td><code>APPLE_PRIVATE_KEY</code></td><td><code>&lt;Apple private key。改行を含む場合は扱い方を後続実装で確定&gt;</code></td></tr><tr><td><code>APPLE_REDIRECT_URI</code></td><td><code>&lt;Render の callback URL&gt;</code></td></tr><tr><td><code>APPLE_SUBJECT_HASH_SALT</code></td><td><code>&lt;ランダムに生成した salt&gt;</code></td></tr></tbody></table>
 <div class="callout warn"><p><code>APPLE_PRIVATE_KEY</code>、<code>DATABASE_URL</code>、<code>APPLE_SUBJECT_HASH_SALT</code> は秘密情報。Render Dashboard 以外に貼らない。</p></div>
 <div class="callout warn"><p><code>USAGE_SYNC_TOKEN</code> は local mode 用の互換手段。cloud-testflight の主認証には使わない。</p></div>
 <div class="callout ok"><p>Web Service の Environment 画面に必要な key が入っている。</p></div>
@@ -144,6 +145,14 @@ th{background:var(--accent-soft);font-weight:600}
 <table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>Render URL</td><td><code>https://&lt;service-name&gt;.onrender.com</code></td></tr><tr><td>Callback URL</td><td><code>https://&lt;service-name&gt;.onrender.com/api/auth/apple/callback</code></td></tr></tbody></table>
 <div class="callout warn"><p>カスタムドメインを使う場合、Apple 側にもカスタムドメインの callback URL を登録する。Render の一時 URL と混ぜない。</p></div>
 <div class="callout ok"><p>Render の <code>APPLE_REDIRECT_URI</code> と Apple Developer 側の Return URL が一致している。</p></div>
+<h3>12.1 起動確認 URL を開く</h3>
+<p>○ Web Service が起動していることを、秘密情報を使わずに確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>ブラウザで <code>https://&lt;service-name&gt;.onrender.com/api/health</code> を開く。</li><li>JSON が表示されることを確認する。</li></ol>
+<p>期待する応答の例：</p>
+<pre class="plain"><code>{ "ok": true, "mode": "cloud-testflight" }</code></pre>
+<div class="callout warn"><p><code>/api/health</code> は DB 接続や Apple 設定の正しさまでは確認しない。起動確認専用として使う。</p></div>
+<div class="callout ok"><p><code>ok: true</code> と <code>mode: cloud-testflight</code> が表示される。</p></div>
 <h2>13. カスタムドメインを使う場合だけ設定する</h2>
 <p>○ TestFlight で見せる URL を安定させる。</p>
 <p>□ 操作</p>
@@ -166,7 +175,7 @@ th{background:var(--accent-soft);font-weight:600}
 <p>○ デプロイ作業に進める状態か確認する。</p>
 <p>□ 操作</p>
 <p>次の項目をチェックする。</p>
-<ul><li>[ ] Render アカウントがある。</li><li>[ ] 2FA が有効。</li><li>[ ] 支払い方法が登録済み。</li><li>[ ] GitHub 連携は SubBuddy リポジトリだけに絞っている。</li><li>[ ] Web Service と Postgres のリージョンを決めた。</li><li>[ ] Render Postgres を作成済み。</li><li>[ ] <code>DATABASE_URL</code> は internal URL を使う。</li><li>[ ] Web Service を作成済み。</li><li>[ ] <code>SUBBUDDY_MODE=cloud-testflight</code> を設定済み。</li><li>[ ] <code>NODE_VERSION=24.16.0</code> を設定済み。</li><li>[ ] Apple サインイン用の環境変数を設定済み。</li><li>[ ] callback URL が Render と Apple Developer で一致している。</li><li>[ ] ログに PII・秘密情報を出さない方針を確認済み。</li></ul>
+<ul><li>[ ] Render アカウントがある。</li><li>[ ] 2FA が有効。</li><li>[ ] 支払い方法が登録済み。</li><li>[ ] GitHub 連携は SubBuddy リポジトリだけに絞っている。</li><li>[ ] Web Service と Postgres のリージョンを決めた。</li><li>[ ] Render Postgres を作成済み。</li><li>[ ] <code>DATABASE_URL</code> は internal URL を使う。</li><li>[ ] Web Service を作成済み。</li><li>[ ] <code>SUBBUDDY_MODE=cloud-testflight</code> を設定済み。</li><li>[ ] <code>NODE_VERSION=24.16.0</code> を設定済み。</li><li>[ ] Apple サインイン用の環境変数を設定済み。</li><li>[ ] callback URL が Render と Apple Developer で一致している。</li><li>[ ] <code>/api/health</code> が <code>ok: true</code> / <code>mode: cloud-testflight</code> を返す。</li><li>[ ] ログに PII・秘密情報を出さない方針を確認済み。</li></ul>
 <div class="callout ok"><p>すべてチェックできたら、後続の Render デプロイ検証に進める。</p></div>
 <h2>17. 参考リンク</h2>
 <ul><li>Render Next.js: https://render.com/docs/deploy-nextjs-app</li><li>Render Postgres: https://render.com/docs/postgresql-creating-connecting</li><li>Render 環境変数・Secret Files: https://render.com/docs/configure-environment-variables</li><li>Render GitHub 連携: https://render.com/docs/github</li><li>Render Login Settings / 2FA: https://render.com/docs/login-settings</li><li>Render pre-deploy command: https://render.com/docs/deploys#pre-deploy-command</li><li>Render Node version: https://render.com/docs/node-version</li><li>Render custom domains / TLS: https://render.com/docs/custom-domains</li><li>Render pricing: https://render.com/pricing</li></ul>

@@ -2,7 +2,7 @@
 
 /* ===========================================================================
  * SubBuddy デザインシステム（design.css 由来・DESIGN.md 準拠）
- * 値の正＝tmp/stitch-calm/design.css。フォントだけ next/font の CSS 変数へ差し替え。
+ * 値の正＝tmp/stitch-calm/design.css。フォントは外部取得不要の system fallback を使う。
  * =========================================================================== */
 
 :root {
@@ -23,11 +23,12 @@
   --track: #ece7dc;
   --memo: #3c4a3e;
 
-  /* フォントは next/font（app/layout.tsx）の CSS 変数を使う */
-  --sans: var(--font-sans-jp), system-ui, sans-serif;
-  --mincho: var(--font-mincho), serif;
-  --num: var(--font-num), sans-serif;
-  --lat: var(--font-lat), serif;
+  /* Render build を外部フォント取得に依存させない。 */
+  --sans: "Zen Kaku Gothic New", "BIZ UDPGothic", system-ui, sans-serif;
+  --mincho: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --num: "BIZ UDPGothic", ui-sans-serif, system-ui, sans-serif;
+  --lat: "EB Garamond", Georgia, serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 /* Tailwind のユーティリティからも参照できるよう主要トークンを公開 */
@@ -46,7 +47,7 @@
   --color-red: var(--red);
   --color-amber: var(--amber);
   --font-sans: var(--sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--mono);
 }
 
 html {

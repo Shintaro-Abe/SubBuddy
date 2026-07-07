@@ -76,7 +76,7 @@
 - 小規模検証版はフルクラウド化する。
 - クラウド基盤は PaaS + マネージド PostgreSQL 方針とする。
 - 認証は Apple サインインを本命にする。
-- iPhone はネイティブアプリを主経路、Shortcuts は補助/フォールバックとする。
+- iPhone はネイティブアプリを主経路とし、Shortcuts 由来の起動シグナルも iPhone アプリに吸収する。外部ショートカット設定は v1 の主経路にしない。
 - iPhone から送るのは集計値のみで、詳細ログや全アプリ一覧は送らない。
 - クラウドに保存するのは MVP 中核データ、利用集計値、レコメンド結果までとする。
 - 外部サービスの ID / PW、Screen Time 詳細ログ、生メール本文、クレカ/銀行明細の生データ、位置情報の生ログは保存しない。
@@ -108,7 +108,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Web[Web / iPhone / Shortcuts] --> RH[Route Handler]
+  Web[Web / iPhone App] --> RH[Route Handler]
   RH --> Provider[Auth Provider]
   Provider --> Actor[AuthenticatedActor]
   Actor --> UseCase[Use case / Domain]

@@ -56,7 +56,7 @@
 
 ### 第二意見（フル区分は必須）
 
-- 手段: grilling / codex:rescue
+- 手段: grilling Skill / 別ペルソナ・別モデルでのアドバーサリアル・セルフレビュー（gemini Skill・adversarial-review など）
 - 要点:
 - 反映した内容:
 

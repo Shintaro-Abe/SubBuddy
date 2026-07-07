@@ -17,7 +17,7 @@
 
 - **local mode を維持**：DB・API・Web・Worker を Mac ローカルで動かす個人運用は残す。ただし本番と別構成にせず、同一コードベースの実行モードとして扱う。
 - **小規模検証版はフルクラウド**：TestFlight 20〜50人向けの検証版では、Web/API/DB をクラウドに置き、iPhone アプリはクラウド API へ直接集計値を送る。
-- **iPhone は利用量センサー（補助）**：Screen Time（DeviceActivity）/ Shortcuts の集計値を SubBuddy API へ同期する。P1（使っていない）パターンの判定手段であり、能動前面/背景利用のサブスクに限定して適用する。
+- **iPhone は利用量センサー（補助）**：ネイティブ iPhone アプリが Screen Time（DeviceActivity）と Shortcuts 由来の起動シグナルを吸収し、集計値を SubBuddy API へ同期する。P1（使っていない）パターンの判定手段であり、能動前面/背景利用のサブスクに限定して適用する。
 - **AI もクラウドも使わずに MVP を成立させる**：判断はパターンマッチング（P1〜P7）。利用量なしでも P2〜P6 のレコメンドが出る。
 - **秘密情報非保存**：外部サービスの ID/PW を保存しない。自動ログイン・スクレイピングをしない。
 - **PII・機微データ**：実データは実行モードに応じて local DB またはクラウド DB に保存する。どちらの場合もリポジトリには合成データのみ（`AGENTS.md` 準拠）。
@@ -155,6 +155,7 @@ MVP 後の最初の配布版は、**TestFlight 20〜50人の小規模検証版**
 - **デバイス同期**：iPhone はログイン後にデバイス登録し、デバイス同期トークンで `POST /api/usage/daily` を呼ぶ。
 - **TLS（正規証明書）**：公開到達点に適した証明書。
 - **PII 保護（最重要）**：機微な金融 PII を多人数ぶん預かるため、保存時暗号化・可能なら E2E（運営者も中身を見られない）・最小データ収集（iPhone は集計値のみ）・個情法/GDPR 配慮を行う。
+- **プライバシー説明の実態一致**：`cloud-testflight mode` では iPhone から SubBuddy が運用するクラウド API へ集計値を送る。配布文面・プライバシーポリシー・App Privacy・Family Controls 説明では「Mac にだけ送る」と書かず、クラウド送信であることを明示する。Mac 限定表現は `local mode` の説明に限定する。
 - **運用**：クラウドデプロイ・監視・スケール・バックアップ/DR。
 - **配布前ゲート**：配布用 entitlement、TestFlight、クラウド送信の一気通貫を必須ゲートにする。
 
@@ -253,6 +254,9 @@ type AuthenticatedActor =
 #### 8.1.2 cloud-testflight / production：Apple サインイン
 
 - ユーザー認証は Apple サインインを本命とする。
+- iOS はネイティブ Sign in with Apple（`ASAuthorizationAppleIDProvider`）、Web は Services ID を使う。identity token の `aud` は iOS＝アプリ Bundle ID（`com.subbuddy.app`）、Web＝Services ID（`com.subbuddy.web`）と値が変わる。
+- サーバーの Apple token 検証は、署名検証・`iss = https://appleid.apple.com` に加えて `aud ∈ { com.subbuddy.web, com.subbuddy.app }` を許可リストで検証する。許可リスト外の `aud` は拒否する（ADR 0004）。
+- iOS 用はネイティブ検証専用エンドポイント（`POST /api/auth/apple/native`）を設け、Web リダイレクト用コールバック（`POST /api/auth/apple/callback`）と処理を分離する。
 - Apple の stable identifier と SubBuddy の `users.id` を紐付ける。メールアドレスは変更・非公開があり得るため、必須識別子にしない。
 - Web/API はセッションから `AuthenticatedActor.kind = "user"` を解決する。
 - ユーザー操作 API は、クライアント指定の `userId` を信じず、認証済み `userId` で DB 操作する。
@@ -260,8 +264,10 @@ type AuthenticatedActor =
 #### 8.1.3 デバイス同期トークン
 
 - iPhone は Apple サインイン後にデバイス登録し、サーバーからデバイス同期トークンを受け取る。
+- iOS は端末内で生成した `clientDeviceId`（UUID）を Keychain に保存し、デバイス登録時に送る。サーバーは `(userId, clientDeviceId)` で upsert し、同じ端末を1レコードへ収束させる。
 - 同期 API は `Authorization: Bearer <device sync token>` で認証する。
 - トークンは平文保存せず、ハッシュ化して `devices.tokenHash` に保存する。
+- iOS 側の平文トークンは Keychain に保存する。App Group の共有 JSON / UserDefaults / ログには置かない。
 - トークンは失効・再発行でき、`revokedAt` と `lastSyncedAt` を持つ。
 - `POST /api/usage/daily` は token から `userId` / `deviceId` を解決し、request body の `userId` は受け付けない。
 
@@ -269,6 +275,7 @@ type AuthenticatedActor =
 
 - **外部サービスの ID/PW を入力させない・保存しない**（恒久制約）。
 - iPhone からサーバーへ送るのは **集計値のみ**。詳細 Screen Time ログ・全アプリ一覧は端末内に留める。
+- `cloud-testflight mode` / `production mode` では、集計値の送信先は SubBuddy のクラウド API である。App Store Connect やプライバシーポリシーでは、送信先を実態どおりクラウドとして説明する（「ユーザー自身の Mac にだけ送る」は `local mode` 限定）。
 - 実データは実行モードに応じて local DB またはクラウド DB に保存する。ログ・エラー出力・スクショに実 PII を残さない。
 - 秘密情報（トークン・DB 接続情報）は `.env` または PaaS のシークレット管理で扱い、コミット前にシークレットスキャンを行う
   （`pre-commit-secret-scan` 運用、`development-guidelines.md` で詳細化）。
@@ -339,7 +346,7 @@ MVP と local mode は個人・単一ユーザー規模、cloud-testflight mode 
 
 | リスク | 影響 | 対応 |
 |---|---|---|
-| Family Controls entitlement 取得不可 | P1 パターン（使っていない）の判定が能動前面サブスクで成立しない | 先行 Spike（要求 10.3）。不成立時は Shortcuts 起動記録で代替、または P2〜P6 のみで判定 |
+| Family Controls entitlement 取得不可 | P1 パターン（使っていない）の判定が能動前面サブスクで成立しない | 先行 Spike（要求 10.3）。不成立時は iPhone アプリ内の起動シグナルで補助、または P2〜P6 のみで判定 |
 | DeviceActivity の実機イベント挙動の不確実性 | 利用バケットの精度低下 | Spike で発火・再起動後挙動を確認。バケット粒度で吸収 |
 | 配布用 Family Controls entitlement 取得不可 | TestFlight 配布版で利用量同期が成立しない | Apple 公式要件を実装前に再確認し、配布用 entitlement / TestFlight / クラウド送信を必須ゲートにする |
 | Apple サインイン実装・審査要件の変更 | ログイン導線や審査で手戻り | 実装直前に Apple 公式情報を確認し、メールを必須識別子にしない設計を維持 |

@@ -78,6 +78,36 @@ describe("verifyAppleIdentityToken", () => {
     ).rejects.toBeInstanceOf(AppleIdentityTokenError);
   });
 
+  it("aud 許可リスト内なら Web / iOS の複数 aud を受け入れる（ADR 0004）", async () => {
+    const allowedClientIds = ["com.subbuddy.web", "com.subbuddy.app"];
+
+    const web = await verifyAppleIdentityToken(signAppleToken({ aud: "com.subbuddy.web" }), {
+      allowedClientIds,
+      expectedNonce: "nonce-1",
+      now: NOW,
+      fetchImpl: fetchJwks,
+    });
+    expect(web.subject).toBe("apple-user-alpha");
+
+    const ios = await verifyAppleIdentityToken(signAppleToken({ aud: "com.subbuddy.app" }), {
+      allowedClientIds,
+      expectedNonce: "nonce-1",
+      now: NOW,
+      fetchImpl: fetchJwks,
+    });
+    expect(ios.subject).toBe("apple-user-alpha");
+  });
+
+  it("許可リストにない aud は拒否する（ADR 0004）", async () => {
+    await expect(
+      verifyAppleIdentityToken(signAppleToken({ aud: "com.subbuddy.evil" }), {
+        allowedClientIds: ["com.subbuddy.web", "com.subbuddy.app"],
+        now: NOW,
+        fetchImpl: fetchJwks,
+      }),
+    ).rejects.toBeInstanceOf(AppleIdentityTokenError);
+  });
+
   it("nonce が異なる token は拒否する", async () => {
     await expect(
       verifyAppleIdentityToken(signAppleToken(), {
@@ -90,8 +120,10 @@ describe("verifyAppleIdentityToken", () => {
   });
 
   it("署名が壊れた token は拒否する", async () => {
-    const token = signAppleToken();
-    const tampered = token.replace(/.$/, token.endsWith("a") ? "b" : "a");
+    const parts = signAppleToken().split(".");
+    const signature = parts[2]!;
+    const tamperedSignature = `${signature.startsWith("a") ? "b" : "a"}${signature.slice(1)}`;
+    const tampered = `${parts[0]}.${parts[1]}.${tamperedSignature}`;
 
     await expect(
       verifyAppleIdentityToken(tampered, {

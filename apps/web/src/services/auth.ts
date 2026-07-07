@@ -20,10 +20,17 @@ type AuthDb = {
       update: { lastSignedInAt: Date };
       select: { id: true };
     }): Promise<UserRecord>;
+    deleteMany(args: { where: { appleSubjectHash: string } }): Promise<{ count: number }>;
   };
   device: {
     create(args: {
-      data: { userId: string; name?: string; tokenHash: string };
+      data: { userId: string; clientDeviceId?: string; name?: string; tokenHash: string };
+      select: { id: true; name: true };
+    }): Promise<DeviceRecord>;
+    upsert(args: {
+      where: { userId_clientDeviceId: { userId: string; clientDeviceId: string } };
+      create: { userId: string; clientDeviceId: string; name?: string; tokenHash: string };
+      update: { name?: string; tokenHash: string; revokedAt: null };
       select: { id: true; name: true };
     }): Promise<DeviceRecord>;
     updateMany(args: {
@@ -57,6 +64,16 @@ export async function upsertAppleUser(
   return { kind: "user", userId: user.id, authProvider: "apple" };
 }
 
+export async function deleteAppleUserAccount(
+  identity: Pick<AppleIdentity, "subjectHash">,
+  db: AuthDb = prisma,
+): Promise<boolean> {
+  const result = await db.user.deleteMany({
+    where: { appleSubjectHash: identity.subjectHash },
+  });
+  return result.count > 0;
+}
+
 export function generateDeviceSyncToken(): string {
   return randomBytes(32).toString("base64url");
 }
@@ -64,18 +81,40 @@ export function generateDeviceSyncToken(): string {
 export async function registerDeviceForAppleUser(
   userId: string,
   deviceName: string | undefined,
+  clientDeviceId: string | undefined,
   db: AuthDb = prisma,
   tokenFactory = generateDeviceSyncToken,
 ): Promise<RegisteredDevice> {
   const deviceSyncToken = tokenFactory();
-  const device = await db.device.create({
-    data: {
-      userId,
-      name: deviceName,
-      tokenHash: hashDeviceSyncToken(deviceSyncToken),
-    },
-    select: { id: true, name: true },
-  });
+  const deviceData = {
+    userId,
+    clientDeviceId,
+    name: deviceName,
+    tokenHash: hashDeviceSyncToken(deviceSyncToken),
+  };
+
+  const device = clientDeviceId
+    ? await db.device.upsert({
+        where: { userId_clientDeviceId: { userId, clientDeviceId } },
+        create: {
+          ...deviceData,
+          clientDeviceId,
+        },
+        update: {
+          name: deviceName,
+          tokenHash: deviceData.tokenHash,
+          revokedAt: null,
+        },
+        select: { id: true, name: true },
+      })
+    : await db.device.create({
+        data: {
+          userId,
+          name: deviceName,
+          tokenHash: deviceData.tokenHash,
+        },
+        select: { id: true, name: true },
+      });
 
   return { device, deviceSyncToken };
 }

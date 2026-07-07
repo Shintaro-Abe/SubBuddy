@@ -163,7 +163,7 @@
 |---|---|
 | Service type | Web Service |
 | Repository | SubBuddy リポジトリ |
-| Branch | `<デプロイ対象ブランチ>` |
+| Branch | `main` |
 | Root Directory | `apps/web` |
 | Runtime | Node |
 | Build Command | `npm ci && npm run build` |
@@ -173,6 +173,8 @@
 | Auto Deploy | 初回は手動推奨。運用が安定したら有効化 |
 
 > ⚠ Pre-deploy Command は有料 Web Service で使う。DB migration を手動にしないために設定する。
+
+> ⚠ 今回の初期設定では `main` を使う。将来、検証用の `staging` や `develop` ブランチを作った場合だけ見直す。
 
 > ✅ Web Service 作成画面に入れる値がそろっている。
 
@@ -210,7 +212,8 @@
 | `NODE_VERSION` | `24.16.0` |
 | `DATABASE_URL` | `<Render Postgres の Internal Database URL>` |
 | `APPLE_TEAM_ID` | `<Apple Developer Team ID>` |
-| `APPLE_CLIENT_ID` | `<Apple Service ID または Bundle ID 方針に沿った Client ID>` |
+| `APPLE_ALLOWED_CLIENT_IDS` | `com.subbuddy.web,com.subbuddy.app`（Web の Services ID と iOS の Bundle ID。identity token の aud 許可リスト。ADR 0004） |
+| `APPLE_CLIENT_ID` | `<後方互換用。APPLE_ALLOWED_CLIENT_IDS を設定する場合は未設定でよい>` |
 | `APPLE_KEY_ID` | `<Apple Sign in key ID>` |
 | `APPLE_PRIVATE_KEY` | `<Apple private key。改行を含む場合は扱い方を後続実装で確定>` |
 | `APPLE_REDIRECT_URI` | `<Render の callback URL>` |
@@ -240,6 +243,25 @@
 > ⚠ カスタムドメインを使う場合、Apple 側にもカスタムドメインの callback URL を登録する。Render の一時 URL と混ぜない。
 
 > ✅ Render の `APPLE_REDIRECT_URI` と Apple Developer 側の Return URL が一致している。
+
+### 12.1 起動確認 URL を開く
+
+○ Web Service が起動していることを、秘密情報を使わずに確認する。
+
+□ 操作
+
+1. ブラウザで `https://<service-name>.onrender.com/api/health` を開く。
+2. JSON が表示されることを確認する。
+
+期待する応答の例：
+
+```json
+{ "ok": true, "mode": "cloud-testflight" }
+```
+
+> ⚠ `/api/health` は DB 接続や Apple 設定の正しさまでは確認しない。起動確認専用として使う。
+
+> ✅ `ok: true` と `mode: cloud-testflight` が表示される。
 
 ## 13. カスタムドメインを使う場合だけ設定する
 
@@ -312,6 +334,7 @@
 - [ ] `NODE_VERSION=24.16.0` を設定済み。
 - [ ] Apple サインイン用の環境変数を設定済み。
 - [ ] callback URL が Render と Apple Developer で一致している。
+- [ ] `/api/health` が `ok: true` / `mode: cloud-testflight` を返す。
 - [ ] ログに PII・秘密情報を出さない方針を確認済み。
 
 > ✅ すべてチェックできたら、後続の Render デプロイ検証に進める。

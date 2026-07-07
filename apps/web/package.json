@@ -17,6 +17,7 @@
     "format:check": "prettier --check .",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
+    "verify:cloud-apis": "tsx --env-file=.env scripts/verify-cloud-apis.mjs",
     "demo:usage": "node --env-file=.env scripts/demo-send-usage.mjs",
     "demo:revert": "node --env-file=.env scripts/demo-revert-usage.mjs"
   },

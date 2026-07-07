@@ -1,10 +1,14 @@
-import { created, badRequest, fromZodError, serverError, unauthorized } from "@/lib/api";
+import { ok, badRequest, fromZodError, serverError, unauthorized } from "@/lib/api";
 import { AppleIdentityTokenError, verifyAppleIdentityToken } from "@/lib/apple-auth";
-import { registerDeviceForAppleUser, upsertAppleUser } from "@/services/auth";
-import { deviceRegistrationSchema } from "@/schemas/auth";
+import { upsertAppleUser } from "@/services/auth";
+import { appleCallbackSchema } from "@/schemas/auth";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * iOS ネイティブ Sign in with Apple 用エンドポイント（ADR 0004）。
+ * Web の OAuth callback と入口を分け、identity token の aud は許可リストで検証する。
+ */
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -13,7 +17,7 @@ export async function POST(req: Request) {
     return badRequest("request body must be valid JSON");
   }
 
-  const parsed = deviceRegistrationSchema.safeParse(body);
+  const parsed = appleCallbackSchema.safeParse(body);
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
@@ -21,12 +25,7 @@ export async function POST(req: Request) {
       expectedNonce: parsed.data.nonce,
     });
     const actor = await upsertAppleUser(identity);
-    const result = await registerDeviceForAppleUser(
-      actor.userId,
-      parsed.data.name,
-      parsed.data.clientDeviceId,
-    );
-    return created(result);
+    return ok({ actor });
   } catch (error) {
     if (error instanceof AppleIdentityTokenError) return unauthorized();
     return serverError();

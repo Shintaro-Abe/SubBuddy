@@ -29,7 +29,7 @@ SubBuddy は現在、ローカルで動く MVP 構成である。次の配布目
 
 - PaaS への実デプロイはしない。
 - Apple サインインの実装はしない。
-- DeviceActivity / iPhone アプリの本実装はしない。
+- この作業では iPhone アプリ本体の実装には着手せず、後続の TestFlight スプリントで DeviceActivity と Shortcuts 由来の起動シグナルをネイティブ iPhone アプリに吸収して実装する。
 - Prisma schema のマイグレーションはこの作業では行わない。
 - 実ユーザー・実支出・実利用ログなどの PII は扱わない。
 - 外部サービスの ID / パスワード保存、自動ログイン、スクレイピングは行わない。

@@ -1,6 +1,6 @@
 ---
 name: quantitative-recommendation-engine
-description: 定量レコメンドエンジン設計。5つの手段（契約事実・Shortcuts起動記録・知識ベース・初回1問・契約期間）でスコアリングし継続/様子見/解約を判定。Shortcuts自動記録はiOSアプリ不要・APIサーバにHTTP POST
+description: 定量レコメンドエンジン設計。5つの手段（契約事実・起動シグナル・知識ベース・初回1問・契約期間）でスコアリングし継続/様子見/解約を判定。現在方針では Shortcuts 由来の起動シグナルを iPhone アプリに吸収
 metadata:
   type: project
   originSessionId: quantitative-rec-2026-06-08
@@ -12,18 +12,18 @@ metadata:
 
 **5つの手段**：
 1. 契約事実（料金・更新日・重複・カテゴリ）→ 基盤スコア
-2. Shortcuts自動記録（アプリ起動回数・最終起動日）→ 利用有無の唯一の客観データ
+2. 起動シグナル（アプリ起動回数・最終起動日。現在方針では iPhone アプリに吸収）→ 利用有無の補助データ
 3. サービス知識ベース（代替・無料プラン・ダウングレード先）→ 具体的な提案
 4. 初回登録時の1問（「なくなったら困るか」）→ 価値の初期信号
 5. 契約期間の長さ（登録日から自動算出）→ 惰性更新リスク
 
 **判定閾値**：65点以上=解約検討、40〜64点=様子見、39点以下=継続
 
-**Shortcuts実装の重要確認事項**：
-- iOSアプリ不要。iPhoneの標準ショートカットから直接APIサーバにHTTP POST
-- 同じWi-Fiも不要。APIサーバをインターネット上に立てればどこからでも送信可能
-- サブスクIDとサブスク名の紐付けは既存のsubscriptionsテーブルで完結
-- QRコード方式でユーザーの設定を簡略化（MacのブラウザにQR表示→iPhoneカメラで読取）
+**起動シグナル実装の重要確認事項**：
+- 当時のローカルMVP案では Shortcuts から直接 API サーバに HTTP POST する想定だった
+- 現在の TestFlight 方針では、Shortcuts 由来の起動シグナルをネイティブ iPhone アプリに吸収し、外部ショートカット設定を v1 の主経路にしない
+- サブスクIDとサブスク名の紐付けは既存の subscriptions テーブルで完結
+- 既存の `ios_shortcut` ソース値は互換のため残す
 
 **Shortcuts不在時の解約条件**：代替より50%割高 AND 重複2件以上 AND 契約12ヶ月以上 AND 年間節約¥10,000以上（全AND。1つでも欠ければ様子見止まり）
 
@@ -37,7 +37,7 @@ metadata:
 - P1（使っていない）は方式C（スパン内利用日数＋最終利用経過日数の両方）を採用。判定スパンは月額=30日、年額=365日
 - `usage_type`（active_foreground/active_background/active_other_device/passive/entitlement/capacity）で P1 適用可否を切り替え
 - 無料プランは料金比較対象から除外（有料プラン同士のみ比較）
-- iPhone前面利用アプリはDeviceActivity（iOS利用量）で計測。背景利用はShortcuts。受動/権利保有はP1適用不可
+- iPhone前面利用アプリは DeviceActivity（iOS利用量）で計測。背景利用は iPhone アプリに吸収した起動シグナルで補助。受動/権利保有はP1適用不可
 
 **実装完了（2026-06-09）**：全10フェーズ・45タスク完了。コミット `18aa33b`（feat(scoring): パターン判定方式に転換）＋ `1f81cd0`（README.md）を main にプッシュ済み。WBS 同期済み（RE-1〜RE-10 全完了）。ユニットテスト57件・E2E 6件・lint・typecheck 全通過。docs/（product-requirements・functional-design・glossary・architecture・repository-structure・development-guidelines）改訂済み。
 

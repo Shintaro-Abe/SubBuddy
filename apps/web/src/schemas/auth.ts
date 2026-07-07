@@ -9,6 +9,9 @@ export const appleCallbackSchema = z.object({
 
 export const deviceRegistrationSchema = appleCallbackSchema.extend({
   name: z.string().trim().min(1).max(80).optional(),
+  clientDeviceId: z.string().uuid().optional(),
 });
 
 export const deviceRevocationSchema = appleCallbackSchema;
+
+export const accountDeletionSchema = appleCallbackSchema;

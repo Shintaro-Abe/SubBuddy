@@ -40,6 +40,15 @@ export function toUsageBucketWire(value: UsageBucket): UsageBucketWire {
 }
 
 /**
+ * バケットの大小比較用ランク（none=0 … 120m_plus=6）。
+ * ADR 0006（利用量同期のバケット最大値マージ）で、同一 (subscription_id, usage_date) の
+ * 新旧バケットを比較して大きい方を採用するために使う。ワイヤ順を唯一の順序基準にする。
+ */
+export function usageBucketRank(value: UsageBucket): number {
+  return USAGE_BUCKET_WIRE.indexOf(toUsageBucketWire(value));
+}
+
+/**
  * 各バケットが表す「最小の利用分数」（下限値）。
  * iOS からは時間そのものではなくバケット（◯分以上）が来るため、
  * 集計では保守的に下限値を採用して「少なくとも何分使ったか」を見積もる。

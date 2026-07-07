@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import { UsageBucket } from "@prisma/client";
-import { UsageSubscriptionNotFoundError, upsertUsageDailyBatch } from "./usage";
+import { UsageSubscriptionNotFoundError, mergeUsageDaily, upsertUsageDailyBatch } from "./usage";
 import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
 
 /**
@@ -11,14 +11,39 @@ import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
  * （DB 実体での行数確認は Phase 5 の通し確認で実施。）
  */
 function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
-  const calls: { where: unknown }[] = [];
+  const calls: { where: unknown; update: unknown }[] = [];
   const db = {
     subscription: {
-      findMany: async () => ownedSubscriptionIds.map((id) => ({ id })),
+      findMany: async (args: { where: { id: { in: string[] } } }) =>
+        ownedSubscriptionIds
+          .filter((id) => args.where.id.in.includes(id))
+          .map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      upsert: async (args: { where: unknown }) => {
-        calls.push({ where: args.where });
+      findUnique: async () => null,
+      upsert: async (args: { where: unknown; update: unknown }) => {
+        calls.push({ where: args.where, update: args.update });
+        return {};
+      },
+    },
+  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+  return { db, calls };
+}
+
+function fakeDbWithExisting(existingByKey: Record<string, unknown>, ownedSubscriptionIds = ["sub_1", "sub_2"]) {
+  const calls: { where: unknown; update: unknown }[] = [];
+  const db = {
+    subscription: {
+      findMany: async (args: { where: { id: { in: string[] } } }) =>
+        ownedSubscriptionIds
+          .filter((id) => args.where.id.in.includes(id))
+          .map((id) => ({ id })),
+    },
+    iosUsageDailySummary: {
+      findUnique: async (args: { where: { subscriptionId_usageDate: { subscriptionId: string } } }) =>
+        existingByKey[args.where.subscriptionId_usageDate.subscriptionId] ?? null,
+      upsert: async (args: { where: unknown; update: unknown }) => {
+        calls.push({ where: args.where, update: args.update });
         return {};
       },
     },
@@ -76,5 +101,102 @@ describe("upsertUsageDailyBatch", () => {
       UsageSubscriptionNotFoundError,
     );
     expect(calls).toHaveLength(0);
+  });
+
+  it("既存行がある場合は後勝ちではなくバケット最大値へマージする", async () => {
+    const incoming: NormalizedUsageDaily[] = [
+      {
+        subscriptionId: "sub_1",
+        usageDate: new Date("2026-05-30T00:00:00.000Z"),
+        used: false,
+        usageBucket: UsageBucket.m15_plus,
+        estimatedMinutesMin: 15,
+        estimatedMinutesMax: 29,
+        source: "ios_device_activity",
+      },
+    ];
+    const { db, calls } = fakeDbWithExisting({
+      sub_1: {
+        used: true,
+        usageBucket: UsageBucket.m60_plus,
+        estimatedMinutesMin: 60,
+        estimatedMinutesMax: 119,
+        source: "ios_device_activity",
+      },
+    });
+
+    await upsertUsageDailyBatch("user_local", incoming, db);
+
+    expect(calls[0].update).toEqual({
+      used: true,
+      usageBucket: UsageBucket.m60_plus,
+      estimatedMinutesMin: 60,
+      estimatedMinutesMax: 119,
+      source: "ios_device_activity",
+    });
+  });
+});
+
+describe("mergeUsageDaily", () => {
+  it("新しいバケットが大きい場合は新しい値を採用し、used と分推定は最大へ寄せる", () => {
+    const incoming = {
+      subscriptionId: "sub_1",
+      usageDate: new Date("2026-05-30T00:00:00.000Z"),
+      used: true,
+      usageBucket: UsageBucket.m120_plus,
+      estimatedMinutesMin: 120,
+      estimatedMinutesMax: null,
+      source: "ios_device_activity",
+    };
+
+    expect(
+      mergeUsageDaily(
+        {
+          used: false,
+          usageBucket: UsageBucket.m30_plus,
+          estimatedMinutesMin: 30,
+          estimatedMinutesMax: 59,
+          source: "manual_synthetic",
+        },
+        incoming,
+      ),
+    ).toEqual({
+      used: true,
+      usageBucket: UsageBucket.m120_plus,
+      estimatedMinutesMin: 120,
+      estimatedMinutesMax: 59,
+      source: "ios_device_activity",
+    });
+  });
+
+  it("新しいバケットが小さい場合も既存値を下げない", () => {
+    const incoming = {
+      subscriptionId: "sub_1",
+      usageDate: new Date("2026-05-30T00:00:00.000Z"),
+      used: false,
+      usageBucket: UsageBucket.m5_plus,
+      estimatedMinutesMin: 5,
+      estimatedMinutesMax: 14,
+      source: "ios_device_activity",
+    };
+
+    expect(
+      mergeUsageDaily(
+        {
+          used: true,
+          usageBucket: UsageBucket.m60_plus,
+          estimatedMinutesMin: 60,
+          estimatedMinutesMax: 119,
+          source: "ios_device_activity",
+        },
+        incoming,
+      ),
+    ).toEqual({
+      used: true,
+      usageBucket: UsageBucket.m60_plus,
+      estimatedMinutesMin: 60,
+      estimatedMinutesMax: 119,
+      source: "ios_device_activity",
+    });
   });
 });
