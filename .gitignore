@@ -54,6 +54,8 @@ fixtures.local.*
 # iOS / Xcode (将来)
 ios/**/build/
 ios/**/DerivedData/
+apps/ios/*.xcodeproj/
+apps/ios/SubBuddyApp/Assets.xcassets/AppIcon.appiconset/*@*.png
 *.xcuserstate
 
 # Claude local settings

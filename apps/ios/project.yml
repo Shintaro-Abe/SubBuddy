@@ -1,0 +1,91 @@
+# XcodeGen project definition.
+# Generate on macOS with: `xcodegen generate`
+name: SubBuddy
+options:
+  deploymentTarget:
+    iOS: "17.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ${APPLE_TEAM_ID}
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  SubBuddyApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: SubBuddyApp/App
+      - path: SubBuddyApp/Shared
+      - path: SubBuddyApp/Assets.xcassets
+    dependencies:
+      - target: SubBuddyMonitorExtension
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app
+        PRODUCT_NAME: SubBuddy
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: SubBuddyApp/SubBuddyApp.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUBBUDDY_API_BASE_URL: ""
+    info:
+      path: SubBuddyApp/Info.plist
+      properties:
+        CFBundleDisplayName: SubBuddy
+        CFBundleIconName: AppIcon
+        SUBBUDDY_API_BASE_URL: $(SUBBUDDY_API_BASE_URL)
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    entitlements:
+      path: SubBuddyApp/SubBuddyApp.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.subbuddy.app
+
+  SubBuddyMonitorExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SubBuddyMonitorExtension
+      - path: SubBuddyApp/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app.monitor
+        PRODUCT_NAME: SubBuddyMonitorExtension
+        CODE_SIGN_ENTITLEMENTS: SubBuddyMonitorExtension/SubBuddyMonitorExtension.entitlements
+    info:
+      path: SubBuddyMonitorExtension/Info.plist
+      properties:
+        CFBundleDisplayName: SubBuddy Monitor
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).DeviceActivityMonitorExtension
+    entitlements:
+      path: SubBuddyMonitorExtension/SubBuddyMonitorExtension.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.subbuddy.app
+
+schemes:
+  SubBuddyApp:
+    build:
+      targets:
+        SubBuddyApp: all
+        SubBuddyMonitorExtension: all
+    run:
+      config: Debug
+      executable: SubBuddyApp
+    archive:
+      config: Release
