@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SubBuddy iPhone UI Sample</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3f2ed;
+      --screen: #f9f8f4;
+      --surface: #fff;
+      --ink: #173f3a;
+      --text: #26312f;
+      --muted: #687571;
+      --line: #d5dcd8;
+      --accent: #185c52;
+      --accent-soft: #e6efe9;
+      --warn: #a34c35;
+      --warn-soft: #f4e8e1;
+      --note: #fff8e8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    main { max-width: 1480px; margin: 0 auto; padding: 32px 24px 48px; }
+    h1 { margin: 0; color: var(--ink); font-size: 28px; }
+    .lead { margin: 8px 0 28px; color: var(--muted); font-size: 14px; }
+    .phones { display: grid; grid-template-columns: repeat(4, minmax(270px, 1fr)); gap: 24px; align-items: start; }
+    .phone {
+      width: 100%; max-width: 330px; min-height: 680px; margin: 0 auto;
+      border: 2px solid #202927; border-radius: 28px; overflow: hidden;
+      background: var(--screen); box-shadow: 0 10px 28px rgb(23 63 58 / 10%);
+      display: flex; flex-direction: column;
+    }
+    .status { height: 28px; padding: 9px 18px 0; display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; }
+    .content { flex: 1; padding: 16px 18px 12px; }
+    .topbar { min-height: 40px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .topbar h2 { margin: 0; color: var(--ink); font-size: 23px; }
+    .icon-button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); font-size: 21px; }
+    .eyebrow { color: var(--muted); font-size: 12px; }
+    .hero { border: 1px solid #8eaaa0; border-radius: 8px; background: var(--accent-soft); padding: 14px; }
+    .hero h3 { margin: 5px 0 6px; color: var(--ink); font-size: 18px; line-height: 1.35; }
+    .hero p, .small { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    button.primary { width: 100%; min-height: 42px; margin-top: 13px; border: 0; border-radius: 7px; background: var(--accent); color: white; font-weight: 700; font-size: 14px; }
+    .metric { margin: 20px 4px 16px; }
+    .metric strong { display: block; margin: 3px 0; color: var(--ink); font-size: 30px; font-variant-numeric: tabular-nums; }
+    .rows { border-top: 1px solid var(--line); }
+    .row { min-height: 52px; padding: 13px 12px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 14px; }
+    .row-main { display: block; min-width: 0; }
+    .row-main strong { display: block; color: var(--ink); margin-bottom: 4px; }
+    .chevron { color: var(--muted); font-size: 19px; }
+    .search { height: 42px; border: 1px solid #cbd5d0; border-radius: 7px; background: white; color: var(--muted); padding: 11px 13px; font-size: 13px; }
+    .segments { display: grid; grid-template-columns: repeat(3, 1fr); margin: 12px 0 14px; border: 1px solid #8eaaa0; border-radius: 7px; overflow: hidden; }
+    .segments span { padding: 8px 3px; background: white; color: var(--muted); text-align: center; font-size: 11px; }
+    .segments .on { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+    .contract { padding: 13px 12px; background: white; border-bottom: 1px solid var(--line); }
+    .contract strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 15px; }
+    .state { display: block; margin-top: 5px; font-size: 12px; }
+    .state.warn { color: var(--warn); }
+    .state.missing { color: #8a641a; }
+    .pill { display: inline-block; border: 1px solid #c98a75; border-radius: 999px; padding: 5px 9px; color: #7a3428; background: var(--warn-soft); font-size: 12px; }
+    .service-title { margin: 14px 0 13px; }
+    .service-title h3 { margin: 0 0 5px; color: var(--ink); font-size: 23px; }
+    .panel { margin-top: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 7px; background: white; font-size: 13px; line-height: 1.65; }
+    .panel.note { background: var(--note); border-color: #d9be7a; }
+    .panel strong { display: block; color: var(--ink); margin-bottom: 3px; }
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 16px; }
+    .choices button { min-height: 46px; padding: 5px; border: 1px solid var(--accent); border-radius: 7px; background: white; color: var(--accent); font-size: 11px; font-weight: 700; }
+    .choices .selected { color: white; background: var(--accent); }
+    .text-link { display: block; margin-top: 14px; color: var(--accent); text-align: center; font-size: 13px; text-decoration: none; }
+    .trust { padding: 14px; border: 1px solid #8eaaa0; border-radius: 7px; background: var(--accent-soft); }
+    .trust strong { display: block; color: var(--ink); margin-bottom: 5px; }
+    .danger { display: block; margin: 25px auto 0; border: 0; background: transparent; color: var(--warn); font-size: 13px; }
+    .tabs { height: 57px; border-top: 1px solid var(--line); background: white; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; text-align: center; font-size: 11px; color: var(--muted); }
+    .tabs .on { color: var(--accent); font-weight: 700; }
+    .screen-name { margin: 11px 0 0; text-align: center; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 1180px) { .phones { grid-template-columns: repeat(2, minmax(270px, 1fr)); } }
+    @media (max-width: 650px) { main { padding: 24px 14px 40px; } .phones { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>SubBuddy iPhone UI サンプル</h1>
+  <p class="lead">次の行動を1つだけ示し、事実から判断へ進める。主要操作はiPhoneだけで完結する。</p>
+  <section class="phones" aria-label="4画面のUIサンプル">
+    <article>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="content">
+          <header class="topbar"><h2>ホーム</h2><button class="icon-button" aria-label="設定">⚙</button></header>
+          <section class="hero">
+            <span class="eyebrow">次に確認すること</span>
+            <h3>動画サービスの更新まで5日</h3>
+            <p>年額12,000円。最近の利用記録はありません。</p>
+            <button class="primary">内容を確認</button>
+          </section>
+          <section class="metric">
+            <span class="eyebrow">登録中の年間支出（目安）</span>
+            <strong>96,840円</strong>
+            <span class="small">8件・今日 9:38更新</span>
+          </section>
+          <div class="rows">
+            <div class="row"><span>更新が近い　2件</span><span class="chevron">›</span></div>
+            <div class="row"><span>支出の内訳</span><span class="chevron">›</span></div>
+            <div class="row"><span>棚卸しの続き</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+        <nav class="tabs"><span class="on">ホーム</span><span>契約</span><span>見直し</span></nav>
+      </div>
+      <p class="screen-name">ホーム</p>
+    </article>
+
+    <article>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="content">
+          <header class="topbar"><h2>契約</h2><button class="icon-button" aria-label="契約を追加">＋</button></header>
+          <div class="search">⌕　サービスを検索</div>
+          <div class="segments"><span class="on">すべて</span><span>更新間近</span><span>情報不足</span></div>
+          <div class="contract"><strong>動画サービス</strong><span class="small">1,000円 / 月　更新 7/16</span><span class="state warn">更新が近い</span></div>
+          <div class="contract"><strong>クラウドストレージ</strong><span class="small">400円 / 月　更新日 未入力</span><span class="state missing">情報を追加すると判断できます</span></div>
+          <div class="contract"><strong>音楽サービス</strong><span class="small">980円 / 月　計測中</span></div>
+          <button class="primary">契約を追加</button>
+        </div>
+        <nav class="tabs"><span>ホーム</span><span class="on">契約</span><span>見直し</span></nav>
+      </div>
+      <p class="screen-name">契約</p>
+    </article>
+
+    <article>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="content">
+          <header class="topbar"><h2>見直し</h2></header>
+          <span class="pill">更新が近い</span>
+          <div class="service-title"><h3>動画サービス</h3><span class="small">次回更新 7月16日（あと5日）</span></div>
+          <section class="panel"><strong>分かっていること</strong>年額目安 12,000円<br>最近30日の利用記録 0日<br><span class="small">今日 9:38時点</span></section>
+          <section class="panel note"><strong>まだ分からないこと</strong>別の端末で使っている場合は記録されません。</section>
+          <section class="panel"><strong>確認できる選択肢</strong>このまま継続する<br>月額800円の下位プランを確認する<br><span class="small">差額は年間2,400円の目安</span></section>
+          <a class="text-link" href="#">公式の手続きページを見る　›</a>
+        </div>
+        <nav class="tabs"><span>ホーム</span><span>契約</span><span class="on">見直し</span></nav>
+      </div>
+      <p class="screen-name">見直し</p>
+    </article>
+
+    <article>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="content">
+          <header class="topbar"><h2>設定</h2></header>
+          <section class="trust"><strong>あなたのデータ</strong><span class="small">何を保存し、何を送らないか確認できます。</span></section>
+          <div class="rows" style="margin-top:16px">
+            <div class="row"><span>保存しているデータ</span><span class="chevron">›</span></div>
+            <div class="row"><span>Screen Timeと計測対象</span><span class="chevron">›</span></div>
+            <div class="row"><span>同期</span><span class="small">正常　›</span></div>
+            <div class="row"><span>通知</span><span class="chevron">›</span></div>
+          </div>
+          <div class="rows" style="margin-top:16px">
+            <div class="row"><span>ヘルプ・問い合わせ</span><span class="chevron">›</span></div>
+            <div class="row"><span>Macで詳しく見る（任意）</span><span class="chevron">›</span></div>
+          </div>
+          <button class="danger">アカウントとデータを削除</button>
+        </div>
+      </div>
+      <p class="screen-name">設定</p>
+    </article>
+  </section>
+</main>
+</body>
+</html>

@@ -3,6 +3,7 @@ import Foundation
 enum AppConstants {
     static let appGroupID = "group.com.subbuddy.app"
     static let usageRecordFileName = "usage_records.json"
+    static let subscriptionMappingFileName = "subscription_mappings.json"
     static let thresholdMinutes = [15, 30, 60, 120]
 
     static var apiBaseURL: URL? {

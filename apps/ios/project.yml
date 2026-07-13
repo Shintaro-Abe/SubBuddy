@@ -30,7 +30,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app
         PRODUCT_NAME: SubBuddy
         MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_ENTITLEMENTS: SubBuddyApp/SubBuddyApp.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUBBUDDY_API_BASE_URL: ""

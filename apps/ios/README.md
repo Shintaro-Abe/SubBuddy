@@ -42,7 +42,7 @@ https://<service-name>.onrender.com
 4. `Subscription ID` に開発用サブスクIDを入力する。
 5. `Select Measured App` で計測対象アプリを選ぶ。
 6. `Start Monitoring` を実行する。
-7. 翌日以降、`Sync Past Records` で過去日分をRenderへ送信する。
+7. しきい値到達後、`Sync Records` で当日分を含む利用量をRenderへ送信する。
 
 > 注意: 現時点では一気通貫を早めるため、サブスク一覧取得は未実装。`Subscription ID` は手入力する。
 

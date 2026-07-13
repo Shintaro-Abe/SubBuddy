@@ -29,10 +29,9 @@ final class UsageSyncService {
 
         let today = Self.todayString()
         let records = store.readAll()
-        let pastRecords = records.filter { $0.date < today }
-        guard !pastRecords.isEmpty else { return 0 }
+        guard !records.isEmpty else { return 0 }
 
-        let items = pastRecords.compactMap { record -> UsageItem? in
+        let items = records.compactMap { record -> UsageItem? in
             guard let subscriptionId = mappingStore.subscriptionId(for: record.activityId) else {
                 return nil
             }
@@ -52,7 +51,7 @@ final class UsageSyncService {
 
         try await send(BatchPayload(items: items), apiBaseURL: apiBaseURL, deviceSyncToken: deviceSyncToken)
 
-        for record in pastRecords {
+        for record in records where record.date < today {
             store.remove(activityId: record.activityId, date: record.date)
         }
 

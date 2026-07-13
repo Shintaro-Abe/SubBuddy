@@ -1,5 +1,5 @@
 import { deflateSync } from "node:zlib";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const outputDir = new URL("../SubBuddyApp/Assets.xcassets/AppIcon.appiconset/", import.meta.url);
@@ -104,6 +104,12 @@ function png(size) {
 }
 
 mkdirSync(outputDir, { recursive: true });
+
+for (const filename of readdirSync(outputDir)) {
+  if (filename.endsWith(".png")) {
+    unlinkSync(join(outputDir.pathname, filename));
+  }
+}
 
 const images = icons.map(([idiom, size, scale, pixels]) => {
   const filename = `app-icon-${idiom}-${size.replace(".", "_")}-scale${scale}.png`;

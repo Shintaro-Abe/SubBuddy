@@ -30,7 +30,7 @@ struct ContentView: View {
                             case .success(let authorization):
                                 await authSession.handleAppleAuthorization(authorization)
                             case .failure(let error):
-                                await authSession.handleAppleAuthorizationError(error)
+                                authSession.handleAppleAuthorizationError(error)
                             }
                         }
                     }
@@ -97,8 +97,8 @@ struct ContentView: View {
                     Text("Local records: \(measurementSession.recordCount)")
                         .foregroundStyle(.secondary)
 
-                    Button("Sync Past Records") {
-                        Task { await measurementSession.syncPastRecords() }
+                    Button("Sync Records") {
+                        Task { await measurementSession.syncRecords() }
                     }
                     .disabled(!authSession.isSignedIn || measurementSession.isSyncing)
                 }

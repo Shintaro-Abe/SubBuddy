@@ -68,10 +68,10 @@ sequenceDiagram
   App->>Store: selection / 対応表を保存
   App->>Ext: DeviceActivity監視登録
   Ext->>Store: 日別集計を書き込み
-  App->>Store: フォアグラウンド化時に過去日キュー取得
+  App->>Store: フォアグラウンド化時に当日分を含むキュー取得
   App->>API: POST /api/usage/daily
   API-->>App: 送信成功
-  App->>Store: 過去日かつ成功分のみ削除
+  App->>Store: 過去日かつ成功分のみ削除、当日分は保持
 ```
 
 ## 影響範囲の分析

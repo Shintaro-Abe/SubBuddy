@@ -771,19 +771,19 @@ tasks:
     status: "未着手"
 
   # ═════════════════════════════════════════════════════════════
-  # TestFlight スプリント（日付付き）
+  # 旧 TestFlight スプリント（日付付き実装計画・参照レーン）
   # steering: .steering/20260704-testflight-sprint-roadmap/
   # 週境界: W1=07/06-07/12 / W2=07/13-07/19 / W3=07/20-07/26 / W4=07/27-08/02
   # ═════════════════════════════════════════════════════════════
   - id: "TF-1"
     level: 1
-    phase: "TestFlight"
-    name: "TestFlight 小規模検証版配信"
+    phase: "実装履歴"
+    name: "旧TestFlightスプリント（再基準化後は参照レーン）"
     progress: 45
     status: "進行中"
     plannedStart: "2026-07-06"
     plannedEnd: "2026-08-03"
-    note: "北極星＝20〜50人配信。サーバー側APIは実装済み。iOSは2ターゲット構成・実機起動・Archive/Uploadまで完了。Render一気通貫と7日計測は未完了"
+    note: "2026-07-04時点の実装計画と進捗を保持。リリース親進捗には加算せず、REL-0/REL-1/REL-2を正本とする。Render一気通貫と7日計測は未完了"
 
   # ───── TF-1.1 外部依存・申請 ─────
   - id: "TF-1.1"
@@ -1052,13 +1052,13 @@ tasks:
     parent: "TF-1.5"
     level: 3
     phase: "TestFlight"
-    name: "Sheets 同期廃止・GitHub 一本化"
+    name: "旧計画: Sheets同期廃止・GitHub一本化"
     progress: 0
     status: "未着手"
     plannedStart: "2026-08-03"
     plannedEnd: "2026-08-03"
     predecessors: ["TF-1.3.6"]
-    note: "決定9。TestFlight 配信完了で廃止（スプリント中は併存＝安定確認期間）"
+    note: "2026-07-04時点の旧決定。再基準化後の同期先変更はREL-0.1と確認ゲートで再判断し、TestFlight配信だけを理由に自動廃止しない"
 
   # ═════════════════════════════════════════════════════════════
   # 道場中間発表（日付付き・別レーン／ハード期限）
@@ -1326,3 +1326,276 @@ tasks:
     progress: 0
     status: "保留"
     note: "N-15。運用ツール。クリティカルパス外の並行作業。⚠️決定待ち: Q-3(構築時期＝スプリント並行か配信後か)"
+
+  # ═════════════════════════════════════════════════════════════
+  # リリースロードマップ正本
+  # steering: .steering/20260711-release-roadmap-rebaseline/
+  # 日付は Render 実疎通と先行条件の確認後に設定する。
+  # ═════════════════════════════════════════════════════════════
+
+  - id: "REL-0"
+    level: 1
+    phase: "社内実機確認"
+    name: "社内実機確認ゲート"
+    progress: 10
+    status: "進行中"
+    deliverable: "サインインから削除までの一気通貫、7日計測、安全性・品質証跡"
+    note: "開始・完了・中止条件は承認済みreview-packとdocsを正とする。親進捗は子タスク完了から算出"
+
+  - id: "REL-0.1"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "承認内容を永続docs・WBS・旧ロードマップへ反映"
+    progress: 100
+    status: "完了"
+    actualStart: "2026-07-12"
+    actualEnd: "2026-07-12"
+    deliverable: "docs 4文書・glossary・ADR・WBS・旧roadmapの整合"
+    note: "steering T-1/T-2/T-6/T-8〜T-12を反映済み。日付再計算T-7とGitHub dry-run・同期T-13は別途実施"
+
+  - id: "REL-0.2"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "Apple認証・テナント認可・配布版固定ユーザー隔離"
+    progress: 0
+    status: "未着手"
+    predecessors: ["TF-1.2.4"]
+    deliverable: "iPhone/Web共通ユーザー、短期・更新トークン、セッション・端末失効、他テナント拒否"
+    note: "steering T-19/T-22/T-25。user_localは配布版でフェイルクローズ"
+
+  - id: "REL-0.3"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "完成済みMVP機能をiPhoneへ全移植"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.2"]
+    deliverable: "ホーム・契約・見直し・設定、支出、更新、計測、容量管理、出力、退会"
+    note: "steering T-14/T-17/T-18/T-20/T-32/T-33。途中の内部ビルドは外部配布条件を満たさない"
+
+  - id: "REL-0.4"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "見直し計算・保存・表示の修復と確認優先度への移行"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.2"]
+    deliverable: "利用実績・単価・候補・節約額・根拠・注意点の一致、重大エラー0件"
+    note: "steering T-21/T-34/T-35/T-46/T-50。継続・解約を断定しない"
+
+  - id: "REL-0.5"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "オフライン・競合・削除・出力・端末保護"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.2"]
+    deliverable: "暗号化キャッシュ、30日期限、差分選択、完全退会、削除コード、Face IDロック"
+    note: "steering T-23/T-24/T-39/T-56〜T-58。自動上書き・複製・未同期消失を禁止"
+
+  - id: "REL-0.6"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "Webブランド統一UI・正式アイコン・アクセシビリティ"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.3"]
+    deliverable: "Web正本トークン、正式アイコン、VoiceOver・Dynamic Type・Webキーボード証跡"
+    note: "steering T-15/T-16/T-40〜T-43/T-47。仮アイコンは内部確認まで"
+
+  - id: "REL-0.7"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "Render実疎通・7日連続計測・データ整合性試験"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.3", "REL-0.4", "REL-0.5"]
+    deliverable: "実機一気通貫、日境界・再送・順不同・再インストール・権限拒否の証跡"
+    note: "7日連続計測は圧縮しない。実データを証跡へ持ち出さない"
+
+  - id: "REL-0.8"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "配布適合・Family Controls・クラッシュ・性能ゲート"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.6", "REL-0.7"]
+    deliverable: "署名・entitlement・Privacy Manifest、主要クラッシュ0件、性能基準合格"
+    note: "steering T-48/T-51/T-55。Family Controls再不承認時はスコープ再承認"
+
+  - id: "REL-0.9"
+    parent: "REL-0"
+    level: 2
+    phase: "社内実機確認"
+    name: "復元訓練・費用監視・利用上限・重大事故停止"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.2"]
+    deliverable: "別環境復元、削除再適用、月1万円監視、回数制限、自動停止手順"
+    note: "steering T-37/T-38/T-44/T-52/T-53"
+
+  - id: "REL-0.GATE"
+    parent: "REL-0"
+    level: 2
+    phase: "ゲート判定"
+    name: "社内実機確認の終了判定"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.8", "REL-0.9"]
+    deliverable: "合格・差し戻し・中止の判定記録と証跡リンク"
+    note: "データ越境、復元不能な消失、認証迂回、削除不能は合格不可"
+
+  - id: "REL-1"
+    level: 1
+    phase: "TestFlight小規模検証"
+    name: "TestFlight小規模検証ゲート"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.GATE"]
+    deliverable: "20人以上・14日評価・全体4週間の価値、信頼、運用結果"
+    note: "30人募集、上限50人。20人未満は最大2週間延長し、価値失敗と断定しない"
+
+  - id: "REL-1.1"
+    parent: "REL-1"
+    level: 2
+    phase: "TestFlight準備"
+    name: "審査情報・プライバシー・規約・正式アイコン・問い合わせ準備"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-0.GATE"]
+    deliverable: "App Store Connect情報、収集一覧、保持・削除、テスト案内、連絡先"
+    note: "Appleへ内部成功基準は提出せず、実際の収集データと目的を申告"
+
+  - id: "REL-1.2"
+    parent: "REL-1"
+    level: 2
+    phase: "TestFlight準備"
+    name: "参加認可・募集・同意・診断情報・通知設定"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.1"]
+    deliverable: "30人募集、iPhone初回有効化、参加同意、任意診断、通知5種"
+    note: "steering T-25/T-28/T-29/T-36/T-45"
+
+  - id: "REL-1.3"
+    parent: "REL-1"
+    level: 2
+    phase: "TestFlight運用"
+    name: "4週間運用・週次トリアージ・1人運営対応"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.2"]
+    deliverable: "各参加者14日、7日・14日評価、問い合わせ・障害・離脱記録"
+    note: "平日10〜18時。通常3営業日、利用不能1営業日、重大事故24時間以内を内部目標"
+
+  - id: "REL-1.4"
+    parent: "REL-1"
+    level: 2
+    phase: "TestFlight評価"
+    name: "最小操作イベント・任意アンケート・一般公開移行基準の集計"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.3"]
+    deliverable: "8イベント、到達率、回答率、価値実感率、クラッシュ、安全性"
+    note: "steering T-26/T-27/T-30/T-31/T-49。第三者解析へ送らない"
+
+  - id: "REL-1.5"
+    parent: "REL-1"
+    level: 2
+    phase: "TestFlight終了"
+    name: "終了後30日・出力・削除・本人選択型移行"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.4"]
+    deliverable: "読取専用期間、CSV/JSON、完全削除、一般公開環境への元データ移行"
+    note: "未選択は自動削除。見直し結果・セッション・問い合わせ・アンケートは移行しない"
+
+  - id: "REL-1.GATE"
+    parent: "REL-1"
+    level: 2
+    phase: "ゲート判定"
+    name: "TestFlight終了・一般公開移行判定"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.4"]
+    deliverable: "進行・修正再検証・中止の判定記録"
+    note: "到達70%、回答60%、価値実感70%、重大事故0件。未達のまま同じ仕様で一般公開しない"
+
+  - id: "REL-2"
+    level: 1
+    phase: "一般公開"
+    name: "一般公開ゲート"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.GATE"]
+    deliverable: "日本App StoreとWebの段階公開、公開後レビュー"
+    note: "一般公開日、機能範囲、信頼性目標、費用予算はREL-1.GATE後に再承認"
+
+  - id: "REL-2.1"
+    parent: "REL-2"
+    level: 2
+    phase: "一般公開準備"
+    name: "一般公開スコープ・日付・費用予算の再承認"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-1.GATE"]
+    deliverable: "最短・標準・悲観日程、必須機能、費用・停止条件"
+
+  - id: "REL-2.2"
+    parent: "REL-2"
+    level: 2
+    phase: "一般公開準備"
+    name: "信頼性・Render国外保存・法務・サポートの最終確認"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-2.1"]
+    deliverable: "許容損失1時間、復旧8時間、国外制度・契約確認、日本向け規約・窓口"
+
+  - id: "REL-2.3"
+    parent: "REL-2"
+    level: 2
+    phase: "一般公開準備"
+    name: "App Store掲載素材・日本限定配信・production移行"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-2.2"]
+    deliverable: "スクリーンショット・掲載文・キーワード、production環境、再計算・トークン再発行"
+    note: "steering T-38/T-39/T-43/T-54"
+
+  - id: "REL-2.4"
+    parent: "REL-2"
+    level: 2
+    phase: "一般公開"
+    name: "日本App Store・Webの段階公開と監視"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-2.3"]
+    deliverable: "段階公開、クラッシュ99.5%以上、性能・容量・費用監視"
+
+  - id: "REL-2.5"
+    parent: "REL-2"
+    level: 2
+    phase: "継続運用"
+    name: "公開後レビュー・カタログ90日鮮度・月次復元確認"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-2.4"]
+    deliverable: "公開後判定、料金鮮度、依存・脆弱性、削除・問い合わせ、復元証跡"
+
+  - id: "REL-2.GATE"
+    parent: "REL-2"
+    level: 2
+    phase: "ゲート判定"
+    name: "一般公開後レビュー"
+    progress: 0
+    status: "未着手"
+    predecessors: ["REL-2.4"]
+    deliverable: "継続・縮小・停止と残課題の判定記録"

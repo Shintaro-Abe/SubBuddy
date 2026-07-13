@@ -20,7 +20,7 @@ TestFlight 20〜50人配信に向け、サーバー側整備は `../20260707-tes
 - ネイティブ Sign in with Apple で `POST /api/auth/apple/native` にログインする。
 - サインイン後に iPhone デバイスを冪等登録し、同期 token を Keychain に保存する。
 - FamilyControls / DeviceActivity で計測対象アプリをユーザーが選び、日別・バケット単位の集計値を端末内に保存する。
-- フォアグラウンド化時に過去日の集計値を `/api/usage/daily` へ同期する。
+- フォアグラウンド化時に当日分を含む集計値を `/api/usage/daily` へ同期する。
 - アカウント削除 UI から `DELETE /api/account` を呼び、成功後に Keychain / App Group のローカル状態を消す。
 - 配布用 entitlement / App Group / codesign 確認手順を実装タスクに含める。
 - 一気通貫確認後、7日連続計測を開始できる状態にする。
@@ -49,7 +49,7 @@ TestFlight 20〜50人配信に向け、サーバー側整備は `../20260707-tes
 - [ ] AC-4: サインイン直後に端末内生成の `clientDeviceId` で `POST /api/devices` を呼び、同期 token を Keychain に保存できる。
 - [ ] AC-5: `.individual` 認可、FamilyActivityPicker、計測対象選択、監視登録が動く。
 - [ ] AC-6: DeviceActivityMonitor Extension は通信せず、App Group に日別・バケット単位の集計値だけを書き込む。
-- [ ] AC-7: 本体アプリはフォアグラウンド化時に過去日かつ未送信の集計値を `/api/usage/daily` へ送り、送信成功分のみ削除する。当日分は削除しない。
+- [ ] AC-7: 本体アプリはフォアグラウンド化時に当日分を含む集計値を `/api/usage/daily` へ送る。送信後、当日分は再送・増分更新のため端末内に残し、過去日分のみ削除する。
 - [ ] AC-8: 同期 payload は `subscription_id` / `usage_date` / `used` / `usage_bucket` / `estimated_minutes_min` / `estimated_minutes_max` / `source` / `confidence` の集計値に限定し、詳細ログを含めない。
 - [ ] AC-9: アカウント削除 UI から `DELETE /api/account` を呼び、成功後に Keychain / App Group のローカル状態を消せる。
 - [ ] AC-10: 開発実機でサインイン→デバイス登録→計測対象選択→DeviceActivity 集計→クラウド送信の一気通貫を確認できる。

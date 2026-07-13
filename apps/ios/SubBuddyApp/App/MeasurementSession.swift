@@ -27,12 +27,17 @@ final class MeasurementSession: ObservableObject {
         }
 
         let activityName = mappingStore.activityName(for: trimmedSubscriptionId)
-        if let selectionData = try? JSONEncoder().encode(selection) {
-            mappingStore.save(SubscriptionMapping(
-                subscriptionId: trimmedSubscriptionId,
-                activityName: activityName,
-                selection: selectionData
-            ))
+        guard let selectionData = try? JSONEncoder().encode(selection) else {
+            statusMessage = "Monitoring failed: selection encoding failed"
+            return
+        }
+        guard mappingStore.save(SubscriptionMapping(
+            subscriptionId: trimmedSubscriptionId,
+            activityName: activityName,
+            selection: selectionData
+        )) else {
+            statusMessage = "Monitoring failed: shared mapping store unavailable"
+            return
         }
 
         do {
@@ -55,7 +60,7 @@ final class MeasurementSession: ObservableObject {
         statusMessage = "Records: \(recordCount)"
     }
 
-    func syncPastRecords() async {
+    func syncRecords() async {
         isSyncing = true
         defer { isSyncing = false }
 
