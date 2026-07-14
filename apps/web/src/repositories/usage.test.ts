@@ -29,10 +29,17 @@ function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   return { db, calls };
 }
 
-function fakeDbWithExisting(
-  existingByKey: Record<string, unknown>,
-  ownedSubscriptionIds = ["sub_1", "sub_2"],
-) {
+type ExistingUsageRow = {
+  subscriptionId: string;
+  usageDate: Date;
+  used: boolean;
+  usageBucket: UsageBucket;
+  estimatedMinutesMin: number | null;
+  estimatedMinutesMax: number | null;
+  source: string;
+};
+
+function fakeDbWithExisting(existingRows: ExistingUsageRow[], ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   const calls: { where: unknown; update: unknown }[] = [];
   const db = {
     $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
@@ -41,12 +48,7 @@ function fakeDbWithExisting(
         ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findMany: async () =>
-        Object.entries(existingByKey).map(([subscriptionId, existing]) => ({
-          subscriptionId,
-          usageDate: items.find((item) => item.subscriptionId === subscriptionId)!.usageDate,
-          ...(existing as object),
-        })),
+      findMany: async () => existingRows,
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
@@ -120,15 +122,17 @@ describe("upsertUsageDailyBatch", () => {
         source: "ios_device_activity",
       },
     ];
-    const { db, calls } = fakeDbWithExisting({
-      sub_1: {
+    const { db, calls } = fakeDbWithExisting([
+      {
+        subscriptionId: "sub_1",
+        usageDate: new Date("2026-05-30T00:00:00.000Z"),
         used: true,
         usageBucket: UsageBucket.m60_plus,
         estimatedMinutesMin: 60,
         estimatedMinutesMax: 119,
         source: "ios_device_activity",
       },
-    });
+    ]);
 
     await upsertUsageDailyBatch("user_local", incoming, db);
 
