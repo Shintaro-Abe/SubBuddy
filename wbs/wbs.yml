@@ -1366,7 +1366,7 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "Apple認証・テナント認可・配布版固定ユーザー隔離"
-    progress: 10
+    progress: 30
     status: "進行中"
     plannedStart: "2026-07-13"
     plannedEnd: "2026-08-07"
@@ -1392,10 +1392,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "認証セッション・更新トークンのDBスキーマと移行"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-15"
     plannedEnd: "2026-07-17"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.1"]
 
   - id: "REL-0.2.3"
@@ -1403,10 +1405,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "短期アクセストークン・更新トークンの発行とローテーション"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-20"
     plannedEnd: "2026-07-22"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.2"]
 
   - id: "REL-0.2.4"

@@ -51,6 +51,11 @@ enum UsageBucket {
   m120_plus // 120m_plus
 }
 
+enum AuthClientType {
+  web
+  ios
+}
+
 // ---- テーブル ----
 
 model User {
@@ -65,6 +70,7 @@ model User {
   usageSummaries  IosUsageDailySummary[]
   recommendations RecommendationSnapshot[]
   devices         Device[]
+  authSessions    AuthSession[]
 
   @@map("users")
 }
@@ -80,11 +86,42 @@ model Device {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authSessions AuthSession[]
 
   @@unique([userId, clientDeviceId])
   @@index([userId])
   @@map("devices")
+}
+
+model AuthSession {
+  id                  String         @id @default(cuid())
+  userId              String         @map("user_id")
+  clientType          AuthClientType @map("client_type")
+  tokenFamilyId       String         @map("token_family_id")
+  refreshTokenHash    String         @unique @map("refresh_token_hash")
+  replacedBySessionId String?        @unique @map("replaced_by_session_id")
+  deviceId            String?        @map("device_id")
+  rememberBrowser     Boolean        @default(false) @map("remember_browser")
+  lastUsedAt          DateTime       @default(now()) @map("last_used_at")
+  idleExpiresAt       DateTime       @map("idle_expires_at")
+  absoluteExpiresAt   DateTime       @map("absolute_expires_at")
+  revokedAt           DateTime?      @map("revoked_at")
+  revokeReason        String?        @map("revoke_reason")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device     Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  replacedBy AuthSession? @relation("AuthSessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replaces   AuthSession? @relation("AuthSessionRotation")
+
+  @@index([userId, revokedAt])
+  @@index([tokenFamilyId])
+  @@index([deviceId])
+  @@index([idleExpiresAt])
+  @@index([absoluteExpiresAt])
+  @@map("auth_sessions")
 }
 
 model Subscription {
