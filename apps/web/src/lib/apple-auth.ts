@@ -53,6 +53,7 @@ export type VerifyAppleIdentityTokenOptions = {
    */
   allowedClientIds?: string[];
   expectedNonce?: string;
+  subjectHashSalt?: string;
   now?: Date;
   jwksUrl?: string;
   fetchImpl?: typeof fetch;
@@ -122,9 +123,15 @@ function verifyRs256Signature(jwk: AppleJwk, signingInput: string, signature: Bu
   }
 }
 
-export function hashAppleSubject(subject: string): string {
-  const salt = process.env.APPLE_SUBJECT_HASH_SALT ?? "";
+export function hashAppleSubject(
+  subject: string,
+  salt = process.env.APPLE_SUBJECT_HASH_SALT ?? "",
+): string {
   return createHash("sha256").update(`apple:${salt}:${subject}`, "utf8").digest("hex");
+}
+
+export function hashAppleNonce(nonce: string): string {
+  return createHash("sha256").update(nonce, "utf8").digest("hex");
 }
 
 export async function verifyAppleIdentityToken(
@@ -171,7 +178,7 @@ export async function verifyAppleIdentityToken(
 
   return {
     subject: payload.sub,
-    subjectHash: hashAppleSubject(payload.sub),
+    subjectHash: hashAppleSubject(payload.sub, options.subjectHashSalt),
     email: payload.email,
   };
 }

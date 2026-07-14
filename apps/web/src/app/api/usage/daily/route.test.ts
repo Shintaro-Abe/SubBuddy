@@ -18,6 +18,7 @@ function makeRequest(headers: Record<string, string> = {}, body = "{}") {
 
 describe("POST /api/usage/daily の認証", () => {
   beforeEach(() => {
+    vi.stubEnv("SUBBUDDY_MODE", "local");
     vi.stubEnv("USAGE_SYNC_TOKEN", TOKEN);
   });
   afterEach(() => {

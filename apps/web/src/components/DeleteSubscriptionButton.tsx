@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { authenticatedFetch } from "@/lib/client-api";
 
 /** サブスク削除ボタン。確認のうえ DELETE API を叩き、一覧へ戻る。 */
 export function DeleteSubscriptionButton({ id }: { id: string }) {
@@ -12,7 +13,7 @@ export function DeleteSubscriptionButton({ id }: { id: string }) {
     if (!window.confirm("このサブスクを削除しますか？（利用履歴・判定も削除されます）")) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/subscriptions/${id}`, { method: "DELETE" });
+      const res = await authenticatedFetch(`/api/subscriptions/${id}`, { method: "DELETE" });
       if (res.ok) {
         router.push("/subscriptions");
         router.refresh();

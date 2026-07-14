@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { SubscriptionCard } from "@/components/SubscriptionCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function SubscriptionsPage() {
-  const rows = await getSubscriptionsWithLatestRecommendation(getCurrentUserId());
+  const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
 
   return (
     <div>

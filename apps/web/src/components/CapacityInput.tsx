@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { authenticatedFetch } from "@/lib/client-api";
 import { defaultScoringConfig } from "@/config/scoring";
 
 /**
@@ -63,7 +64,7 @@ export function CapacityInput({
     setSaving(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
+      const res = await authenticatedFetch(`/api/subscriptions/${subscriptionId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -73,7 +74,7 @@ export function CapacityInput({
       });
       if (!res.ok) throw new Error("save failed");
       // 使用容量が変わると判定（安全に下げられるか）も変わるので再計算する。
-      await fetch("/api/recommendations/recompute", { method: "POST" });
+      await authenticatedFetch("/api/recommendations/recompute", { method: "POST" });
       startTransition(() => router.refresh());
     } catch {
       setError("保存に失敗しました。時間をおいて試してください");
@@ -127,7 +128,8 @@ export function CapacityInput({
       {usagePercent !== null && planCapacityGb !== null && (
         <div style={{ marginTop: 12 }}>
           <p className="caption" style={{ margin: 0 }}>
-            使用率 {usagePercent}%（{Number(usedGb).toLocaleString()} / {planCapacityGb.toLocaleString()} GB）
+            使用率 {usagePercent}%（{Number(usedGb).toLocaleString()} /{" "}
+            {planCapacityGb.toLocaleString()} GB）
           </p>
           <div
             aria-hidden

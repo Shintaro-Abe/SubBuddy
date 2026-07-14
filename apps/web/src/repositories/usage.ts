@@ -16,7 +16,8 @@ type UsageDailyExisting = {
   source: string;
 };
 
-type Db = Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+type TransactionDb = Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+type Db = Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
 
 export class UsageSubscriptionNotFoundError extends Error {
   constructor() {
@@ -61,8 +62,14 @@ export function mergeUsageDaily(
   return {
     used: existing.used || incoming.used,
     usageBucket: incomingRank > existingRank ? incoming.usageBucket : existing.usageBucket,
-    estimatedMinutesMin: maxNullableNumber(existing.estimatedMinutesMin, incoming.estimatedMinutesMin),
-    estimatedMinutesMax: maxNullableNumber(existing.estimatedMinutesMax, incoming.estimatedMinutesMax),
+    estimatedMinutesMin: maxNullableNumber(
+      existing.estimatedMinutesMin,
+      incoming.estimatedMinutesMin,
+    ),
+    estimatedMinutesMax: maxNullableNumber(
+      existing.estimatedMinutesMax,
+      incoming.estimatedMinutesMax,
+    ),
     source: incomingRank > existingRank ? incoming.source : existing.source,
   };
 }
@@ -72,56 +79,54 @@ export async function upsertUsageDailyBatch(
   items: NormalizedUsageDaily[],
   db: Db = prisma,
 ): Promise<UpsertUsageResult> {
-  const subscriptionIds = [...new Set(items.map((item) => item.subscriptionId))];
-  if (subscriptionIds.length > 0) {
-    const ownedSubscriptions = await db.subscription.findMany({
-      where: { userId, id: { in: subscriptionIds } },
-      select: { id: true },
-    });
-    if (ownedSubscriptions.length !== subscriptionIds.length) {
-      throw new UsageSubscriptionNotFoundError();
+  return db.$transaction(async (tx: TransactionDb) => {
+    const subscriptionIds = [...new Set(items.map((item) => item.subscriptionId))];
+    if (subscriptionIds.length > 0) {
+      const ownedSubscriptions = await tx.subscription.findMany({
+        where: { userId, id: { in: subscriptionIds } },
+        select: { id: true },
+      });
+      if (ownedSubscriptions.length !== subscriptionIds.length) {
+        throw new UsageSubscriptionNotFoundError();
+      }
     }
-  }
 
-  for (const item of items) {
-    const where = {
-      subscriptionId_usageDate: {
-        subscriptionId: item.subscriptionId,
-        usageDate: item.usageDate,
-      },
-    };
-    const existing = await db.iosUsageDailySummary.findUnique({
-      where,
-      select: {
-        used: true,
-        usageBucket: true,
-        estimatedMinutesMin: true,
-        estimatedMinutesMax: true,
-        source: true,
-      },
-    });
-    const merged = mergeUsageDaily(existing, item);
+    for (const item of items) {
+      const where = {
+        subscriptionId_usageDate: {
+          subscriptionId: item.subscriptionId,
+          usageDate: item.usageDate,
+        },
+      };
+      const existing = await tx.iosUsageDailySummary.findUnique({
+        where,
+        select: {
+          used: true,
+          usageBucket: true,
+          estimatedMinutesMin: true,
+          estimatedMinutesMax: true,
+          source: true,
+        },
+      });
+      const merged = mergeUsageDaily(existing, item);
 
-    await db.iosUsageDailySummary.upsert({
-      where,
-      create: {
-        userId,
-        subscriptionId: item.subscriptionId,
-        usageDate: item.usageDate,
-        ...merged,
-      },
-      update: merged,
-    });
-  }
-  return { upserted: items.length };
+      await tx.iosUsageDailySummary.upsert({
+        where,
+        create: {
+          userId,
+          subscriptionId: item.subscriptionId,
+          usageDate: item.usageDate,
+          ...merged,
+        },
+        update: merged,
+      });
+    }
+    return { upserted: items.length };
+  });
 }
 
 /** 指定サブスクの利用サマリを新しい順で取得（集計用）。 */
-export function listUsageForSubscription(
-  userId: string,
-  subscriptionId: string,
-  db: Db = prisma,
-) {
+export function listUsageForSubscription(userId: string, subscriptionId: string, db: Db = prisma) {
   return db.iosUsageDailySummary.findMany({
     where: { userId, subscriptionId },
     orderBy: { usageDate: "desc" },

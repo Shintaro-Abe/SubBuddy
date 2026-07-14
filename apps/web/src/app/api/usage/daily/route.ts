@@ -9,21 +9,19 @@ import { verifyUsageSyncToken } from "@/lib/usage-auth";
 import { usageDailyBatchSchema } from "@/schemas/usage";
 import { normalizeUsageBatch } from "@/domain/usage/normalize";
 import { upsertUsageDailyBatch, UsageSubscriptionNotFoundError } from "@/repositories/usage";
+import { parseAuthConfig } from "@/config/auth";
 
 export const dynamic = "force-dynamic";
 
-function isCloudMode() {
-  return process.env.SUBBUDDY_MODE === "cloud-testflight" || process.env.SUBBUDDY_MODE === "production";
-}
-
 async function authenticateUsageSyncRequest(req: Request): Promise<AuthenticatedActor | null> {
   const authorization = req.headers.get("authorization");
+  const config = parseAuthConfig();
 
-  if (verifyUsageSyncToken(authorization, process.env.USAGE_SYNC_TOKEN)) {
-    return getLocalActor();
+  if (config.mode === "local") {
+    return verifyUsageSyncToken(authorization, process.env.USAGE_SYNC_TOKEN)
+      ? getLocalActor()
+      : null;
   }
-
-  if (!isCloudMode()) return null;
   return authenticateDeviceSyncToken(authorization);
 }
 

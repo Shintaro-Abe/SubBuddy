@@ -126,6 +126,8 @@ erDiagram
   users ||--o{ ios_usage_daily_summaries : has
   users ||--o{ recommendation_snapshots : has
   users ||--o{ devices : owns
+  users ||--o{ auth_sessions : has
+  devices ||--o{ auth_sessions : binds
   subscriptions ||--o{ billing_events : generates
   subscriptions ||--o{ ios_usage_daily_summaries : measured_as
   subscriptions ||--o{ recommendation_snapshots : evaluated_as
@@ -136,6 +138,8 @@ erDiagram
   users {
     string id PK
     string name
+    string apple_subject_hash UK
+    datetime last_signed_in_at
     datetime created_at
   }
   subscriptions {
@@ -194,6 +198,23 @@ erDiagram
     string token_hash UK
     datetime revoked_at
     datetime last_synced_at
+    datetime created_at
+    datetime updated_at
+  }
+  auth_sessions {
+    string id PK
+    string user_id FK
+    string client_type
+    string token_family_id
+    string refresh_token_hash UK
+    string replaced_by_session_id FK
+    string device_id FK
+    boolean remember_browser
+    datetime last_used_at
+    datetime idle_expires_at
+    datetime absolute_expires_at
+    datetime revoked_at
+    string revoke_reason
     datetime created_at
     datetime updated_at
   }
@@ -287,6 +308,14 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 クラウド配布版で、ユーザーに紐づく iPhone デバイスを表す。`token_hash` はデバイス同期トークンのハッシュであり、平文トークンは保存しない。
 `client_device_id` は iOS が端末内で生成し Keychain に保存する UUID で、同一ユーザーの同一端末登録を1レコードへ収束させるために使う（個人情報や Apple の端末識別子は使わない）。
 `revoked_at` は失効日時、`last_synced_at` は最後に利用量同期が成功した日時。ユーザーが端末を紛失した場合や再設定した場合に、トークンを失効・再発行できるようにする。
+
+#### auth_sessions（Web・iPhone認証セッション）
+
+Appleサインイン後の通常APIセッションを表す。アクセストークンは15分、更新トークンは一度だけ使えるopaque token（中身を読めないランダム値）とし、DBには`refresh_token_hash`だけを保存する。更新のたびに新しい行を作り、`replaced_by_session_id`で世代を結ぶ。使用済み更新トークンの再利用時は`token_family_id`単位で失効する。
+
+Webの保持ログインがオフならブラウザsession Cookieかつサーバー側24時間、オンなら30日未使用または発行から90日の早い方で失効する。iPhoneも30日未使用または90日最長とする。有効セッション上限は1ユーザー10件である。利用者向け一覧にはクライアント種別、任意端末名、作成日時、最終利用日時だけを返し、IPアドレスや詳細User-Agentは保存しない。
+
+Appleサインイン障害中は環境設定の障害開始時刻を基準に新規セッション交換を停止する。障害前から存在するトークン系列だけを、通常のidle/absolute期限内かつ障害開始から最大72時間まで利用できる。
 
 
 #### recommendation_snapshots（レコメンド履歴）
@@ -611,8 +640,15 @@ local mode は単一ユーザー前提、cloud-testflight / production は Apple
 | DELETE | `/api/subscriptions/{id}` | 削除 |
 | GET | `/api/summary` | 月額/年額合計・件数サマリ |
 | GET | `/api/spending/summary` | 支出サマリ：月額/年額合計・カテゴリ別内訳・月次推移（F-12） |
+| GET | `/api/auth/apple/config` | Web Appleサインインの公開設定取得 |
+| POST | `/api/auth/apple/start` | Web認証用state・nonce発行。保持ログインは初期オフ |
 | POST | `/api/auth/apple/callback` | Apple サインインのコールバック（クラウド版・Web リダイレクト用） |
 | POST | `/api/auth/apple/native` | iOS ネイティブ Sign in with Apple の identity token 検証（クラウド版・iOS 用。Web コールバックと処理分離。ADR 0004） |
+| POST | `/api/auth/refresh` | 更新トークンのローテーションとアクセストークン再発行 |
+| POST | `/api/auth/logout` | 現在セッションと紐づく端末トークンの失効 |
+| GET | `/api/sessions` | 自分の有効セッション一覧 |
+| DELETE | `/api/sessions/{id}` | 自分の指定セッションを失効 |
+| DELETE | `/api/sessions` | Apple再認証後に全セッション・全端末トークンを失効 |
 | POST | `/api/devices` | iPhone デバイス登録・同期トークン発行（クラウド版）。`clientDeviceId` がある場合、同一ユーザー・同一端末を upsert |
 | DELETE | `/api/devices/{id}` | デバイス同期トークン失効（クラウド版） |
 | POST | `/api/usage/daily` | iOS からの日別利用量集計値の同期（バッチ upsert, UC-04） |
@@ -641,7 +677,7 @@ local mode は単一ユーザー前提、cloud-testflight / production は Apple
 }
 ```
 
-- `subscriptionId × date` で upsert（冪等）。バケットは新旧の**最大値**を採用してマージする（後勝ち上書きにしない）。当日を複数回受信しても最大値へ収束する（ADR 0006）。
+- `subscriptionId × date` で upsert（冪等）。バケットは新旧の**最大値**を採用してマージする（後勝ち上書きにしない）。当日を複数回受信しても最大値へ収束する（ADR 0006）。所有権確認と全upsertは同一DB transactionで行い、別ユーザーの契約IDが1件でもあればバッチ全体を保存しない。
 - `date`（`usage_date`）は iPhone 現地時刻で確定した値をそのまま保存する。サーバー時刻で日付を作らない。
 - 詳細ログ・`FamilyActivityToken`・bundleId は受け付けない。
 - request body に `userId` は含めない。保存する `user_id` は認証境界で解決した値を使う。
@@ -667,6 +703,7 @@ Apple サインインでアカウントを作るクラウド配布版では、iO
 - `billing_events`
 - `ios_usage_daily_summaries`
 - `recommendation_snapshots`
+- `auth_sessions`
 
 `service_catalog` / `service_plans` / `service_alternatives` は共有マスタのため削除しない。削除成功後、iOS アプリは Keychain のデバイス同期トークン、App Group の対応表・未送信集計値を消去し、DeviceActivity 監視を停止する。デバイス失効（`DELETE /api/devices/{id}`）は「送信を止める」用途であり、アカウント削除とは別導線として扱う。
 

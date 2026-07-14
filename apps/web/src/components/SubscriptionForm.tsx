@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { authenticatedFetch } from "@/lib/client-api";
 import { ServiceCatalogSearch } from "./ServiceCatalogSearch";
 
 export interface SubscriptionFormValues {
@@ -88,7 +89,7 @@ export function SubscriptionForm({
     if (values.initialValueAnswer) payload.initialValueAnswer = values.initialValueAnswer;
 
     try {
-      const res = await fetch(id ? `/api/subscriptions/${id}` : "/api/subscriptions", {
+      const res = await authenticatedFetch(id ? `/api/subscriptions/${id}` : "/api/subscriptions", {
         method: id ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
@@ -159,14 +160,14 @@ export function SubscriptionForm({
             maxLength={200}
           />
         )}
-        <div className="help">
-          カタログから選ぶと、カテゴリや利用の性質が自動で入ります。
-        </div>
+        <div className="help">カタログから選ぶと、カテゴリや利用の性質が自動で入ります。</div>
       </div>
 
       {/* カテゴリ：カタログ選択時は自動設定・表示のみ */}
       <div className="field">
-        <label htmlFor="category" className="label">カテゴリ</label>
+        <label htmlFor="category" className="label">
+          カテゴリ
+        </label>
         <input
           id="category"
           className="input"
@@ -177,15 +178,15 @@ export function SubscriptionForm({
           readOnly={catalogMatched}
           placeholder="video_streaming / music / ai_tool など"
         />
-        {catalogMatched && (
-          <p className="help">カタログから自動設定されました</p>
-        )}
+        {catalogMatched && <p className="help">カタログから自動設定されました</p>}
       </div>
 
       {/* 利用の性質：カタログ選択時は自動設定、カタログ外はユーザーが選択 */}
       {!catalogMatched && (
         <div className="field">
-          <label htmlFor="usageType" className="label">利用の仕方</label>
+          <label htmlFor="usageType" className="label">
+            利用の仕方
+          </label>
           <select
             id="usageType"
             className="input"
@@ -193,7 +194,9 @@ export function SubscriptionForm({
             onChange={(e) => set("usageType", e.target.value)}
           >
             {USAGE_TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -201,7 +204,9 @@ export function SubscriptionForm({
 
       <div className="grid2">
         <div className="field">
-          <label htmlFor="amount" className="label">金額（円・整数）</label>
+          <label htmlFor="amount" className="label">
+            金額（円・整数）
+          </label>
           <input
             id="amount"
             type="number"
@@ -214,7 +219,9 @@ export function SubscriptionForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="billingCycle" className="label">課金周期</label>
+          <label htmlFor="billingCycle" className="label">
+            課金周期
+          </label>
           <select
             id="billingCycle"
             className="input"
@@ -229,7 +236,9 @@ export function SubscriptionForm({
 
       <div className="grid2">
         <div className="field">
-          <label htmlFor="nextRenewalDate" className="label">次回更新日</label>
+          <label htmlFor="nextRenewalDate" className="label">
+            次回更新日
+          </label>
           <input
             id="nextRenewalDate"
             type="date"
@@ -239,7 +248,9 @@ export function SubscriptionForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="importance" className="label">重要度</label>
+          <label htmlFor="importance" className="label">
+            重要度
+          </label>
           <div className="seg" role="group" aria-label="重要度">
             {[1, 2, 3, 4, 5].map((n) => (
               <span
@@ -307,7 +318,9 @@ export function SubscriptionForm({
       )}
 
       <div className="field">
-        <label htmlFor="cancellationUrl" className="label">解約手続き URL（任意）</label>
+        <label htmlFor="cancellationUrl" className="label">
+          解約手続き URL（任意）
+        </label>
         <input
           id="cancellationUrl"
           type="url"
@@ -319,7 +332,9 @@ export function SubscriptionForm({
       </div>
 
       <div className="field">
-        <label htmlFor="notes" className="label">メモ（任意）</label>
+        <label htmlFor="notes" className="label">
+          メモ（任意）
+        </label>
         <textarea
           id="notes"
           className="input"
@@ -332,14 +347,14 @@ export function SubscriptionForm({
 
       {id && (
         <div className="field">
-          <label htmlFor="status" className="label">状態</label>
+          <label htmlFor="status" className="label">
+            状態
+          </label>
           <select
             id="status"
             className="input"
             value={values.status}
-            onChange={(e) =>
-              set("status", e.target.value as "active" | "paused" | "canceled")
-            }
+            onChange={(e) => set("status", e.target.value as "active" | "paused" | "canceled")}
           >
             <option value="active">継続中</option>
             <option value="paused">一時停止</option>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AuthConfigError, parseAuthConfig } from "@/config/auth";
+import { AuthConfigError, isAppleOutageAccessAllowed, parseAuthConfig } from "@/config/auth";
 
 const SECRET = "c3ludGhldGljLWF1dGgtc2VjcmV0LWZvci10ZXN0cy1vbmx5LTEyMzQ1Njc4OTA";
 
@@ -10,6 +10,8 @@ function cloudEnv(
     SUBBUDDY_MODE: "cloud-testflight",
     DATABASE_URL: "postgresql://synthetic:synthetic@localhost:5432/synthetic",
     APPLE_ALLOWED_CLIENT_IDS: "com.subbuddy.web,com.subbuddy.app",
+    APPLE_CLIENT_ID: "com.subbuddy.web",
+    APPLE_REDIRECT_URI: "https://testflight.subbuddy.example/sign-in",
     APPLE_SUBJECT_HASH_SALT: "synthetic-subject-hash-salt-32-bytes",
     AUTH_TOKEN_ISSUER: "https://testflight-api.subbuddy.example",
     AUTH_TOKEN_AUDIENCE: "subbuddy-cloud-testflight",
@@ -92,5 +94,35 @@ describe("authentication runtime configuration", () => {
       }),
     );
     expect(config.mode).toBe("production");
+  });
+
+  it("Apple障害時は障害前のtoken系列だけを72時間以内で許可する", () => {
+    const config = parseAuthConfig(
+      cloudEnv({ AUTH_APPLE_OUTAGE_STARTED_AT: "2026-07-14T00:00:00.000Z" }),
+    );
+    expect(config.mode).not.toBe("local");
+    if (config.mode === "local") return;
+
+    expect(
+      isAppleOutageAccessAllowed(
+        config,
+        new Date("2026-07-13T23:00:00.000Z"),
+        new Date("2026-07-17T00:00:00.000Z"),
+      ),
+    ).toBe(true);
+    expect(
+      isAppleOutageAccessAllowed(
+        config,
+        new Date("2026-07-13T23:00:00.000Z"),
+        new Date("2026-07-17T00:00:01.000Z"),
+      ),
+    ).toBe(false);
+    expect(
+      isAppleOutageAccessAllowed(
+        config,
+        new Date("2026-07-14T00:00:01.000Z"),
+        new Date("2026-07-14T01:00:00.000Z"),
+      ),
+    ).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { daysUntil, formatDate, formatYen } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
@@ -17,7 +17,7 @@ export default async function RenewalsPage({
   const parsed = Number(daysParam);
   const days = Number.isInteger(parsed) && parsed >= 1 && parsed <= 365 ? parsed : DEFAULT_DAYS;
 
-  const rows = await getSubscriptionsWithLatestRecommendation(getCurrentUserId());
+  const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
   const upcoming = rows
     .filter((r) => r.subscription.status === "active" && r.subscription.nextRenewalDate)
     .map((r) => ({ ...r, daysUntil: daysUntil(r.subscription.nextRenewalDate) ?? -1 }))

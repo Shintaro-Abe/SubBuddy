@@ -13,11 +13,10 @@ import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
 function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   const calls: { where: unknown; update: unknown }[] = [];
   const db = {
+    $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
     subscription: {
       findMany: async (args: { where: { id: { in: string[] } } }) =>
-        ownedSubscriptionIds
-          .filter((id) => args.where.id.in.includes(id))
-          .map((id) => ({ id })),
+        ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
       findUnique: async () => null,
@@ -26,28 +25,31 @@ function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
         return {};
       },
     },
-  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+  } as unknown as Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
   return { db, calls };
 }
 
-function fakeDbWithExisting(existingByKey: Record<string, unknown>, ownedSubscriptionIds = ["sub_1", "sub_2"]) {
+function fakeDbWithExisting(
+  existingByKey: Record<string, unknown>,
+  ownedSubscriptionIds = ["sub_1", "sub_2"],
+) {
   const calls: { where: unknown; update: unknown }[] = [];
   const db = {
+    $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
     subscription: {
       findMany: async (args: { where: { id: { in: string[] } } }) =>
-        ownedSubscriptionIds
-          .filter((id) => args.where.id.in.includes(id))
-          .map((id) => ({ id })),
+        ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findUnique: async (args: { where: { subscriptionId_usageDate: { subscriptionId: string } } }) =>
-        existingByKey[args.where.subscriptionId_usageDate.subscriptionId] ?? null,
+      findUnique: async (args: {
+        where: { subscriptionId_usageDate: { subscriptionId: string } };
+      }) => existingByKey[args.where.subscriptionId_usageDate.subscriptionId] ?? null,
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
       },
     },
-  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+  } as unknown as Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
   return { db, calls };
 }
 

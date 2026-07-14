@@ -13,6 +13,8 @@ const modeSchema = z.enum(["local", ...CLOUD_MODES]);
 const cloudEnvironmentSchema = z.object({
   DATABASE_URL: z.string().min(1),
   APPLE_ALLOWED_CLIENT_IDS: z.string().min(1),
+  APPLE_CLIENT_ID: z.string().min(1),
+  APPLE_REDIRECT_URI: z.string().url(),
   APPLE_SUBJECT_HASH_SALT: z.string().min(32),
   AUTH_TOKEN_ISSUER: z.string().url(),
   AUTH_TOKEN_AUDIENCE: z.string().min(1),
@@ -26,6 +28,7 @@ const cloudEnvironmentSchema = z.object({
     .int()
     .min(0)
     .max(MAX_APPLE_OUTAGE_GRACE_SECONDS),
+  AUTH_APPLE_OUTAGE_STARTED_AT: z.string().datetime().optional(),
   AUTH_ACCESS_COOKIE_NAME: z.string().min(1),
   AUTH_REFRESH_COOKIE_NAME: z.string().min(1),
   AUTH_CSRF_COOKIE_NAME: z.string().min(1),
@@ -42,6 +45,8 @@ export type CloudAuthConfig = {
   mode: CloudMode;
   databaseUrl: string;
   appleAllowedClientIds: string[];
+  appleWebClientId: string;
+  appleRedirectUri: string;
   appleSubjectHashSalt: string;
   tokenIssuer: string;
   tokenAudience: string;
@@ -51,6 +56,7 @@ export type CloudAuthConfig = {
   idleTtlSeconds: number;
   absoluteTtlSeconds: number;
   appleOutageGraceSeconds: number;
+  appleOutageStartedAt: Date | null;
   accessCookieName: string;
   refreshCookieName: string;
   csrfCookieName: string;
@@ -123,8 +129,9 @@ function assertCookieNames(mode: CloudMode, names: string[]) {
     throw new AuthConfigError("authentication cookie names must be unique");
   }
   const prefix = mode === "production" ? "__Host-subbuddy-" : "__Host-subbuddy-testflight-";
-  if (names.some((name) => !name.startsWith(prefix))) {
-    throw new AuthConfigError(`authentication cookie names must start with ${prefix}`);
+  const expected = [`${prefix}access`, `${prefix}refresh`, `${prefix}csrf`];
+  if (names.some((name, index) => name !== expected[index])) {
+    throw new AuthConfigError(`authentication cookie names must be ${expected.join(", ")}`);
   }
 }
 
@@ -149,6 +156,13 @@ export function parseAuthConfig(env: Environment = process.env): AuthConfig {
   if (appleAllowedClientIds.length < 2) {
     throw new AuthConfigError("APPLE_ALLOWED_CLIENT_IDS must contain Web and iOS identifiers");
   }
+  if (!appleAllowedClientIds.includes(values.APPLE_CLIENT_ID)) {
+    throw new AuthConfigError("APPLE_CLIENT_ID must be included in APPLE_ALLOWED_CLIENT_IDS");
+  }
+  const appleRedirectUri = new URL(values.APPLE_REDIRECT_URI);
+  if (appleRedirectUri.protocol !== "https:") {
+    throw new AuthConfigError("APPLE_REDIRECT_URI must use HTTPS");
+  }
   const cookieNames = [
     values.AUTH_ACCESS_COOKIE_NAME,
     values.AUTH_REFRESH_COOKIE_NAME,
@@ -160,6 +174,8 @@ export function parseAuthConfig(env: Environment = process.env): AuthConfig {
     mode: parsedMode.data,
     databaseUrl: values.DATABASE_URL,
     appleAllowedClientIds,
+    appleWebClientId: values.APPLE_CLIENT_ID,
+    appleRedirectUri: appleRedirectUri.toString(),
     appleSubjectHashSalt: values.APPLE_SUBJECT_HASH_SALT,
     tokenIssuer: values.AUTH_TOKEN_ISSUER,
     tokenAudience: values.AUTH_TOKEN_AUDIENCE,
@@ -169,6 +185,9 @@ export function parseAuthConfig(env: Environment = process.env): AuthConfig {
     idleTtlSeconds: values.AUTH_IDLE_TTL_SECONDS,
     absoluteTtlSeconds: values.AUTH_ABSOLUTE_TTL_SECONDS,
     appleOutageGraceSeconds: values.AUTH_APPLE_OUTAGE_GRACE_SECONDS,
+    appleOutageStartedAt: values.AUTH_APPLE_OUTAGE_STARTED_AT
+      ? new Date(values.AUTH_APPLE_OUTAGE_STARTED_AT)
+      : null,
     accessCookieName: values.AUTH_ACCESS_COOKIE_NAME,
     refreshCookieName: values.AUTH_REFRESH_COOKIE_NAME,
     csrfCookieName: values.AUTH_CSRF_COOKIE_NAME,
@@ -178,4 +197,16 @@ export function parseAuthConfig(env: Environment = process.env): AuthConfig {
 
 export function validateRuntimeConfiguration(env: Environment = process.env): void {
   parseAuthConfig(env);
+}
+
+export function isAppleOutageAccessAllowed(
+  config: CloudAuthConfig,
+  tokenFamilyCreatedAt: Date,
+  now = new Date(),
+): boolean {
+  if (!config.appleOutageStartedAt) return true;
+  const deadline = new Date(
+    config.appleOutageStartedAt.getTime() + config.appleOutageGraceSeconds * 1000,
+  );
+  return tokenFamilyCreatedAt <= config.appleOutageStartedAt && now <= deadline;
 }

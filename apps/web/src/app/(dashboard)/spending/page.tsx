@@ -1,4 +1,4 @@
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { listSubscriptions } from "@/repositories/subscriptions";
 import { aggregateSpending } from "@/domain/spending/aggregate";
 import { categoryLabel, formatYen } from "@/lib/display";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * 仕上げのデザインは別途。ここでは集計結果が正しく出ることの確認を優先する。
  */
 export default async function SpendingPage() {
-  const subs = await listSubscriptions(getCurrentUserId());
+  const subs = await listSubscriptions(await requireServerUserId());
   const summary = aggregateSpending(
     subs.map((s) => ({
       amount: s.amount,
@@ -29,7 +29,8 @@ export default async function SpendingPage() {
     <>
       <p className="display">支出の内訳</p>
       <p className="caption" style={{ marginTop: 8 }}>
-        継続中 <span className="num">{summary.activeCount}</span> 件の支出を、合計・内訳・推移で見ています。
+        継続中 <span className="num">{summary.activeCount}</span>{" "}
+        件の支出を、合計・内訳・推移で見ています。
       </p>
 
       {/* 合計 */}

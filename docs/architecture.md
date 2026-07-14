@@ -123,7 +123,7 @@ SubBuddy は **同一コードベースを実行モードで切り替える**。
 
 実行モードは `SUBBUDDY_MODE` で切り替える。値は `local` / `cloud-testflight` / `production` のいずれかとする。`local` では `USAGE_SYNC_TOKEN` による互換同期を使い、`cloud-testflight` / `production` では Apple サインインとデバイス同期トークンを使う。
 
-Apple サインインに必要な `APPLE_TEAM_ID`、`APPLE_CLIENT_ID`、`APPLE_KEY_ID`、`APPLE_PRIVATE_KEY`、`APPLE_REDIRECT_URI` は `.env` または PaaS の secret store に置く。実値をリポジトリにコミットしない。
+Apple サインインに必要な `APPLE_TEAM_ID`、`APPLE_CLIENT_ID`、`APPLE_KEY_ID`、`APPLE_PRIVATE_KEY`、`APPLE_REDIRECT_URI` と、認証署名鍵・Cookie名・許可Originは `.env` または PaaS の secret store に置く。TestFlightとproductionでDB、署名鍵、Cookie名、Apple設定を共有せず、実値をリポジトリにコミットしない。
 
 ### 4.1 local mode：ローカル運用（localhost）
 
@@ -177,7 +177,7 @@ flowchart LR
 ## 5. データ層・永続化
 
 - **ORM**：Prisma。スキーマ（`schema.prisma`）を単一ソースとし、マイグレーションで DB を管理。
-- **テーブル**：`users / devices / subscriptions / billing_events / ios_usage_daily_summaries / recommendation_snapshots / service_catalog / service_plans / service_alternatives`（定義は `functional-design.md` 5）。
+- **テーブル**：`users / devices / auth_sessions / subscriptions / billing_events / ios_usage_daily_summaries / recommendation_snapshots / service_catalog / service_plans / service_alternatives`（定義は `functional-design.md` 5）。
 - **冪等同期**：`ios_usage_daily_summaries` は `(subscription_id, usage_date)` を一意キーに upsert（機能設計 4.1 / 10.1）。
 - **履歴保持**：`recommendation_snapshots` はスコアリング結果を追記（履歴）として保存し、判定の推移を追える。
 - **金額の扱い**：金額は**整数（最小通貨単位）**で保持し浮動小数の誤差を避ける。通貨は既定 JPY。
@@ -258,7 +258,13 @@ type AuthenticatedActor =
 - サーバーの Apple token 検証は、署名検証・`iss = https://appleid.apple.com` に加えて `aud ∈ { com.subbuddy.web, com.subbuddy.app }` を許可リストで検証する。許可リスト外の `aud` は拒否する（ADR 0004）。
 - iOS 用はネイティブ検証専用エンドポイント（`POST /api/auth/apple/native`）を設け、Web リダイレクト用コールバック（`POST /api/auth/apple/callback`）と処理を分離する。
 - Apple の stable identifier と SubBuddy の `users.id` を紐付ける。メールアドレスは変更・非公開があり得るため、必須識別子にしない。
-- Web/API はセッションから `AuthenticatedActor.kind = "user"` を解決する。
+- Apple identity tokenは初回ログインと再認証だけで検証する。成功後は15分の署名付きアクセストークンと、一度だけ使える更新トークンへ交換する。
+- 更新トークンはローテーションし、使用済みトークンが再提示された場合は同じトークン系列を失効する。サーバーにはSHA-256ハッシュだけを保存する。
+- Webはアクセストークンと更新トークンを`HttpOnly`・`Secure`・`SameSite=Lax` Cookieへ保存する。変更操作は許可Originの完全一致とCSRF tokenの同値確認を必須にする。
+- iPhoneは更新トークンとセッションIDを`ThisDeviceOnly`のKeychainへ保存し、アクセストークンはメモリだけに置く。401時は更新処理を1つにまとめ、元の操作を1回だけ再試行する。
+- セッションは最大10件とし、一覧、個別失効、現在のサインアウト、全サインアウトを提供する。セッションに紐づく端末を失効した場合はデバイス同期トークンも失効する。
+- Appleサインイン障害時は運用者が環境別の障害開始時刻を設定する。新規ログインを停止し、障害前から存在するトークン系列だけを元の期限内かつ開始から最大72時間まで継続する。復旧後は障害開始時刻を解除する。
+- Web/API は有効なセッションから `AuthenticatedActor.kind = "user"` を解決する。`cloud-testflight`と`production`では認証失敗時に固定ユーザーへ戻らない。
 - ユーザー操作 API は、クライアント指定の `userId` を信じず、認証済み `userId` で DB 操作する。
 
 #### 8.1.3 デバイス同期トークン

@@ -1,13 +1,24 @@
-import { getCurrentUserId } from "@/lib/user";
-import { ok, created, fromZodError, badRequest, serverError } from "@/lib/api";
+import { parseAuthConfig } from "@/config/auth";
+import {
+  ok,
+  created,
+  fromZodError,
+  badRequest,
+  forbidden,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
+import { authenticateRequest, authorizeStateChange } from "@/lib/auth";
 import { subscriptionCreateSchema } from "@/schemas/subscription";
 import { createSubscription, listSubscriptions } from "@/repositories/subscriptions";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const subs = await listSubscriptions(getCurrentUserId());
+    const auth = await authenticateRequest(req);
+    if (!auth) return unauthorized();
+    const subs = await listSubscriptions(auth.actor.userId);
     return ok({ items: subs });
   } catch {
     return serverError();
@@ -15,6 +26,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const config = parseAuthConfig();
+  const auth = await authenticateRequest(req);
+  if (!auth) return unauthorized();
+  if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
   let body: unknown;
   try {
     body = await req.json();
@@ -25,7 +40,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const sub = await createSubscription(getCurrentUserId(), parsed.data);
+    const sub = await createSubscription(auth.actor.userId, parsed.data);
     return created(sub);
   } catch {
     return serverError();

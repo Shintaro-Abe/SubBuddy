@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscription } from "@/repositories/subscriptions";
 import { SubscriptionForm } from "@/components/SubscriptionForm";
 
@@ -11,7 +11,7 @@ export default async function EditSubscriptionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const s = await getSubscription(getCurrentUserId(), id);
+  const s = await getSubscription(await requireServerUserId(), id);
   if (!s) notFound();
 
   return (
@@ -29,9 +29,7 @@ export default async function EditSubscriptionPage({
           category: s.category,
           amount: s.amount,
           billingCycle: s.billingCycle,
-          nextRenewalDate: s.nextRenewalDate
-            ? s.nextRenewalDate.toISOString().slice(0, 10)
-            : "",
+          nextRenewalDate: s.nextRenewalDate ? s.nextRenewalDate.toISOString().slice(0, 10) : "",
           importance: s.importance,
           cancellationUrl: s.cancellationUrl ?? "",
           notes: s.notes ?? "",

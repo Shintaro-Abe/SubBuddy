@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { authenticatedFetch } from "@/lib/client-api";
 
 /**
  * 全件再計算ボタン。/api/recommendations/recompute を叩いて結果を反映する。
@@ -15,7 +16,7 @@ export function RecomputeButton() {
   async function handleClick() {
     setLoading(true);
     try {
-      const res = await fetch("/api/recommendations/recompute", { method: "POST" });
+      const res = await authenticatedFetch("/api/recommendations/recompute", { method: "POST" });
       if (!res.ok) throw new Error("recompute failed");
       startTransition(() => router.refresh());
     } catch {

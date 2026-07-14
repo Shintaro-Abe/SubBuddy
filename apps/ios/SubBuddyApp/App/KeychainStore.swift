@@ -6,6 +6,9 @@ final class KeychainStore {
         case clientDeviceId = "client_device_id"
         case deviceId = "device_id"
         case deviceSyncToken = "device_sync_token"
+        case accessToken = "auth_access_token"
+        case refreshToken = "auth_refresh_token"
+        case sessionId = "auth_session_id"
     }
 
     private let service = "com.subbuddy.app"

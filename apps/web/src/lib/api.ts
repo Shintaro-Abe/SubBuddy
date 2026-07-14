@@ -28,6 +28,18 @@ export function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 
+export function forbidden() {
+  return NextResponse.json({ error: "forbidden" }, { status: 403 });
+}
+
+export function conflict(message = "conflict") {
+  return NextResponse.json({ error: message }, { status: 409 });
+}
+
+export function serviceUnavailable() {
+  return NextResponse.json({ error: "service unavailable" }, { status: 503 });
+}
+
 export function notFound(message = "not found") {
   return NextResponse.json({ error: message }, { status: 404 });
 }

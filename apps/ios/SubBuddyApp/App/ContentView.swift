@@ -24,7 +24,8 @@ struct ContentView: View {
                 }
 
                 Section("Account") {
-                    SignInWithAppleButton(.signIn) { _ in
+                    SignInWithAppleButton(.signIn) { request in
+                        authSession.prepareAppleAuthorizationRequest(request)
                     } onCompletion: { result in
                         Task {
                             switch result {
