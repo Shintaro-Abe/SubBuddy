@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { erDiagram } from './diagrams';
 import { generateGantt } from './gantt';
 import { diffIssues, extractWbsId, issueBody, type GitHubIssue } from './issues';
+import { mergeSingleSelectOptions } from './project';
 import type { Task } from '../types';
 
 function task(p: Partial<Task> & { id: string; name?: string }): Task {
@@ -48,6 +49,12 @@ describe('github issue sync helpers', () => {
     expect(diffs[0]!.type).toBe('unchanged');
   });
 
+  it('Project自動化で閉じた完了Issueを再オープンしない', () => {
+    const t = task({ id: '1', name: 'テストタスク', status: '完了', progress: 100 });
+    const diffs = diffIssues([t], [issue({ body: issueBody(t), state: 'closed' })]);
+    expect(diffs[0]!.type).toBe('unchanged');
+  });
+
   it('GitHub から消えたタスクは add になる', () => {
     const diffs = diffIssues([task({ id: '1' })], []);
     expect(diffs[0]!.type).toBe('add');
@@ -78,5 +85,19 @@ model Subscription {
     expect(doc).toContain('erDiagram');
     expect(doc).toContain('User {');
     expect(doc).toContain('Subscription {');
+  });
+});
+
+describe('github project sync helpers', () => {
+  it('既存選択肢のIDを維持して不足する選択肢だけを追加する', () => {
+    expect(
+      mergeSingleSelectOptions(
+        [{ id: 'phase-1', name: '実装', color: 'BLUE', description: '既存' }],
+        ['実装', '検証'],
+      ),
+    ).toEqual([
+      { id: 'phase-1', name: '実装', color: 'BLUE', description: '既存' },
+      { name: '検証', color: 'BLUE', description: '' },
+    ]);
   });
 });

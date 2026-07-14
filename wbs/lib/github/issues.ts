@@ -97,7 +97,6 @@ export function diffIssues(
     const changedFields: string[] = [];
     if (current.title !== expectedTitle) changedFields.push('title');
     if ((current.body ?? '').trim() !== expectedBody.trim()) changedFields.push('body');
-    if (current.state === 'closed') changedFields.push('state');
     diffs.push({
       id,
       type: changedFields.length ? 'update' : 'unchanged',
@@ -159,7 +158,7 @@ export function applyIssueDiffs(
     }
     if (!diff.task) continue;
 
-    const body = { title: issueTitle(diff.task, keyField), body: issueBody(diff.task, keyField), state: 'open' };
+    const body = { title: issueTitle(diff.task, keyField), body: issueBody(diff.task, keyField) };
     if (diff.type === 'add') {
       const issue = ghApiJson<GitHubIssue>(`repos/${owner}/${name}/issues`, { method: 'POST', body });
       writes += 1;
