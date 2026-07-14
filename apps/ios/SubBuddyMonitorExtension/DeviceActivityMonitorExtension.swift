@@ -9,7 +9,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         _ event: DeviceActivityEvent.Name,
         activity: DeviceActivityName
     ) {
-        let today = Self.todayString()
+        let today = AppConstants.localDateString()
         let bucket = Self.bucketFromEventId(event.rawValue)
 
         let store = SharedStore()
@@ -32,13 +32,6 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         logger.info("interval ended: \(activity.rawValue)")
-    }
-
-    private static func todayString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-        return formatter.string(from: Date())
     }
 
     private static func bucketFromEventId(_ eventId: String) -> UsageBucket {

@@ -27,33 +27,36 @@ final class UsageSyncService {
             throw SyncError.deviceSyncTokenMissing
         }
 
-        let today = Self.todayString()
+        let today = AppConstants.localDateString()
         let records = store.readAll()
         guard !records.isEmpty else { return 0 }
 
-        let items = records.compactMap { record -> UsageItem? in
+        let mappedRecords = records.compactMap { record -> (UsageRecord, UsageItem)? in
             guard let subscriptionId = mappingStore.subscriptionId(for: record.activityId) else {
                 return nil
             }
 
-            return UsageItem(
-                subscriptionId: subscriptionId,
-                date: record.date,
-                used: record.bucket != .none,
-                usageBucket: record.bucket.wireValue,
-                estimatedMinutesMin: record.bucket.lowerMinutes,
-                estimatedMinutesMax: record.bucket.upperMinutes,
-                source: "ios_device_activity"
+            return (
+                record,
+                UsageItem(
+                    subscriptionId: subscriptionId,
+                    date: record.date,
+                    used: record.bucket != .none,
+                    usageBucket: record.bucket.wireValue,
+                    estimatedMinutesMin: record.bucket.lowerMinutes,
+                    estimatedMinutesMax: record.bucket.upperMinutes,
+                    source: "ios_device_activity"
+                )
             )
         }
+        let items = mappedRecords.map { $0.1 }
 
         guard !items.isEmpty else { return 0 }
 
         try await send(BatchPayload(items: items), apiBaseURL: apiBaseURL, deviceSyncToken: deviceSyncToken)
 
-        for record in records where record.date < today {
-            store.remove(activityId: record.activityId, date: record.date)
-        }
+        let acknowledgedPastRecords = mappedRecords.map { $0.0 }.filter { $0.date < today }
+        store.removeAcknowledged(acknowledgedPastRecords)
 
         return items.count
     }
@@ -75,13 +78,6 @@ final class UsageSyncService {
         guard (200...299).contains(httpResponse.statusCode) else {
             throw SyncError.httpStatus(httpResponse.statusCode)
         }
-    }
-
-    private static func todayString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-        return formatter.string(from: Date())
     }
 }
 

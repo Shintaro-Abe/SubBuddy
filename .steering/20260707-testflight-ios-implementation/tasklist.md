@@ -20,6 +20,7 @@
 | T-10 | 開発実機で一気通貫確認を実施 | AC-10 | 完了 | Render DBでデバイス登録済みuser_idに紐づく開発用subscriptionを用意し、サインイン→デバイス登録→計測対象選択→集計→送信が通ることを確認済み |
 | T-11 | Xcode build / Archive / codesign と secret 非漏洩確認を実施 | AC-11, AC-12 | 未着手 | build 成功、entitlement 確認、ログ・差分に token / PII なし |
 | T-12 | 一気通貫成立後に7日連続計測を開始し、開始日と観測方法を記録 | AC-10, AC-12 | 未着手 | 開始日、端末、対象サブスク、観測ルールが tasklist に追記されている |
+| T-13 | Greptileレビューのデータ整合性・PII・通信経路指摘を修正 | AC-7, AC-8, AC-12 | 進行中 | App Groupのプロセス間競合を防ぎ、送信済みの同一版だけを削除し、端末名PIIを送らず、API URLをHTTPSに限定する。Mac/Xcodeで単体テストを実行する |
 
 状態: 未着手 / 進行中 / 完了 / 保留
 
@@ -32,6 +33,7 @@
 - 2026-07-11: 実機監視開始時に `CFPrefsPlistSource ... group.com.subbuddy.app` 警告を確認。監視記録自体は共有ファイル方式だが、subscriptionId対応表が `UserDefaults(suiteName:)` 依存だと同期0件のリスクがあるため、対応表もApp Group共有ファイルへ変更し、保存失敗時は監視開始しないよう補強した。
 - 2026-07-11: E2E確認では当日分が見えないと検証価値が低いため、iOS同期対象を「過去日分のみ」から「当日分を含む全ローカルレコード」に変更。Web側は同一日を最大バケットへ冪等マージするため、当日レコードは削除せず再送可能にし、過去日分のみ送信後に削除する。
 - 2026-07-11: 手順書 `manuals/ios-render-e2e-testflight-prep.md` の「15-1. Render DBで同期結果を確認する」まで完了。Render Shellの `apps/web` 配下でPrisma確認を実行し、`sub_dev_netflix_001` / `2026-07-11` / `m60_plus` / `ios_device_activity` の保存を確認した。
+- 2026-07-14: PR #5はコミットが後続のローカル`main`へ取り込み済みだったため、履歴分岐を避けてマージせずCloseした。Greptile指摘をT-13として現行コードで対応。`SharedStore`の全読み書きを`NSFileCoordinator`配下へ移し、同期時のスナップショットと同一の過去日レコードだけを一括削除する。未対応付けレコードと送信中に更新されたレコードは保持する。端末名は固定の一般名、API URLはHTTPS限定とした。15/30/60/120分とiPhone現地日付は承認済み設計を維持し、日付生成を共通化した。
 
 ## 外部準備ログ
 

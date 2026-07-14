@@ -78,12 +78,29 @@ targets:
         com.apple.security.application-groups:
           - group.com.subbuddy.app
 
+  SubBuddyAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: SubBuddyAppTests
+    dependencies:
+      - target: SubBuddyApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   SubBuddyApp:
     build:
       targets:
         SubBuddyApp: all
         SubBuddyMonitorExtension: all
+        SubBuddyAppTests: [test]
+    test:
+      config: Debug
+      targets:
+        - SubBuddyAppTests
     run:
       config: Debug
       executable: SubBuddyApp

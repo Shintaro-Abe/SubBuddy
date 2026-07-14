@@ -7,7 +7,6 @@ final class AuthSession: ObservableObject {
     @Published private(set) var statusMessage = "Not signed in"
     @Published private(set) var isSignedIn = false
     @Published private(set) var deviceId: String?
-    @Published private(set) var userId: String?
     @Published private(set) var isWorking = false
 
     private let keychain = KeychainStore()
@@ -55,13 +54,11 @@ final class AuthSession: ObservableObject {
             let registration = try await client.registerDevice(
                 identityToken: identityToken,
                 clientDeviceId: clientDeviceId,
-                name: UIDevice.current.name
+                name: AppConstants.defaultDeviceName
             )
 
             try keychain.set(registration.deviceSyncToken, for: .deviceSyncToken)
             try keychain.set(registration.device.id, for: .deviceId)
-
-            userId = signIn.actor.userId
             deviceId = registration.device.id
             isSignedIn = true
             statusMessage = "Signed in and device registered"

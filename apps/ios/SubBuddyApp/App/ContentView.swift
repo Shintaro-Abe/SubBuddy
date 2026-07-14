@@ -3,6 +3,7 @@ import FamilyControls
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @StateObject private var authSession = AuthSession()
     @StateObject private var measurementSession = MeasurementSession()
@@ -109,6 +110,10 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("SubBuddy")
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            authorizationStatus = AuthorizationCenter.shared.authorizationStatus
         }
     }
 
