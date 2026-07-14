@@ -47,8 +47,7 @@ export async function DELETE(req: Request) {
 
     const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
       allowedClientIds: config.appleAllowedClientIds,
-      expectedNonce:
-        auth.transport === "bearer" ? hashAppleNonce(parsed.data.nonce) : parsed.data.nonce,
+      expectedNonce: hashAppleNonce(parsed.data.nonce),
       subjectHashSalt: config.appleSubjectHashSalt,
     });
     if (!(await appleIdentityBelongsToUser(identity, auth.actor.userId))) return unauthorized();

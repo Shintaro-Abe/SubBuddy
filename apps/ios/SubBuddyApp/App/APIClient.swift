@@ -101,10 +101,13 @@ actor APIClient {
             refreshTask = nil
             try applySession(session)
             return session
-        } catch {
+        } catch APIError.httpStatus(let statusCode) where statusCode == 401 || statusCode == 403 {
             refreshTask = nil
             clearSession()
             throw APIError.reauthenticationRequired
+        } catch {
+            refreshTask = nil
+            throw error
         }
     }
 

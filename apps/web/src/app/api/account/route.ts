@@ -39,8 +39,7 @@ export async function DELETE(req: Request) {
       if (!parsed.data.nonce) return unauthorized();
       const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
         allowedClientIds: config.appleAllowedClientIds,
-        expectedNonce:
-          auth.transport === "bearer" ? hashAppleNonce(parsed.data.nonce) : parsed.data.nonce,
+        expectedNonce: hashAppleNonce(parsed.data.nonce),
         subjectHashSalt: config.appleSubjectHashSalt,
       });
       if (!(await appleIdentityBelongsToUser(identity, auth.actor.userId))) return unauthorized();
@@ -51,7 +50,7 @@ export async function DELETE(req: Request) {
     }
 
     const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
-      expectedNonce: parsed.data.nonce,
+      expectedNonce: parsed.data.nonce ? hashAppleNonce(parsed.data.nonce) : undefined,
     });
     const deleted = await deleteAppleUserAccount(identity);
     return ok({ deleted });

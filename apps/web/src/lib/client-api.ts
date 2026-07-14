@@ -2,10 +2,15 @@
 
 let refreshInFlight: Promise<boolean> | null = null;
 
-function csrfTokenFromCookie(): string | null {
-  for (const part of document.cookie.split(";")) {
+const CSRF_COOKIE_NAMES = new Set([
+  "__Host-subbuddy-testflight-csrf",
+  "__Host-subbuddy-csrf",
+]);
+
+export function csrfTokenFromCookie(cookieHeader = document.cookie): string | null {
+  for (const part of cookieHeader.split(";")) {
     const [rawName, ...valueParts] = part.trim().split("=");
-    if (rawName.endsWith("-csrf")) return valueParts.join("=") || null;
+    if (CSRF_COOKIE_NAMES.has(rawName)) return valueParts.join("=") || null;
   }
   return null;
 }

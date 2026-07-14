@@ -19,6 +19,7 @@ vi.mock("@/services/auth", async (importOriginal) => ({
 }));
 
 import { POST } from "./route";
+import { hashAppleNonce } from "@/lib/apple-auth";
 
 const config = {
   mode: "cloud-testflight",
@@ -79,7 +80,7 @@ describe("POST /api/auth/apple/callback", () => {
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(mocks.verifyAppleIdentityToken).toHaveBeenCalledWith("synthetic.identity.token", {
       allowedClientIds: config.appleAllowedClientIds,
-      expectedNonce: nonce,
+      expectedNonce: hashAppleNonce(nonce),
       subjectHashSalt: config.appleSubjectHashSalt,
     });
   });

@@ -10,7 +10,11 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { hasAllowedOrigin, readCookie } from "@/lib/auth";
-import { AppleIdentityTokenError, verifyAppleIdentityToken } from "@/lib/apple-auth";
+import {
+  AppleIdentityTokenError,
+  hashAppleNonce,
+  verifyAppleIdentityToken,
+} from "@/lib/apple-auth";
 import {
   AppleOutageError,
   exchangeAppleIdentityForSession,
@@ -37,7 +41,7 @@ export async function POST(req: Request) {
     const config = parseAuthConfig();
     if (config.mode === "local") {
       const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
-        expectedNonce: parsed.data.nonce,
+        expectedNonce: parsed.data.nonce ? hashAppleNonce(parsed.data.nonce) : undefined,
       });
       const actor = await upsertAppleUser(identity);
       return ok({ actor, redirectTo: "/" });
@@ -61,7 +65,7 @@ export async function POST(req: Request) {
 
     const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
       allowedClientIds: config.appleAllowedClientIds,
-      expectedNonce: nonce,
+      expectedNonce: hashAppleNonce(nonce),
       subjectHashSalt: config.appleSubjectHashSalt,
     });
     const result = await exchangeAppleIdentityForSession(
