@@ -88,7 +88,6 @@ final class AuthSession: ObservableObject {
         } catch {
             if let apiError = error as? APIError, case .reauthenticationRequired = apiError {
                 isSignedIn = false
-                userId = nil
                 statusMessage = "Sign in with Apple is required again"
             } else {
                 statusMessage = "Sign in failed: \(error.localizedDescription)"

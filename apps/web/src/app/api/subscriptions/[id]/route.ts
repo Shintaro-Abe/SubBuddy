@@ -34,20 +34,21 @@ export async function GET(req: Request, { params }: Ctx) {
 
 export async function PUT(req: Request, { params }: Ctx) {
   const { id } = await params;
-  const config = parseAuthConfig();
-  const auth = await authenticateRequest(req);
-  if (!auth) return unauthorized();
-  if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
-  let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return badRequest("request body must be valid JSON");
-  }
-  const parsed = subscriptionUpdateSchema.safeParse(body);
-  if (!parsed.success) return fromZodError(parsed.error);
+    const config = parseAuthConfig();
+    const auth = await authenticateRequest(req);
+    if (!auth) return unauthorized();
+    if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
 
-  try {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return badRequest("request body must be valid JSON");
+    }
+    const parsed = subscriptionUpdateSchema.safeParse(body);
+    if (!parsed.success) return fromZodError(parsed.error);
+
     const updated = await updateSubscription(auth.actor.userId, id, parsed.data);
     return updated ? ok(updated) : notFound();
   } catch {

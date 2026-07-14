@@ -28,24 +28,31 @@ actor APIClient {
     }
 
     func registerDevice(identityToken: String, clientDeviceId: String, name: String) async throws -> DeviceRegistrationResponse {
-        let body = DeviceRegistrationRequest(
-            identityToken: identityToken,
-            name: name,
-            clientDeviceId: clientDeviceId
-        )
         if accessToken != nil || (try keychain.string(for: .refreshToken)) != nil {
-            return try await sendAuthenticated(path: "/api/devices", method: "POST", body: body)
+            return try await sendAuthenticated(
+                path: "/api/devices",
+                method: "POST",
+                body: AuthenticatedDeviceRegistrationRequest(name: name, clientDeviceId: clientDeviceId)
+            )
         }
-        return try await send(path: "/api/devices", method: "POST", body: body)
+        return try await send(
+            path: "/api/devices",
+            method: "POST",
+            body: LocalDeviceRegistrationRequest(
+                identityToken: identityToken,
+                name: name,
+                clientDeviceId: clientDeviceId
+            )
+        )
     }
 
     func signOut() async throws {
+        defer { clearSession() }
         let _: SignOutResponse = try await sendAuthenticated(
             path: "/api/auth/logout",
             method: "POST",
             body: EmptyRequest()
         )
-        clearSession()
     }
 
     private func sendAuthenticated<RequestBody: Encodable, ResponseBody: Decodable>(
@@ -179,8 +186,13 @@ struct RefreshResponse: Decodable {
     let session: AppleSignInResponse.Session
 }
 
-struct DeviceRegistrationRequest: Encodable {
+struct LocalDeviceRegistrationRequest: Encodable {
     let identityToken: String
+    let name: String
+    let clientDeviceId: String
+}
+
+struct AuthenticatedDeviceRegistrationRequest: Encodable {
     let name: String
     let clientDeviceId: String
 }

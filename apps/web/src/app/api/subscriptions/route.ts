@@ -26,20 +26,21 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const config = parseAuthConfig();
-  const auth = await authenticateRequest(req);
-  if (!auth) return unauthorized();
-  if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
-  let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return badRequest("request body must be valid JSON");
-  }
-  const parsed = subscriptionCreateSchema.safeParse(body);
-  if (!parsed.success) return fromZodError(parsed.error);
+    const config = parseAuthConfig();
+    const auth = await authenticateRequest(req);
+    if (!auth) return unauthorized();
+    if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
 
-  try {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return badRequest("request body must be valid JSON");
+    }
+    const parsed = subscriptionCreateSchema.safeParse(body);
+    if (!parsed.success) return fromZodError(parsed.error);
+
     const sub = await createSubscription(auth.actor.userId, parsed.data);
     return created(sub);
   } catch {

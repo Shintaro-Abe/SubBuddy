@@ -48,7 +48,7 @@ export function authenticatedFetch(input: RequestInfo | URL, init: RequestInit =
   }
 
   return fetch(input, { ...init, headers }).then(async (response) => {
-    const target = typeof input === "string" ? input : input.toString();
+    const target = input instanceof Request ? input.url : input.toString();
     if (response.status !== 401 || target.includes("/api/auth/refresh")) return response;
 
     if (!(await refreshBrowserSession())) return response;

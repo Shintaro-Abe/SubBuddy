@@ -16,6 +16,11 @@ type UsageDailyExisting = {
   source: string;
 };
 
+type UsageDailyStored = UsageDailyExisting & {
+  subscriptionId: string;
+  usageDate: Date;
+};
+
 type TransactionDb = Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
 type Db = Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
 
@@ -34,6 +39,10 @@ function maxNullableNumber(a: number | null, b: number | null): number | null {
   if (a === null) return b;
   if (b === null) return a;
   return Math.max(a, b);
+}
+
+function usageDailyKey(subscriptionId: string, usageDate: Date): string {
+  return `${subscriptionId}:${usageDate.toISOString()}`;
 }
 
 /**
@@ -91,6 +100,31 @@ export async function upsertUsageDailyBatch(
       }
     }
 
+    const existingRows: UsageDailyStored[] =
+      items.length === 0
+        ? []
+        : await tx.iosUsageDailySummary.findMany({
+            where: {
+              userId,
+              OR: items.map((item) => ({
+                subscriptionId: item.subscriptionId,
+                usageDate: item.usageDate,
+              })),
+            },
+            select: {
+              subscriptionId: true,
+              usageDate: true,
+              used: true,
+              usageBucket: true,
+              estimatedMinutesMin: true,
+              estimatedMinutesMax: true,
+              source: true,
+            },
+          });
+    const existingByKey = new Map(
+      existingRows.map((row) => [usageDailyKey(row.subscriptionId, row.usageDate), row]),
+    );
+
     for (const item of items) {
       const where = {
         subscriptionId_usageDate: {
@@ -98,16 +132,8 @@ export async function upsertUsageDailyBatch(
           usageDate: item.usageDate,
         },
       };
-      const existing = await tx.iosUsageDailySummary.findUnique({
-        where,
-        select: {
-          used: true,
-          usageBucket: true,
-          estimatedMinutesMin: true,
-          estimatedMinutesMax: true,
-          source: true,
-        },
-      });
+      const key = usageDailyKey(item.subscriptionId, item.usageDate);
+      const existing = existingByKey.get(key) ?? null;
       const merged = mergeUsageDaily(existing, item);
 
       await tx.iosUsageDailySummary.upsert({
@@ -119,6 +145,11 @@ export async function upsertUsageDailyBatch(
           ...merged,
         },
         update: merged,
+      });
+      existingByKey.set(key, {
+        subscriptionId: item.subscriptionId,
+        usageDate: item.usageDate,
+        ...merged,
       });
     }
     return { upserted: items.length };

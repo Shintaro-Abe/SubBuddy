@@ -49,6 +49,8 @@ export type RegisteredDevice = {
 };
 
 type SessionAuthDb = Pick<typeof prisma, "$transaction" | "authSession">;
+type SessionStoreDb = Pick<typeof prisma, "authSession">;
+type DeviceStoreDb = Pick<AuthDb, "device">;
 type AppleSessionExchangeDb = Pick<AuthDb, "user"> & SessionAuthDb;
 const MAX_ACTIVE_SESSIONS = 10;
 
@@ -265,7 +267,7 @@ export async function attachDeviceToSession(
   userId: string,
   sessionId: string,
   deviceId: string,
-  db: SessionAuthDb = prisma,
+  db: SessionStoreDb = prisma,
 ): Promise<boolean> {
   const result = await db.authSession.updateMany({
     where: { id: sessionId, userId, clientType: "ios", revokedAt: null },
@@ -464,7 +466,7 @@ export async function registerDeviceForAppleUser(
   userId: string,
   deviceName: string | undefined,
   clientDeviceId: string | undefined,
-  db: AuthDb = prisma,
+  db: DeviceStoreDb = prisma,
   tokenFactory = generateDeviceSyncToken,
 ): Promise<RegisteredDevice> {
   const deviceSyncToken = tokenFactory();
@@ -499,6 +501,35 @@ export async function registerDeviceForAppleUser(
       });
 
   return { device, deviceSyncToken };
+}
+
+class SessionAttachError extends Error {}
+
+export async function registerDeviceForSession(
+  userId: string,
+  sessionId: string,
+  deviceName: string | undefined,
+  clientDeviceId: string | undefined,
+  db: Pick<typeof prisma, "$transaction"> = prisma,
+  tokenFactory = generateDeviceSyncToken,
+): Promise<RegisteredDevice | null> {
+  try {
+    return await db.$transaction(async (tx) => {
+      const registered = await registerDeviceForAppleUser(
+        userId,
+        deviceName,
+        clientDeviceId,
+        tx,
+        tokenFactory,
+      );
+      const attached = await attachDeviceToSession(userId, sessionId, registered.device.id, tx);
+      if (!attached) throw new SessionAttachError();
+      return registered;
+    });
+  } catch (error) {
+    if (error instanceof SessionAttachError) return null;
+    throw error;
+  }
 }
 
 export async function revokeDeviceForAppleUser(

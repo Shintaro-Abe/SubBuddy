@@ -3,8 +3,8 @@ import { created, badRequest, forbidden, fromZodError, serverError, unauthorized
 import { authenticateRequest, authorizeStateChange } from "@/lib/auth";
 import { AppleIdentityTokenError, verifyAppleIdentityToken } from "@/lib/apple-auth";
 import {
-  attachDeviceToSession,
   registerDeviceForAppleUser,
+  registerDeviceForSession,
   upsertAppleUser,
 } from "@/services/auth";
 import { authenticatedDeviceRegistrationSchema, deviceRegistrationSchema } from "@/schemas/auth";
@@ -45,14 +45,13 @@ export async function POST(req: Request) {
     const parsed = authenticatedDeviceRegistrationSchema.safeParse(body);
     if (!parsed.success) return fromZodError(parsed.error);
     if (!auth?.sessionId) return unauthorized();
-    const result = await registerDeviceForAppleUser(
+    const result = await registerDeviceForSession(
       auth.actor.userId,
+      auth.sessionId,
       parsed.data.name,
       parsed.data.clientDeviceId,
     );
-    if (!(await attachDeviceToSession(auth.actor.userId, auth.sessionId, result.device.id))) {
-      return unauthorized();
-    }
+    if (!result) return unauthorized();
     return created(result);
   } catch (error) {
     if (error instanceof AppleIdentityTokenError) return unauthorized();

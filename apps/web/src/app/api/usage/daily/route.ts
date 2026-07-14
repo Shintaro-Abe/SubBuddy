@@ -30,7 +30,12 @@ async function authenticateUsageSyncRequest(req: Request): Promise<Authenticated
  * local mode は USAGE_SYNC_TOKEN、cloud-testflight / production は device token auth で user_id を解決する。
  */
 export async function POST(req: Request) {
-  const actor = await authenticateUsageSyncRequest(req);
+  let actor: AuthenticatedActor | null;
+  try {
+    actor = await authenticateUsageSyncRequest(req);
+  } catch {
+    return serverError();
+  }
   if (!actor) return unauthorized();
 
   let body: unknown;

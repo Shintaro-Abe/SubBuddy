@@ -19,7 +19,7 @@ function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
         ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findUnique: async () => null,
+      findMany: async () => [],
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
@@ -41,9 +41,12 @@ function fakeDbWithExisting(
         ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findUnique: async (args: {
-        where: { subscriptionId_usageDate: { subscriptionId: string } };
-      }) => existingByKey[args.where.subscriptionId_usageDate.subscriptionId] ?? null,
+      findMany: async () =>
+        Object.entries(existingByKey).map(([subscriptionId, existing]) => ({
+          subscriptionId,
+          usageDate: items.find((item) => item.subscriptionId === subscriptionId)!.usageDate,
+          ...(existing as object),
+        })),
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
@@ -136,6 +139,20 @@ describe("upsertUsageDailyBatch", () => {
       estimatedMinutesMax: 119,
       source: "ios_device_activity",
     });
+  });
+
+  it("既存行はバッチごとに1回だけ読み込む", async () => {
+    let findManyCalls = 0;
+    const { db } = fakeDb();
+    const summary = (db as never as { iosUsageDailySummary: { findMany: () => Promise<unknown[]> } })
+      .iosUsageDailySummary;
+    summary.findMany = async () => {
+      findManyCalls += 1;
+      return [];
+    };
+
+    await upsertUsageDailyBatch("user_local", items, db);
+    expect(findManyCalls).toBe(1);
   });
 });
 

@@ -1,28 +1,25 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+
+function collectRouteFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return collectRouteFiles(path);
+    return entry.name === "route.ts" ? [path] : [];
+  });
+}
 
 describe("cloud distribution authentication boundary", () => {
   it("固定ユーザー参照はlocal境界ファイルだけに存在する", () => {
     const root = join(process.cwd(), "src");
-    const files = [
-      "app/api/subscriptions/route.ts",
-      "app/api/subscriptions/[id]/route.ts",
-      "app/api/recommendations/route.ts",
-      "app/api/recommendations/recompute/route.ts",
-      "app/api/renewals/upcoming/route.ts",
-      "app/api/spending/summary/route.ts",
-      "app/api/summary/route.ts",
-      "app/api/account/route.ts",
-      "app/api/devices/route.ts",
-      "app/api/devices/[id]/route.ts",
-      "app/api/usage/daily/route.ts",
-    ];
+    const files = collectRouteFiles(join(root, "app", "api"));
 
     for (const file of files) {
-      const source = readFileSync(join(root, file), "utf8");
-      expect(source, file).not.toContain("getCurrentUserId");
-      expect(source, file).not.toContain('"user_local"');
+      const source = readFileSync(file, "utf8");
+      const label = relative(root, file);
+      expect(source, label).not.toContain("getCurrentUserId");
+      expect(source, label).not.toContain('"user_local"');
     }
   });
 });

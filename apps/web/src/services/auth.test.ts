@@ -8,6 +8,7 @@ import {
   listActiveSessions,
   RefreshSessionError,
   registerDeviceForAppleUser,
+  registerDeviceForSession,
   revokeDeviceForAppleUser,
   revokeSession,
   SessionLimitError,
@@ -472,6 +473,28 @@ describe("auth service", () => {
       },
       select: { id: true, name: true },
     });
+  });
+
+  it("session紐付け失敗時はtransactionを失敗として扱う", async () => {
+    const { db } = fakeDb();
+    const tx = {
+      ...db,
+      authSession: { updateMany: async () => ({ count: 0 }) },
+    };
+    const transactionDb = {
+      $transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(tx),
+    };
+
+    await expect(
+      registerDeviceForSession(
+        "user_1",
+        "missing_session",
+        "iPhone",
+        "synthetic-client-device-a",
+        transactionDb as never,
+        () => "raw-device-token",
+      ),
+    ).resolves.toBeNull();
   });
 
   it("所有ユーザーと device id が一致する有効 device だけ失効する", async () => {

@@ -14,9 +14,9 @@ const cloudEnvironmentSchema = z.object({
   DATABASE_URL: z.string().min(1),
   APPLE_ALLOWED_CLIENT_IDS: z.string().min(1),
   APPLE_CLIENT_ID: z.string().min(1),
-  APPLE_REDIRECT_URI: z.string().url(),
+  APPLE_REDIRECT_URI: z.url(),
   APPLE_SUBJECT_HASH_SALT: z.string().min(32),
-  AUTH_TOKEN_ISSUER: z.string().url(),
+  AUTH_TOKEN_ISSUER: z.url(),
   AUTH_TOKEN_AUDIENCE: z.string().min(1),
   AUTH_JWT_SECRET_BASE64URL: z.string().min(43),
   AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().positive(),
@@ -28,7 +28,7 @@ const cloudEnvironmentSchema = z.object({
     .int()
     .min(0)
     .max(MAX_APPLE_OUTAGE_GRACE_SECONDS),
-  AUTH_APPLE_OUTAGE_STARTED_AT: z.string().datetime().optional(),
+  AUTH_APPLE_OUTAGE_STARTED_AT: z.iso.datetime().optional(),
   AUTH_ACCESS_COOKIE_NAME: z.string().min(1),
   AUTH_REFRESH_COOKIE_NAME: z.string().min(1),
   AUTH_CSRF_COOKIE_NAME: z.string().min(1),

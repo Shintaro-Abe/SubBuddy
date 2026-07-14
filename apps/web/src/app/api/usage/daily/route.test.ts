@@ -46,4 +46,11 @@ describe("POST /api/usage/daily の認証", () => {
     const res = await POST(makeRequest({ authorization: `Bearer ${TOKEN}` }, "{not json"));
     expect(res.status).toBe(400);
   });
+
+  it("認証設定の例外は統一された500応答になる", async () => {
+    vi.stubEnv("SUBBUDDY_MODE", "invalid-mode");
+    const res = await POST(makeRequest({ authorization: `Bearer ${TOKEN}` }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "internal server error" });
+  });
 });

@@ -91,6 +91,14 @@ describe("POST /api/auth/apple/callback", () => {
     expect(mocks.verifyAppleIdentityToken).not.toHaveBeenCalled();
   });
 
+  it("nonce不一致はApple token検証前に403", async () => {
+    const response = await POST(
+      request({ nonce: "wrong-nonce-with-at-least-32-characters" }),
+    );
+    expect(response.status).toBe(403);
+    expect(mocks.verifyAppleIdentityToken).not.toHaveBeenCalled();
+  });
+
   it("許可されていないOriginは403", async () => {
     const response = await POST(request({}, "https://attacker.invalid"));
     expect(response.status).toBe(403);

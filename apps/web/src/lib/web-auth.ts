@@ -34,6 +34,16 @@ function secureCookie(maxAge?: number) {
   };
 }
 
+function csrfCookieOptions(maxAge?: number) {
+  return {
+    httpOnly: false,
+    secure: true,
+    sameSite: "lax" as const,
+    path: "/",
+    ...(maxAge === undefined ? {} : { maxAge }),
+  };
+}
+
 export function setAuthFlowCookies(
   response: NextResponse,
   config: CloudAuthConfig,
@@ -75,24 +85,12 @@ export function setWebSessionCookies(
     session.refreshToken,
     secureCookie(persistentMaxAge),
   );
-  response.cookies.set(config.csrfCookieName, csrfToken, {
-    httpOnly: false,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    ...(persistentMaxAge === undefined ? {} : { maxAge: persistentMaxAge }),
-  });
+  response.cookies.set(config.csrfCookieName, csrfToken, csrfCookieOptions(persistentMaxAge));
   return csrfToken;
 }
 
 export function clearWebSessionCookies(response: NextResponse, config: CloudAuthConfig): void {
   response.cookies.set(config.accessCookieName, "", secureCookie(0));
   response.cookies.set(config.refreshCookieName, "", secureCookie(0));
-  response.cookies.set(config.csrfCookieName, "", {
-    httpOnly: false,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set(config.csrfCookieName, "", csrfCookieOptions(0));
 }
