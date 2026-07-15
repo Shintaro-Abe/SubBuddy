@@ -29,6 +29,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app
         PRODUCT_NAME: SubBuddy
+        PRODUCT_MODULE_NAME: SubBuddyApp
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_ENTITLEMENTS: SubBuddyApp/SubBuddyApp.entitlements

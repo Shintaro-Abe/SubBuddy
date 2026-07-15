@@ -36,7 +36,7 @@
 | 2026-07-14 | CodeRabbitレビュー指摘の修正 | 修正後の自動確認 | ログアウト、API例外処理、端末登録、CSRF、利用量同期、配布境界 | 一部合格 | 再レビューの追加指摘1件を修正後、Webの自動テスト168件、型、書き方の検査が合格。iPhoneのコンパイルと実機確認は未実施 | [Pull Request #6](https://github.com/Shintaro-Abe/SubBuddy/pull/6) |
 | 2026-07-15 | `docs/`・`.steering/`・`obsidian/`の現行性更新 | Markdown構造・ローカルリンク・旧前提・差分の検査 | 現行実装、承認済み方針、未完了作業を区別し、参照切れと明白な表記矛盾がないか | 合格 | Markdown 120ファイルのローカルリンクとコードフェンス、章番号、差分形式が合格。旧前提の対象語は0件。外部URLの到達性とMermaidの描画は今回未確認 | この行と当該文書差分 |
 | 2026-07-15 | Render事前設定手順 | MD・生成HTML・認証設定・機密情報の検査 | 現行認証に必要な設定がそろい、実値を含まず、MDとHTMLが一致するか | 合格 | 必須認証設定12件と障害時設定を確認。MDからHTMLを再生成して一致し、差分形式とgitleaks検査も合格 | [Render事前設定手順](../manuals/render-predeploy-setup.md) |
-| 2026-07-15 | iPhoneの現行認証確認機能と実機手順 | Xcode単体テスト、コード差分・MD・生成HTML・機密情報の検査 | 契約API、15分後の更新、サインアウト、端末失効の実機確認を現行構成で実行できるか | 不合格 | Mac実機の`Product > Test`でテストホスト名の不一致を修正後、`APIClient.registerDevice`の例外を投げる式に対するSwiftコンパイルエラーを検出。Keychain読み取りと条件判定を分離し、同種パターンの残存0件と差分形式を確認した。修正後のXcode再実行待ち | [iOS現行認証実機手順](../manuals/ios-render-e2e-testflight-prep.md) |
+| 2026-07-15 | iPhoneの現行認証確認機能と実機手順 | Xcode単体テスト、コード差分・MD・生成HTML・機密情報の検査 | 契約API、15分後の更新、サインアウト、端末失効の実機確認を現行構成で実行できるか | 不合格 | Mac実機の`Product > Test`で、製品名から生成されたSwiftモジュール`SubBuddy`とテストの`@testable import SubBuddyApp`の不一致を検出。製品名は維持し、`PRODUCT_MODULE_NAME`をターゲット名へ統一した。全テストのimportとの一致と差分形式を確認し、修正後のXcode再実行待ち | [iOS現行認証実機手順](../manuals/ios-render-e2e-testflight-prep.md) |
 
 ## テストの詳しい内訳
 
