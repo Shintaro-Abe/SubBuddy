@@ -15,6 +15,19 @@ export type AuthenticatedRequest = {
   transport: "local" | "bearer" | "cookie";
 };
 
+export type RequestAuthRejectionReason =
+  | "credential_missing"
+  | "access_token_invalid"
+  | "session_missing"
+  | "session_user_mismatch"
+  | "session_revoked"
+  | "session_idle_expired"
+  | "session_absolute_expired"
+  | "apple_outage_family_missing"
+  | "apple_outage_grace_expired";
+
+export type RequestAuthRejectionReporter = (reason: RequestAuthRejectionReason) => void;
+
 export function getLocalActor(): Extract<AuthenticatedActor, { kind: "user" }> {
   return { kind: "user", userId: LOCAL_USER_ID, authProvider: "local" };
 }
@@ -51,6 +64,7 @@ export async function authenticateRequest(
   req: Request,
   db: SessionRequestAuthDb = prisma,
   now = new Date(),
+  reportRejection?: RequestAuthRejectionReporter,
 ): Promise<AuthenticatedRequest | null> {
   const config = parseAuthConfig();
   if (config.mode === "local") {
@@ -59,7 +73,10 @@ export async function authenticateRequest(
 
   const bearerToken = extractBearerToken(req.headers.get("authorization"));
   const accessToken = bearerToken ?? readCookie(req, config.accessCookieName);
-  if (!accessToken) return null;
+  if (!accessToken) {
+    reportRejection?.("credential_missing");
+    return null;
+  }
 
   try {
     const claims = await verifyAccessToken(accessToken, config, now);
@@ -73,13 +90,24 @@ export async function authenticateRequest(
         tokenFamilyId: true,
       },
     });
-    if (
-      !session ||
-      session.userId !== claims.userId ||
-      session.revokedAt ||
-      session.idleExpiresAt <= now ||
-      session.absoluteExpiresAt <= now
-    ) {
+    if (!session) {
+      reportRejection?.("session_missing");
+      return null;
+    }
+    if (session.userId !== claims.userId) {
+      reportRejection?.("session_user_mismatch");
+      return null;
+    }
+    if (session.revokedAt) {
+      reportRejection?.("session_revoked");
+      return null;
+    }
+    if (session.idleExpiresAt <= now) {
+      reportRejection?.("session_idle_expired");
+      return null;
+    }
+    if (session.absoluteExpiresAt <= now) {
+      reportRejection?.("session_absolute_expired");
       return null;
     }
     if (config.appleOutageStartedAt) {
@@ -88,7 +116,12 @@ export async function authenticateRequest(
         select: { createdAt: true },
         orderBy: { createdAt: "asc" },
       });
-      if (!familyRoot || !isAppleOutageAccessAllowed(config, familyRoot.createdAt, now)) {
+      if (!familyRoot) {
+        reportRejection?.("apple_outage_family_missing");
+        return null;
+      }
+      if (!isAppleOutageAccessAllowed(config, familyRoot.createdAt, now)) {
+        reportRejection?.("apple_outage_grace_expired");
         return null;
       }
     }
@@ -98,7 +131,10 @@ export async function authenticateRequest(
       transport: bearerToken ? "bearer" : "cookie",
     };
   } catch (error) {
-    if (error instanceof AccessTokenError) return null;
+    if (error instanceof AccessTokenError) {
+      reportRejection?.("access_token_invalid");
+      return null;
+    }
     throw error;
   }
 }

@@ -14,7 +14,12 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const config = parseAuthConfig();
-    const auth = config.mode === "local" ? null : await authenticateRequest(req);
+    const auth =
+      config.mode === "local"
+        ? null
+        : await authenticateRequest(req, undefined, undefined, (reason) => {
+            console.warn("device_registration_rejected", { reason });
+          });
     if (config.mode !== "local" && (!auth || !auth.sessionId)) return unauthorized();
     if (config.mode !== "local" && auth && !authorizeStateChange(req, auth, config)) {
       return forbidden();
@@ -51,7 +56,10 @@ export async function POST(req: Request) {
       parsed.data.name,
       parsed.data.clientDeviceId,
     );
-    if (!result) return unauthorized();
+    if (!result) {
+      console.warn("device_registration_rejected", { reason: "session_attach_failed" });
+      return unauthorized();
+    }
     return created(result);
   } catch (error) {
     if (error instanceof AppleIdentityTokenError) return unauthorized();

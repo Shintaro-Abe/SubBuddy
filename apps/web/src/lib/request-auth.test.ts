@@ -99,7 +99,24 @@ describe("request authentication boundary", () => {
       headers: { authorization: `Bearer ${token.token}` },
     });
 
-    await expect(authenticateRequest(request, db as never, NOW)).resolves.toBeNull();
+    const reportRejection = vi.fn();
+    await expect(
+      authenticateRequest(request, db as never, NOW, reportRejection),
+    ).resolves.toBeNull();
+    expect(reportRejection).toHaveBeenCalledWith("session_user_mismatch");
+  });
+
+  it("不正なaccess tokenは値を記録せず理由コードだけを通知する", async () => {
+    const request = new Request("https://testflight.subbuddy.example/api/devices", {
+      headers: { authorization: "Bearer synthetic-invalid-token" },
+    });
+    const reportRejection = vi.fn();
+
+    await expect(
+      authenticateRequest(request, {} as never, NOW, reportRejection),
+    ).resolves.toBeNull();
+    expect(reportRejection).toHaveBeenCalledWith("access_token_invalid");
+    expect(reportRejection).not.toHaveBeenCalledWith(expect.stringContaining("synthetic"));
   });
 
   it("Cookieの変更要求は許可OriginとCSRF同値が両方必要", () => {
