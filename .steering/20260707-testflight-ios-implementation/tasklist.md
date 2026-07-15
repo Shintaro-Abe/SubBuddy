@@ -2,6 +2,7 @@
 
 > ステアリング：`20260707-testflight-ios-implementation`
 > 作成日：2026-07-07
+> 現行性注記（2026-07-15）：本書のAppleサインイン・デバイス登録の実機結果は旧セッション交換経路での確認を含む。後続の`.steering/20260713-auth-tenant-boundary/`で短期アクセストークンとローテーション更新トークンへ変更したため、現行経路のXcode/Render実機確認は同作業T-13として未完了。iOSの利用者向け主製品UIは`.steering/20260711-release-roadmap-rebaseline/`の後続タスクで扱う。
 
 ## タスク
 

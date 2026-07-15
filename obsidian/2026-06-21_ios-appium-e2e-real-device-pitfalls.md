@@ -2,7 +2,7 @@
 title: "実機 iPhone で Appium E2E 自動化を組むときの落とし穴集"
 type: pitfall
 created: 2026-06-21
-updated: 2026-06-21
+updated: 2026-07-15
 expires_review: 2026-12-21
 confidence: high
 tags:
@@ -21,6 +21,8 @@ aliases:
 
 # 実機 iPhone で Appium E2E 自動化を組むときの落とし穴集
 
+> 現行性注記（2026-07-15）：LAN IPと`USAGE_SYNC_TOKEN`の記述はlocal mode / Spikeの履歴である。外部TestFlightの主経路はRender HTTPS、Appleサインイン、短期アクセストークン、ローテーション更新トークン、デバイス同期トークンを使う。現行認証経路の実機確認は`.steering/20260713-auth-tenant-boundary/tasklist.md`のT-13に残る。
+
 ## TL;DR
 
 - GUI を使わず「ビルド → 実機インストール → Appium でアプリ操作 → Web で結果確認」を**コマンド一発で回す実機 E2E**を組む過程で踏んだ罠を、症状→原因→対処で並べた逆引き集（pitfall カタログ）。
@@ -37,7 +39,7 @@ aliases:
 
 - 対象：実機 iPhone を USB 接続した MacBook 上で、XcodeGen + xcodebuild + Appium(XCUITest) + Playwright を組み合わせた E2E。
 - 環境前提（このプロジェクト固有・混乱しやすい点）
-  - **開発を支援する Claude Code は Dev Container（Linux）で動く。そこでは iOS ビルド・実機・Appium は一切動かない**（xcodebuild / xcrun / USB が無い）。実機 E2E は必ず **Mac のネイティブターミナル**で実行する。
+  - **開発支援環境はDev Container（Linux）で動く。そこではiOSビルド・実機・Appiumは動かない**（xcodebuild / xcrun / USBがない）。実機E2EはMacのネイティブ環境で実行する。
   - Web アプリ（Next.js）と PostgreSQL は**コンテナ側で `0.0.0.0` 起動**し、VS Code のポート転送で Mac の `127.0.0.1:3000` と LAN から到達できる。Mac 側で二重起動するとポート競合するので避ける。
 - 適用範囲外：計測の「精度」検証（それは別途の手動フィールドテストの役割）。
 - バージョン依存が強い項目（Node・iOS・API 可用性）が含まれる。**※ 後述の各項は 2026-06-21 時点**。バージョンが変われば閾値も変わりうる。
@@ -141,8 +143,8 @@ aliases:
 - 上記の対処はすべて**恒久対処としてスクリプト／コードに織り込み済み**。意味を理解せず設定を戻すと再発する。
 - 以下は本文（落とし穴集）の対象外だが、**E2E が「通った後」に何を検証しているのかを誤解しないための参照ポインタ**として最小限だけ残す。各項の正は実装コード側にあり、ここでは要点のみ。
 - ネットワーク到達と認証・冪等性は別レイヤーの関心事。配線が通った後、サーバ側の契約は以下：
-  - 同期は `POST /api/usage/daily`、`Authorization: Bearer <USAGE_SYNC_TOKEN>`。比較は `timingSafeEqual`、**トークン未設定なら常に 401（フェイルクローズ）**。根拠：`apps/web/src/lib/usage-auth.ts`。
-  - 保存は `subscription_id × usage_date` を一意キーにした**冪等 upsert**。同一バッチを再送しても行は増えず、最後の送信値で上書きされる。根拠：`apps/web/src/repositories/usage.ts`。
+  - 同期は`POST /api/usage/daily`を使う。local modeは`USAGE_SYNC_TOKEN`、cloud-testflight / productionは登録端末のデバイス同期トークンで認証する。根拠：`apps/web/src/lib/usage-auth.ts`。
+  - 保存は`subscription_id × usage_date`を一意キーにした冪等upsertで、再送時は利用バケットと概算時間の最大値へ収束する。認証済みユーザーの所有権確認と保存は同一transactionで行う。根拠：`apps/web/src/repositories/usage.ts`。
 - 計測の意味（E2E が運ぶデータの性質。誤解しやすい）：
   - DeviceActivity は**前面利用時間**を閾値（15 / 30 / 60 / 120 分）で測り、バケット（`m15_plus`..`m120_plus`、上限 120 分）化する。根拠：`MonitorScheduler.swift`（`SpikeConstants.thresholdMinutes`）／ `apps/web/src/lib/usage-bucket.ts`。
   - **ロック中の背景音声・別端末での視聴・他アプリへ切り替え中は計測外**。利用量は「前面で見ていた時間」の下限近似でしかない。

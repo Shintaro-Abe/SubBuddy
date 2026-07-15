@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-12（Renderシンガポール・正式認証・運用品質を反映）
+> 最終更新：2026-07-15（認証セッション実装、iOS App Group保存、Render構成を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -16,13 +16,13 @@
 設計上の最重要前提（要求・機能設計から継承）：
 
 - **local mode を維持**：DB・API・Web・Worker を Mac ローカルで動かす個人運用は残す。ただし本番と別構成にせず、同一コードベースの実行モードとして扱う。
-- **小規模検証版はフルクラウド**：TestFlight 20〜50人向けの検証版では、Web/API/DB をクラウドに置き、iPhone アプリはクラウド API へ直接集計値を送る。
-- **iPhone は利用量センサー（補助）**：ネイティブ iPhone アプリが Screen Time（DeviceActivity）と Shortcuts 由来の起動シグナルを吸収し、集計値を SubBuddy API へ同期する。P1（使っていない）パターンの判定手段であり、能動前面/背景利用のサブスクに限定して適用する。
-- **AI もクラウドも使わずに MVP を成立させる**：判断はパターンマッチング（P1〜P7）。利用量なしでも P2〜P6 のレコメンドが出る。
+- **小規模検証版はフルクラウド**：30人募集・有効参加者20人以上・上限50人のTestFlight検証版では、Web/API/DBをRenderシンガポールに置き、iPhoneアプリはクラウドAPIへ直接集計値を送る。
+- **iPhone は主製品**：契約・支出・見直し・更新・設定・削除を完結させる。Screen Time（DeviceActivity）による集計値取得は、確認優先度を支える補助機能として組み込む。
+- **AI もクラウドも使わずにMVPを成立させる**：判断は6つの検出パターン（P1〜P6）と該当なしのフォールバック。利用量なしでもP2〜P6のレコメンドが出る。
 - **秘密情報非保存**：外部サービスの ID/PW を保存しない。自動ログイン・スクレイピングをしない。
 - **PII・機微データ**：実データは実行モードに応じて local DB またはクラウド DB に保存する。どちらの場合もリポジトリには合成データのみ（`AGENTS.md` 準拠）。
 
-> **ロードマップ**：MVP はローカル単一ユーザーで価値を確認する。次に **TestFlight 20〜50人の小規模検証版をフルクラウドで配布**し、その後に production mode として一般公開へ進む。本書は **local mode / cloud-testflight mode / production mode を同一コードベースで賄う構造**を前提に設計する。
+> **ロードマップ**：MVPはローカル単一ユーザーで成立済み。次にTestFlight小規模検証版をフルクラウドで配布し、その後にproduction modeとして一般公開へ進む。本書は**local mode / cloud-testflight mode / production modeを同一コードベースで賄う構造**を前提に設計する。
 
 ---
 
@@ -30,10 +30,10 @@
 
 ```mermaid
 flowchart TB
-  subgraph iPhone[iPhone（利用量センサー）]
+  subgraph iPhone[iPhone（主製品 + 利用量計測）]
     IOS[SubBuddy iOS App<br/>Swift / SwiftUI]
     FC[FamilyControls /<br/>DeviceActivity]
-    LStore[ローカル保存<br/>SwiftData]
+    LStore[ローカル保存<br/>Keychain + App Groupファイル]
   end
 
   subgraph Mac[Mac（ローカルサーバー / macOS）]
@@ -85,10 +85,11 @@ flowchart TB
 | 利用量計測 | FamilyControls / DeviceActivity / ManagedSettings | Screen Time のしきい値イベント取得（要 entitlement） |
 | 対象選択 | FamilyActivityPicker | 計測対象アプリ/Webドメインの選択（UC-09） |
 | 集計イベント | DeviceActivityMonitor Extension | しきい値（1m/5m/15m/30m/60m/120m）超過イベントを受信し日別集計 |
-| ローカル保存 | SwiftData（または SQLite） | オンデバイス集計の保持 |
+| 秘密情報の保存 | Keychain（ThisDeviceOnly） | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID |
+| 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |
 | 同期 | URLSession（HTTPS） | SubBuddy API へ**集計値のみ**送信 |
 
-> iOS 連携は entitlement・実機挙動の不確実性が高いため、**実装前に iOS Spike を必須**とする（要求 10.3 / 機能設計 11）。Spike 結果次第で計測方式を再評価する。
+> iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤での再確認、7日連続計測、Archive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 
 ### 3.3 採用しない技術（スコープ外）
 
@@ -118,12 +119,12 @@ SubBuddy は **同一コードベースを実行モードで切り替える**。
 | 実行モード | 主な用途 | API/DB | 認証 | iPhone 同期 |
 |---|---|---|---|---|
 | `local mode` | 開発者・個人運用 | ローカル Next.js + ローカル PostgreSQL | ローカル簡易認証 | `USAGE_SYNC_TOKEN` による互換同期 |
-| `cloud-testflight mode` | TestFlight 20〜50人の小規模検証版 | PaaS + マネージド PostgreSQL | Apple サインイン | デバイス同期トークン |
+| `cloud-testflight mode` | TestFlight小規模検証版 | Renderシンガポール + マネージド PostgreSQL | Apple サインイン + 認証セッション | デバイス同期トークン |
 | `production mode` | 将来の一般公開版 | クラウド本番環境 | Apple サインイン | デバイス同期トークン |
 
 実行モードは `SUBBUDDY_MODE` で切り替える。値は `local` / `cloud-testflight` / `production` のいずれかとする。`local` では `USAGE_SYNC_TOKEN` による互換同期を使い、`cloud-testflight` / `production` では Apple サインインとデバイス同期トークンを使う。
 
-Apple サインインに必要な `APPLE_TEAM_ID`、`APPLE_CLIENT_ID`、`APPLE_KEY_ID`、`APPLE_PRIVATE_KEY`、`APPLE_REDIRECT_URI` と、認証署名鍵・Cookie名・許可Originは `.env` または PaaS の secret store に置く。TestFlightとproductionでDB、署名鍵、Cookie名、Apple設定を共有せず、実値をリポジトリにコミットしない。
+現行認証ランタイムはAppleの許可クライアントID、WebクライアントID、リダイレクトURI、Apple subjectのハッシュ用salt、SubBuddyのトークン署名鍵、Cookie名、許可Origin、各期限を環境変数で受け取る。Apple認可取消など、後続機能で必要になる秘密鍵はその機能の実装時に追加する。秘密はRenderのsecret storeまたはローカル`.env`に置き、TestFlightとproductionでDB・鍵・Cookie名・Apple設定を共有せず、実値をリポジトリにコミットしない。
 
 ### 4.1 local mode：ローカル運用（localhost）
 
@@ -146,11 +147,11 @@ flowchart LR
 
 ### 4.2 cloud-testflight mode：小規模検証版（フルクラウド）
 
-MVP 後の最初の配布版は、**TestFlight 20〜50人の小規模検証版**とする。この段階はフルクラウドで動かす。
+MVP後の最初の配布版は、**30人募集・有効参加者20人以上・上限50人のTestFlight小規模検証版**とする。この段階はフルクラウドで動かす。
 各ユーザーに Mac ローカルサーバーを求めず、iPhone アプリはクラウド API へ直接集計値を送信する。
 
 - **マルチテナント**：データモデルは `users` / `user_id` で複数ユーザーを分離する。行レベルでテナント分離し、テナント越えアクセスを構造的に防ぐ。
-- **公開形態**：PaaS + マネージド PostgreSQL を基本とする。具体サービスは後続で選定する。
+- **公開形態**：Web/APIとPostgreSQLをRenderシンガポールで運用する。TestFlightとproductionはDB・秘密・Cookie・トークンを分離する。
 - **認証（必須）**：Apple サインイン（§8.1.2）。
 - **デバイス同期**：iPhone はログイン後にデバイス登録し、デバイス同期トークンで `POST /api/usage/daily` を呼ぶ。
 - **TLS（正規証明書）**：公開到達点に適した証明書。
@@ -185,16 +186,12 @@ flowchart LR
 
 ### 5.1 利用量の取り込み：Ingestion API + ソース別コネクタ（採用）
 
-取得源（Screen Time＝利用時間 / iCloud+＝容量 / ジム＝来館 / 請求メール＝金額 …）は**性質が異なり、今後も増える**。
-これを扱うため、**単一の取り込み API（Route Handler）＋ ソースごとのコネクタ（Adapter パターン）** を採用する。
+取得源（Screen Time＝利用時間 / iCloud+＝容量 / 将来候補の請求情報等）は性質が異なる。
+入力ごとに検証・最小化の境界を置き、共通化は実装が複数現れてから行う。現時点の実装は`POST /api/usage/daily`と容量フィールドであり、汎用コネクタ基盤はまだ作らない。
 
-- **採用理由**：新しい取得源は**コネクタを 1 個追加するだけ**で対応でき、コア（判定・DB）を改修しない（加算的拡張）。
-  入力検証（Zod）・PII 最小化・冪等 upsert を**取り込み窓口 1 箇所**に集約でき、`AGENTS.md` の方針を機械的に担保できる。
-- **二層保存（情報を捨てない）**：コネクタが取得した**原本（生データ）を保持**したうえで、判定用の**正規化値**を持つ。
-  共通の形（利用日数・容量・来館日数など）への正規化は**読み出し側／遅延**で行い、入口で原本を捨てない。
-  → 後から「時間帯別」等の新メトリクスが必要になっても、原本から再構築できる。
-- **薄く始める**：MVP は汎用プラグイン機構を作り込まず、具体コネクタを 2〜3 個ベタ書きで動かし、
-  共通点が 2 回現れてから interface を抽出する（rule of three）。
+- **データ最小化**：取得源ごとに必要最小限の入力だけを受け付ける。Screen Timeは日別バケットと概算時間範囲だけを保存し、詳細ログ、全アプリ一覧、`FamilyActivityToken`、bundleIdをサーバーへ送らない。
+- **検証と冪等性**：Route Handlerの入力をZodで検証し、利用量は`subscription_id × usage_date`へ最大バケットで収束させる。認証済みユーザーの所有権確認と保存は同一transactionで行う。
+- **薄く始める**：汎用プラグイン機構を先に作らず、共通点が複数現れてからinterfaceを抽出する。
 - **金額系と利用量系はテーブルを分ける**（`billing_events` ↔ 利用量系）。異種を 1 モデルへ無理に畳まない（leaky abstraction 回避）。
 
 #### 限界（コネクタで解決しないこと）
@@ -253,7 +250,7 @@ type AuthenticatedActor =
 
 #### 8.1.2 cloud-testflight / production：Apple サインイン
 
-- ユーザー認証は Apple サインインを本命とする。
+- クラウド配布版のユーザー認証はAppleサインインだけを使う。
 - iOS はネイティブ Sign in with Apple（`ASAuthorizationAppleIDProvider`）、Web は Services ID を使う。identity token の `aud` は iOS＝アプリ Bundle ID（`com.subbuddy.app`）、Web＝Services ID（`com.subbuddy.web`）と値が変わる。
 - サーバーの Apple token 検証は、署名検証・`iss = https://appleid.apple.com` に加えて `aud ∈ { com.subbuddy.web, com.subbuddy.app }` を許可リストで検証する。許可リスト外の `aud` は拒否する（ADR 0004）。
 - iOS 用はネイティブ検証専用エンドポイント（`POST /api/auth/apple/native`）を設け、Web リダイレクト用コールバック（`POST /api/auth/apple/callback`）と処理を分離する。
@@ -283,7 +280,7 @@ type AuthenticatedActor =
 - iPhone からサーバーへ送るのは **集計値のみ**。詳細 Screen Time ログ・全アプリ一覧は端末内に留める。
 - `cloud-testflight mode` / `production mode` では、集計値の送信先は SubBuddy のクラウド API である。App Store Connect やプライバシーポリシーでは、送信先を実態どおりクラウドとして説明する（「ユーザー自身の Mac にだけ送る」は `local mode` 限定）。
 - 実データは実行モードに応じて local DB またはクラウド DB に保存する。ログ・エラー出力・スクショに実 PII を残さない。
-- 秘密情報（トークン・DB 接続情報）は `.env` または PaaS のシークレット管理で扱い、コミット前にシークレットスキャンを行う
+- 秘密情報（トークン・DB接続情報）は`.env`またはRenderのsecret storeで扱い、コミット前にシークレットスキャンを行う
   （`pre-commit-secret-scan` 運用、`development-guidelines.md` で詳細化）。
 - デバイス同期トークンはハッシュ保存し、平文を DB・ログ・エラー出力に残さない。
 - 外部 ID/PW、Apple ID 資格情報、Screen Time 詳細ログ、全アプリ一覧、メール本文、クレカ/銀行明細生データ、位置情報生ログは保存しない。
@@ -319,7 +316,7 @@ type AuthenticatedActor =
 
 ## 10. パフォーマンス要件
 
-MVP と local mode は個人・単一ユーザー規模、cloud-testflight mode は 20〜50人規模が前提である。大規模処理より**応答性・正確性・テナント分離**を重視する。
+local modeは個人・単一ユーザー規模、cloud-testflight modeは上限50人が前提である。大規模処理より**応答性・正確性・テナント分離**を重視する。
 
 | 指標 | 目標（MVP） | 備考 |
 |---|---|---|
@@ -327,7 +324,7 @@ MVP と local mode は個人・単一ユーザー規模、cloud-testflight mode 
 | 一覧・集計（月額/年額/単価） | 即時 | DB 件数が小規模のため単純集計で十分 |
 | スコアリング再計算（全件） | 数百ms〜1秒程度 | 全サブスク × 直近30日サマリの線形処理 |
 | iOS 同期 API（日別バッチ upsert） | 1 バッチ即時応答 | `(subscription_id, usage_date)` upsert、冪等 |
-| データ規模想定 | local mode はサブスク数十件、cloud-testflight mode は 20〜50人分 | インデックス：`user_id`・`subscription_id`・`usage_date`・`next_renewal_date` |
+| データ規模想定 | local modeはサブスク数十件、cloud-testflight modeは最大50人・1人200契約 | インデックス：`user_id`・`subscription_id`・`usage_date`・`next_renewal_date` |
 
 - 大規模分散・高 QPS は要件外。早すぎる最適化は行わない。
 - 集計クエリが増えた場合に備え、利用サマリの日付・サブスク ID にインデックスを張る。
@@ -370,7 +367,7 @@ MVP と local mode は個人・単一ユーザー規模、cloud-testflight mode 
 - AI 補助：`recommendation_snapshots.reason` を AI 生成文へ差し替え可能な構造を維持。AI アドバイザー機能を載せる段階では、**判定済み集計値のみ**を渡す自作 MCP サーバの採用余地あり（取り込み窓口としては不採用＝§3.3 検討メモ）。
 - Worker 分離：BullMQ + Redis による定期実行・非同期化（本書 7）。
 - 公式 OAuth API：トークンベースの利用量補完（PW 保存型自動ログインとは区別、将来検討）。
-- **小規模検証版（cloud-testflight mode）**：TestFlight 20〜50人へフルクラウドで配布し、Apple サインイン、デバイス同期トークン、PaaS + マネージド PostgreSQL、テナント分離を検証する（§4.2 / §8.1.2）。
+- **小規模検証版（cloud-testflight mode）**：30人募集、20人以上の有効参加者、上限50人で、Appleサインイン、認証セッション、デバイス同期トークン、Renderシンガポール、テナント分離を検証する（§4.2 / §8.1.2）。
 - **クラウド多ユーザー化（production mode）**：小規模検証版を基礎に、一般公開版として公開する（§4.3）。マルチテナント・正式認証・PII 保護を伴う。個人運用は local mode で継続。
 
 > 小規模検証版とクラウド多ユーザー化は**ポストMVP の確定方針**であり、任意の拡張ではない（要求 §3・§10.0）。それ以外（請求自動化・AI 補助・Worker 分離・OAuth 補完）は MVP では実装せず、段階的拡張余地として保持する。**「自動解約しない／外部 ID・PW を保存しない／iPhone は集計値のみ」という不変条件は、クラウド商品版でも維持する。**
