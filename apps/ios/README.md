@@ -28,21 +28,22 @@ export APPLE_TEAM_ID=XXXXXXXXXX
 
 ## 実機確認
 
-アプリを起動したら、まず `API` 欄にRenderの公開URLを入力する。
+アプリを起動したら、まず `API` 欄にSubBuddyの公開URLを入力する。
 
 ```text
-https://<service-name>.onrender.com
+https://app.sub-buddy.com
 ```
 
 その後、次の順に確認する。
 
 1. `Sign in with Apple` を実行する。
 2. `Signed in and device registered` と表示されることを確認する。
-3. `Request Authorization` でScreen Timeを許可する。
-4. `Subscription ID` に開発用サブスクIDを入力する。
-5. `Select Measured App` で計測対象アプリを選ぶ。
-6. `Start Monitoring` を実行する。
-7. しきい値到達後、`Sync Records` で当日分を含む利用量をRenderへ送信する。
+3. `Verify Contract API` で認証済み契約APIを確認する。
+4. `Request Authorization` でScreen Timeを許可する。
+5. `Subscription ID` に開発用サブスクIDを入力する。
+6. `Select Measured App` で計測対象アプリを選ぶ。
+7. `Start Monitoring` を実行する。
+8. しきい値到達後、`Sync Records` で当日分を含む利用量をRenderへ送信する。
 
 > 注意: 現時点では一気通貫を早めるため、サブスク一覧取得は未実装。`Subscription ID` は手入力する。
 

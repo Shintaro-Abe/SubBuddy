@@ -55,6 +55,22 @@ actor APIClient {
         )
     }
 
+    func listSubscriptions() async throws -> [SubscriptionSummary] {
+        let response: SubscriptionListResponse = try await sendAuthenticated(
+            path: "/api/subscriptions",
+            method: "GET"
+        )
+        return response.items
+    }
+
+    func revokeDevice(id: String) async throws {
+        let _: DeviceRevocationResponse = try await sendAuthenticated(
+            path: "/api/devices/\(id)",
+            method: "DELETE"
+        )
+        clearSession()
+    }
+
     private func sendAuthenticated<RequestBody: Encodable, ResponseBody: Decodable>(
         path: String,
         method: String,
@@ -72,6 +88,25 @@ actor APIClient {
                 _ = try await refreshSession()
             }
             return try await send(path: path, method: method, body: body, bearerToken: accessToken)
+        }
+    }
+
+    private func sendAuthenticated<ResponseBody: Decodable>(
+        path: String,
+        method: String
+    ) async throws -> ResponseBody {
+        if accessToken == nil {
+            _ = try await refreshSession()
+        }
+        let attemptedAccessToken = accessToken
+
+        do {
+            return try await send(path: path, method: method, bearerToken: attemptedAccessToken)
+        } catch APIError.httpStatus(401) {
+            if accessToken == attemptedAccessToken {
+                _ = try await refreshSession()
+            }
+            return try await send(path: path, method: method, bearerToken: accessToken)
         }
     }
 
@@ -142,6 +177,26 @@ actor APIClient {
         }
         request.httpBody = try JSONEncoder().encode(body)
 
+        return try await perform(request)
+    }
+
+    private func send<ResponseBody: Decodable>(
+        path: String,
+        method: String,
+        bearerToken: String?
+    ) async throws -> ResponseBody {
+        guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else {
+            throw APIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        if let bearerToken {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
+        return try await perform(request)
+    }
+
+    private func perform<ResponseBody: Decodable>(_ request: URLRequest) async throws -> ResponseBody {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -211,6 +266,18 @@ struct EmptyRequest: Encodable {}
 
 struct SignOutResponse: Decodable {
     let signedOut: Bool
+}
+
+struct SubscriptionListResponse: Decodable {
+    let items: [SubscriptionSummary]
+}
+
+struct SubscriptionSummary: Decodable {
+    let id: String
+}
+
+struct DeviceRevocationResponse: Decodable {
+    let revoked: Bool
 }
 
 enum APIError: LocalizedError {

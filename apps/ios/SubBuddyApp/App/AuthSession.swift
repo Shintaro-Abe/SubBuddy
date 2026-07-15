@@ -12,6 +12,8 @@ final class AuthSession: ObservableObject {
 
     private let keychain = KeychainStore()
     private var pendingAppleNonce: String?
+    private var apiClient: APIClient?
+    private var apiClientBaseURL: URL?
 
     init() {
         deviceId = try? keychain.string(for: .deviceId)
@@ -58,6 +60,67 @@ final class AuthSession: ObservableObject {
         statusMessage = "Sign in failed: \(error.localizedDescription)"
     }
 
+    func verifyContractAPI() async {
+        guard let apiBaseURL = AppConstants.apiBaseURL else {
+            statusMessage = "API base URL is not configured"
+            return
+        }
+
+        isWorking = true
+        defer { isWorking = false }
+
+        do {
+            let items = try await client(for: apiBaseURL).listSubscriptions()
+            isSignedIn = true
+            statusMessage = "Contract API verified: \(items.count) item(s)"
+        } catch {
+            handleAuthenticatedRequestError(error, action: "Contract API check")
+        }
+    }
+
+    func signOutCurrentSession() async {
+        guard let apiBaseURL = AppConstants.apiBaseURL else {
+            statusMessage = "API base URL is not configured"
+            return
+        }
+
+        isWorking = true
+        defer { isWorking = false }
+
+        do {
+            try await client(for: apiBaseURL).signOut()
+            isSignedIn = false
+            statusMessage = "Signed out"
+        } catch {
+            handleAuthenticatedRequestError(error, action: "Sign out")
+        }
+    }
+
+    func revokeCurrentDevice() async {
+        guard let apiBaseURL = AppConstants.apiBaseURL else {
+            statusMessage = "API base URL is not configured"
+            return
+        }
+        guard let deviceId else {
+            statusMessage = "Registered device is unavailable"
+            return
+        }
+
+        isWorking = true
+        defer { isWorking = false }
+
+        do {
+            try await client(for: apiBaseURL).revokeDevice(id: deviceId)
+            try? keychain.delete(.deviceSyncToken)
+            try? keychain.delete(.deviceId)
+            self.deviceId = nil
+            isSignedIn = false
+            statusMessage = "Device revoked"
+        } catch {
+            handleAuthenticatedRequestError(error, action: "Device revocation")
+        }
+    }
+
     private func signInAndRegisterDevice(identityToken: String, nonce: String) async {
         guard let apiBaseURL = AppConstants.apiBaseURL else {
             statusMessage = "API base URL is not configured"
@@ -69,7 +132,7 @@ final class AuthSession: ObservableObject {
 
         do {
             let clientDeviceId = try loadOrCreateClientDeviceId()
-            let client = APIClient(baseURL: apiBaseURL)
+            let client = client(for: apiBaseURL)
             let signIn = try await client.signInWithApple(identityToken: identityToken, nonce: nonce)
             if let session = signIn.session {
                 try await client.applySession(session)
@@ -92,6 +155,25 @@ final class AuthSession: ObservableObject {
             } else {
                 statusMessage = "Sign in failed: \(error.localizedDescription)"
             }
+        }
+    }
+
+    private func client(for baseURL: URL) -> APIClient {
+        if apiClientBaseURL == baseURL, let apiClient {
+            return apiClient
+        }
+        let client = APIClient(baseURL: baseURL)
+        apiClient = client
+        apiClientBaseURL = baseURL
+        return client
+    }
+
+    private func handleAuthenticatedRequestError(_ error: Error, action: String) {
+        if let apiError = error as? APIError, case .reauthenticationRequired = apiError {
+            isSignedIn = false
+            statusMessage = "Sign in with Apple is required again"
+        } else {
+            statusMessage = "\(action) failed: \(error.localizedDescription)"
         }
     }
 
