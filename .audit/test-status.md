@@ -35,6 +35,7 @@
 | 2026-07-14 | Greptileレビュー指摘の修正 | 修正後の自動確認 | Webのnonce検証、iPhoneの一時通信障害時のログイン保持、CSRF Cookieの完全一致 | 一部合格 | Webの自動テスト161件、型チェック、書き方の検査は合格。iPhoneのコンパイルと一時通信障害の実機確認は未実施 | [Pull Request #6](https://github.com/Shintaro-Abe/SubBuddy/pull/6) |
 | 2026-07-14 | CodeRabbitレビュー指摘の修正 | 修正後の自動確認 | ログアウト、API例外処理、端末登録、CSRF、利用量同期、配布境界 | 一部合格 | 再レビューの追加指摘1件を修正後、Webの自動テスト168件、型、書き方の検査が合格。iPhoneのコンパイルと実機確認は未実施 | [Pull Request #6](https://github.com/Shintaro-Abe/SubBuddy/pull/6) |
 | 2026-07-15 | `docs/`・`.steering/`・`obsidian/`の現行性更新 | Markdown構造・ローカルリンク・旧前提・差分の検査 | 現行実装、承認済み方針、未完了作業を区別し、参照切れと明白な表記矛盾がないか | 合格 | Markdown 120ファイルのローカルリンクとコードフェンス、章番号、差分形式が合格。旧前提の対象語は0件。外部URLの到達性とMermaidの描画は今回未確認 | この行と当該文書差分 |
+| 2026-07-15 | Render事前設定手順 | MD・生成HTML・認証設定・機密情報の検査 | 現行認証に必要な設定がそろい、実値を含まず、MDとHTMLが一致するか | 合格 | 必須認証設定12件と障害時設定を確認。MDからHTMLを再生成して一致し、差分形式とgitleaks検査も合格 | [Render事前設定手順](../manuals/render-predeploy-setup.md) |
 
 ## テストの詳しい内訳
 

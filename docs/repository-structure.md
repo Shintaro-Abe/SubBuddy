@@ -38,7 +38,7 @@ SubBuddy/
 ├── .agents/skills/            # リポジトリ管理の Codex Skills（SKILL.md 標準）
 ├── .codex/                    # Codex ハーネス（config.toml / agents/*.toml / hooks/ / harness/）
 ├── memory/                    # 旧自動メモリ（Codex は自動注入なし→明示 read。集約時に配置）
-├── manuals/                   # 人手の操作手順書（外部サービスの GUI 設定など）
+├── manuals/                   # ローカル専用の人手操作手順書（Git非追跡）
 ├── wbs/                       # WBS 進捗管理の正本（wbs.yml）と Sheets 同期ツール
 ├── secrets/                   # SA 鍵等の秘密情報の置き場（.gitkeep のみ追跡。鍵はコミットしない）
 ├── migration/                 # Codex 移行の中継コピー集約先（.gitignore 除外。コミットしない）
@@ -152,7 +152,7 @@ apps/ios/
 
 ---
 
-## 6. WBS 進捗管理：`wbs/` / `manuals/` / `secrets/`
+## 6. WBS進捗管理とローカル手順：`wbs/` / `manuals/` / `secrets/`
 
 開発タスクの進捗を WBS で管理する。**正本（Source of Truth）はリポジトリの `wbs/wbs.yml`** で、Google スプレッドシートは人間向けの生成ビュー（片方向同期：spec → Sheets）。運用フロー（自動トリガ＋確認ゲート）は `development-guidelines.md` を一次情報とする。
 
@@ -165,8 +165,8 @@ wbs/
 └── scripts/                      # 実行スクリプト（init-sheets / sync / detect-bolt-complete.mjs）
 
 manuals/
-├── README.md                     # 操作手順書の置き場の方針
-└── wbs-google-setup.md           # Google 側の初期設定（SA 方式）の手順書
+├── README.md                     # ローカル操作手順の置き場の方針
+└── *.md / *.html                 # MDを正とし、HTMLはMDから生成
 
 secrets/
 └── .gitkeep                      # 鍵置き場のプレースホルダ（鍵本体は .gitignore で除外）
@@ -178,7 +178,7 @@ secrets/
 - `wbs.yml` には**開発タスクのメタ情報のみ**を書く。エンドユーザーの PII・機微データを記載しない（`AGENTS.md` PII 方針）。
 - **秘密情報は `wbs.config.yml` に書かない**。SA 鍵パスは `wbs/.env`（gitignore）で `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` として指定し、鍵本体は `secrets/` に置く。
 - **`secrets/` 配下の鍵は絶対にコミットしない**（`.gitignore` で除外、`.gitleaks.toml` の allowlist 対象）。`.gitkeep` のみ追跡する。
-- `manuals/` には **エージェントが自動実行できない人手の操作手順**（外部サービスの GUI 設定・認証）を置く。実在の鍵・トークンは記載しない。
+- `manuals/`は`.gitignore`対象のローカル専用ディレクトリである。エージェントが自動実行できない外部サービスのGUI設定・認証手順を置く。非追跡でも実在の鍵・トークン・接続情報・個人識別子は記載しない。
 
 ---
 
@@ -195,7 +195,7 @@ secrets/
 | 合成データ | `prisma/seed.ts` / `tests/` | 実 PII 禁止 |
 | WBS 正本 | `wbs/wbs.yml` | 進捗の単一ソース。Sheets は生成ビュー |
 | WBS 同期設定（非秘密） | `wbs/wbs.config.yml` | spreadsheetId・列順等。秘密は書かない |
-| 人手の操作手順 | `manuals/` | 外部サービスの GUI 設定・認証 |
+| 人手の操作手順 | `manuals/` | ローカル専用・Git非追跡。外部サービスのGUI設定・認証 |
 | SA 鍵等の秘密 | `secrets/`（gitignore） | `.gitkeep` のみ追跡。鍵はコミットしない |
 | 図・ダイアグラム | 関連 `docs/*.md` 内 Mermaid | 独立フォルダを作らない |
 
