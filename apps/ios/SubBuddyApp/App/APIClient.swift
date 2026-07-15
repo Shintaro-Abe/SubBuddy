@@ -28,7 +28,8 @@ actor APIClient {
     }
 
     func registerDevice(identityToken: String, clientDeviceId: String, name: String) async throws -> DeviceRegistrationResponse {
-        if accessToken != nil || (try keychain.string(for: .refreshToken)) != nil {
+        let refreshToken = try keychain.string(for: .refreshToken)
+        if accessToken != nil || refreshToken != nil {
             return try await sendAuthenticated(
                 path: "/api/devices",
                 method: "POST",
