@@ -80,7 +80,10 @@ describe("verifyAppleIdentityToken", () => {
         now: NOW,
         fetchImpl: fetchJwks,
       }),
-    ).rejects.toBeInstanceOf(AppleIdentityTokenError);
+    ).rejects.toMatchObject({
+      name: "AppleIdentityTokenError",
+      reason: "audience_mismatch",
+    });
   });
 
   it("aud 許可リスト内なら Web / iOS の複数 aud を受け入れる（ADR 0004）", async () => {
@@ -150,7 +153,10 @@ describe("verifyAppleIdentityToken", () => {
         now: NOW,
         fetchImpl: fetchJwks,
       }),
-    ).rejects.toBeInstanceOf(AppleIdentityTokenError);
+    ).rejects.toMatchObject({
+      name: "AppleIdentityTokenError",
+      reason: "nonce_mismatch",
+    });
   });
 
   it("署名が壊れた token は拒否する", async () => {

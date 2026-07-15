@@ -22,7 +22,7 @@ vi.mock("@/services/auth", async (importOriginal) => ({
   upsertAppleUser: mocks.upsertAppleUser,
 }));
 
-import { hashAppleNonce } from "@/lib/apple-auth";
+import { AppleIdentityTokenError, hashAppleNonce } from "@/lib/apple-auth";
 import { AppleOutageError } from "@/services/auth";
 import { POST } from "./route";
 
@@ -99,6 +99,27 @@ describe("POST /api/auth/apple/native", () => {
     expect(response.status).toBe(400);
     expect(mocks.parseAuthConfig).not.toHaveBeenCalled();
     expect(mocks.verifyAppleIdentityToken).not.toHaveBeenCalled();
+  });
+
+  it("Apple検証401は機微情報を含まない理由コードだけをログへ残す", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mocks.parseAuthConfig.mockReturnValue({
+      mode: "cloud-testflight",
+      appleAllowedClientIds: ["com.subbuddy.web", "com.subbuddy.app"],
+      appleSubjectHashSalt: "synthetic-subject-hash-salt-32-bytes",
+    });
+    mocks.verifyAppleIdentityToken.mockRejectedValue(
+      new AppleIdentityTokenError("nonce_mismatch"),
+    );
+
+    const response = await POST(request({ identityToken: "synthetic.identity.token", nonce }));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "unauthorized" });
+    expect(warn).toHaveBeenCalledWith("apple_native_auth_rejected", {
+      reason: "nonce_mismatch",
+    });
+    warn.mockRestore();
   });
 
   it("Apple障害中の新規session交換は503", async () => {

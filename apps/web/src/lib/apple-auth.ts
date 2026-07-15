@@ -35,9 +35,23 @@ export type AppleIdentity = {
   email?: string;
 };
 
+export type AppleIdentityTokenFailureReason =
+  | "allowed_audience_missing"
+  | "malformed_token"
+  | "unsupported_header"
+  | "jwks_unavailable"
+  | "signing_key_missing"
+  | "invalid_signature"
+  | "issuer_mismatch"
+  | "audience_mismatch"
+  | "expired"
+  | "issued_at_future"
+  | "subject_missing"
+  | "nonce_mismatch";
+
 export class AppleIdentityTokenError extends Error {
-  constructor(message = "invalid apple identity token") {
-    super(message);
+  constructor(readonly reason: AppleIdentityTokenFailureReason = "malformed_token") {
+    super("invalid apple identity token");
     this.name = "AppleIdentityTokenError";
   }
 }
@@ -67,7 +81,7 @@ function decodeJsonPart<T>(input: string): T {
   try {
     return JSON.parse(decodeBase64Url(input).toString("utf8")) as T;
   } catch {
-    throw new AppleIdentityTokenError();
+    throw new AppleIdentityTokenError("malformed_token");
   }
 }
 
@@ -103,11 +117,11 @@ async function fetchAppleJwk(
   fetchImpl: typeof fetch,
 ): Promise<AppleJwk> {
   const res = await fetchImpl(jwksUrl, { cache: "no-store" });
-  if (!res.ok) throw new AppleIdentityTokenError();
+  if (!res.ok) throw new AppleIdentityTokenError("jwks_unavailable");
 
   const jwks = (await res.json()) as AppleJwks;
   const jwk = jwks.keys?.find((key) => key.kid === kid);
-  if (!jwk) throw new AppleIdentityTokenError();
+  if (!jwk) throw new AppleIdentityTokenError("signing_key_missing");
   return jwk;
 }
 
@@ -139,16 +153,20 @@ export async function verifyAppleIdentityToken(
   options: VerifyAppleIdentityTokenOptions = {},
 ): Promise<AppleIdentity> {
   const allowedClientIds = resolveAllowedClientIds(options);
-  if (allowedClientIds.length === 0) throw new AppleIdentityTokenError();
+  if (allowedClientIds.length === 0) {
+    throw new AppleIdentityTokenError("allowed_audience_missing");
+  }
 
   const parts = identityToken.split(".");
-  if (parts.length !== 3) throw new AppleIdentityTokenError();
+  if (parts.length !== 3) throw new AppleIdentityTokenError("malformed_token");
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
   const header = decodeJsonPart<AppleJwtHeader>(encodedHeader);
   const payload = decodeJsonPart<AppleJwtPayload>(encodedPayload);
 
-  if (header.alg !== "RS256" || !header.kid) throw new AppleIdentityTokenError();
+  if (header.alg !== "RS256" || !header.kid) {
+    throw new AppleIdentityTokenError("unsupported_header");
+  }
 
   const jwk = await fetchAppleJwk(
     header.kid,
@@ -160,20 +178,22 @@ export async function verifyAppleIdentityToken(
     `${encodedHeader}.${encodedPayload}`,
     decodeBase64Url(encodedSignature),
   );
-  if (!signatureValid) throw new AppleIdentityTokenError();
+  if (!signatureValid) throw new AppleIdentityTokenError("invalid_signature");
 
   const nowSeconds = Math.floor((options.now ?? new Date()).getTime() / 1000);
-  if (payload.iss !== APPLE_ISSUER) throw new AppleIdentityTokenError();
-  if (!hasAllowedAudience(payload.aud, allowedClientIds)) throw new AppleIdentityTokenError();
+  if (payload.iss !== APPLE_ISSUER) throw new AppleIdentityTokenError("issuer_mismatch");
+  if (!hasAllowedAudience(payload.aud, allowedClientIds)) {
+    throw new AppleIdentityTokenError("audience_mismatch");
+  }
   if (!payload.exp || payload.exp <= nowSeconds - DEFAULT_CLOCK_SKEW_SECONDS) {
-    throw new AppleIdentityTokenError();
+    throw new AppleIdentityTokenError("expired");
   }
   if (payload.iat && payload.iat > nowSeconds + DEFAULT_CLOCK_SKEW_SECONDS) {
-    throw new AppleIdentityTokenError();
+    throw new AppleIdentityTokenError("issued_at_future");
   }
-  if (!payload.sub) throw new AppleIdentityTokenError();
+  if (!payload.sub) throw new AppleIdentityTokenError("subject_missing");
   if (options.expectedNonce && payload.nonce !== options.expectedNonce) {
-    throw new AppleIdentityTokenError();
+    throw new AppleIdentityTokenError("nonce_mismatch");
   }
 
   return {
