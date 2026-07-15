@@ -89,6 +89,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app.tests
         GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SubBuddy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SubBuddy"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
 schemes:
   SubBuddyApp:
