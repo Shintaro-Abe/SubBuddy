@@ -92,7 +92,8 @@ final class AuthSession: ObservableObject {
             isSignedIn = false
             statusMessage = "Signed out"
         } catch {
-            handleAuthenticatedRequestError(error, action: "Sign out")
+            isSignedIn = false
+            statusMessage = "Signed out on this device; server sign-out could not be confirmed"
         }
     }
 
