@@ -1,7 +1,13 @@
 import Foundation
 import Security
 
-final class KeychainStore {
+protocol KeychainStoring {
+    func string(for key: KeychainStore.Key) throws -> String?
+    func set(_ value: String, for key: KeychainStore.Key) throws
+    func delete(_ key: KeychainStore.Key) throws
+}
+
+final class KeychainStore: KeychainStoring {
     enum Key: String {
         case clientDeviceId = "client_device_id"
         case deviceId = "device_id"

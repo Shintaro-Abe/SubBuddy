@@ -3,11 +3,11 @@ import Foundation
 actor APIClient {
     let baseURL: URL
 
-    private let keychain: KeychainStore
+    private let keychain: KeychainStoring
     private var accessToken: String?
     private var refreshTask: Task<AppleSignInResponse.Session, Error>?
 
-    init(baseURL: URL, keychain: KeychainStore = KeychainStore()) {
+    init(baseURL: URL, keychain: KeychainStoring = KeychainStore()) {
         self.baseURL = baseURL
         self.keychain = keychain
     }
@@ -21,10 +21,15 @@ actor APIClient {
     }
 
     func applySession(_ session: AppleSignInResponse.Session) throws {
-        accessToken = session.accessToken
-        try? keychain.delete(.accessToken)
-        try keychain.set(session.refreshToken, for: .refreshToken)
-        try keychain.set(session.sessionId, for: .sessionId)
+        do {
+            try? keychain.delete(.accessToken)
+            try keychain.set(session.refreshToken, for: .refreshToken)
+            try keychain.set(session.sessionId, for: .sessionId)
+            accessToken = session.accessToken
+        } catch {
+            clearSession()
+            throw error
+        }
     }
 
     func registerDevice(identityToken: String, clientDeviceId: String, name: String) async throws -> DeviceRegistrationResponse {
