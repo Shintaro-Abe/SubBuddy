@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-06-30
+> 最終更新：2026-07-15（iOS実装・認証セッション基盤・現行ディレクトリ構成を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -15,8 +15,8 @@
 
 設計上の前提（`architecture.md` から継承）：
 
-- **Web/API 側（Next.js）と iPhone 側（Swift）の 2 コードベース**を 1 リポジトリに同居（`apps/` 配下に分離）。現時点で実体があるのは `apps/web` で、`apps/ios` は小規模検証版に向けて追加する計画上の配置。
-- **利用量取り込みはソース別コネクタ（Adapter）で一元化**（`architecture.md` §5.1）。配置場所を本書で固定する。
+- **Web/API 側（Next.js）と iPhone 側（Swift）の 2 コードベース**を 1 リポジトリに同居（`apps/` 配下に分離）。両方とも実装が存在する。
+- **取得源ごとに入力検証とデータ最小化の境界を置く**（`architecture.md` §5.1）。汎用コネクタ基盤は共通点が複数現れてから追加する。
 - **ドメインロジックは API/Web から独立**（Worker 分離の可搬性。`architecture.md` §7）。
 - **PII・秘密情報はコミットしない**。合成データのみをリポジトリに置く（`AGENTS.md` 準拠）。
 
@@ -30,20 +30,21 @@
 SubBuddy/
 ├── AGENTS.md                  # プロジェクト指示（Codex CLI 用。主要な作業ルールとメモリ索引）
 ├── README.md                  # 概要・セットアップ手順
-├── .gitignore                 # 実データ・秘密情報・ビルド成果物・migration/ を除外
+├── .gitignore                 # 実データ・秘密情報・ビルド成果物等を除外
 ├── .editorconfig              # エディタ共通設定
 ├── docs/                      # 永続的ドキュメント（北極星）
 ├── .steering/                 # 作業単位ドキュメント（[YYYYMMDD]-[タイトル]/）
+├── obsidian/                  # 日付付き技術メモ。現行仕様の正本ではない
 ├── .agents/skills/            # リポジトリ管理の Codex Skills（SKILL.md 標準）
 ├── .codex/                    # Codex ハーネス（config.toml / agents/*.toml / hooks/ / harness/）
 ├── memory/                    # 旧自動メモリ（Codex は自動注入なし→明示 read。集約時に配置）
-├── manuals/                   # 人手の操作手順書（外部サービスの GUI 設定など）
+├── manuals/                   # ローカル専用の人手操作手順書（Git非追跡）
 ├── wbs/                       # WBS 進捗管理の正本（wbs.yml）と Sheets 同期ツール
 ├── secrets/                   # SA 鍵等の秘密情報の置き場（.gitkeep のみ追跡。鍵はコミットしない）
 ├── migration/                 # Codex 移行の中継コピー集約先（.gitignore 除外。コミットしない）
 └── apps/
-    ├── web/                   # Web/API 側：Next.js（Web + API + Worker 同居。local mode は Mac、cloud mode は PaaS）
-    └── ios/                   # iPhone 側：Swift / SwiftUI（利用量センサー。現時点は計画）
+    ├── web/                   # Web/API 側：Next.js（Web + API + スコアリング同居）
+    └── ios/                   # iPhone 側：SwiftUI本体 + DeviceActivity Monitor Extension
 ```
 
 - **エージェント環境**：`AGENTS.md`、`.agents/skills/`、`.codex/` を Codex 用の作業基盤とする。構成の詳細は `.codex/harness/harness-map.md`。
@@ -90,9 +91,10 @@ apps/web/
 ├── .env.example                   # 環境変数のテンプレ（値はダミー）。実 .env はコミットしない
 ├── next.config.ts
 ├── tsconfig.json
-├── tailwind.config.ts
+├── postcss.config.mjs            # Tailwind CSS v4のPostCSS設定
 ├── eslint.config.mjs
 ├── vitest.config.ts
+├── playwright.config.ts
 ├── prisma/
 │   ├── schema.prisma              # DB スキーマの単一ソース（functional-design §5）
 │   ├── migrations/                # マイグレーション履歴
@@ -113,7 +115,8 @@ apps/web/
     ├── schemas/                   # Zod スキーマ（API 入力・取り込みペイロード）
     ├── lib/                       # 横断ユーティリティ（型・通貨・日付等）
     └── components/                # UI コンポーネント（React + Tailwind）
-└── tests/                         # Vitest（domain 中心の単体テスト）。合成データのみ
+├── tests/                         # 横断的なVitestテスト。合成データのみ
+└── e2e/                           # Playwright E2E。合成データのみ
 ```
 
 ### 4.1 配置ルール（Web/API 側）
@@ -131,24 +134,25 @@ apps/web/
 
 ```
 apps/ios/
-├── SubBuddy.xcodeproj/            # （または Package.swift）
-├── SubBuddy/                      # アプリ本体
-│   ├── App/                       # エントリ・画面（SwiftUI）
-│   ├── Models/                    # SwiftData モデル（オンデバイス集計の保持）
-│   ├── Usage/                     # DeviceActivity / FamilyControls まわり
-│   ├── Location/                  # （採用時）ジオフェンス・来館検出
-│   └── Sync/                      # SubBuddy API への集計値送信（URLSession / HTTPS）
-└── DeviceActivityMonitorExtension/ # しきい値超過イベント受信 Extension
+├── project.yml                    # XcodeGenのプロジェクト定義
+├── SubBuddyApp/
+│   ├── App/                       # SwiftUI画面、認証、計測、同期、Keychain
+│   ├── Shared/                    # App Group共有の対応表・集計レコード
+│   └── Assets.xcassets/           # アプリアイコン等
+├── SubBuddyMonitorExtension/      # しきい値超過イベント受信Extension
+└── SubBuddyAppTests/              # 共有処理のXCTest
 ```
 
 ### 5.1 配置ルール（iPhone 側）
 
 - iPhone から SubBuddy API へ送るのは **集計値のみ**（詳細ログ・生の位置情報は送らない。`product-requirements.md` 非機能要件 / `architecture.md` §3.2）。
+- iOSの更新トークン、セッションID、デバイス同期トークン、端末内生成IDはKeychainに置く。利用量集計と計測対象対応表はApp Group内のファイルへ置く。
+- `project.yml`を正本としてXcodeGenで`.xcodeproj`を生成する。生成物を正本にしない。
 - entitlement・署名情報・プロビジョニングプロファイル等の**秘密情報はコミットしない**（`.gitignore` で除外）。
 
 ---
 
-## 6. WBS 進捗管理：`wbs/` / `manuals/` / `secrets/`
+## 6. WBS進捗管理とローカル手順：`wbs/` / `manuals/` / `secrets/`
 
 開発タスクの進捗を WBS で管理する。**正本（Source of Truth）はリポジトリの `wbs/wbs.yml`** で、Google スプレッドシートは人間向けの生成ビュー（片方向同期：spec → Sheets）。運用フロー（自動トリガ＋確認ゲート）は `development-guidelines.md` を一次情報とする。
 
@@ -161,8 +165,8 @@ wbs/
 └── scripts/                      # 実行スクリプト（init-sheets / sync / detect-bolt-complete.mjs）
 
 manuals/
-├── README.md                     # 操作手順書の置き場の方針
-└── wbs-google-setup.md           # Google 側の初期設定（SA 方式）の手順書
+├── README.md                     # ローカル操作手順の置き場の方針
+└── *.md / *.html                 # MDを正とし、HTMLはMDから生成
 
 secrets/
 └── .gitkeep                      # 鍵置き場のプレースホルダ（鍵本体は .gitignore で除外）
@@ -174,7 +178,7 @@ secrets/
 - `wbs.yml` には**開発タスクのメタ情報のみ**を書く。エンドユーザーの PII・機微データを記載しない（`AGENTS.md` PII 方針）。
 - **秘密情報は `wbs.config.yml` に書かない**。SA 鍵パスは `wbs/.env`（gitignore）で `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` として指定し、鍵本体は `secrets/` に置く。
 - **`secrets/` 配下の鍵は絶対にコミットしない**（`.gitignore` で除外、`.gitleaks.toml` の allowlist 対象）。`.gitkeep` のみ追跡する。
-- `manuals/` には **エージェントが自動実行できない人手の操作手順**（外部サービスの GUI 設定・認証）を置く。実在の鍵・トークンは記載しない。
+- `manuals/`は`.gitignore`対象のローカル専用ディレクトリである。エージェントが自動実行できない外部サービスのGUI設定・認証手順を置く。非追跡でも実在の鍵・トークン・接続情報・個人識別子は記載しない。
 
 ---
 
@@ -185,13 +189,13 @@ secrets/
 | 永続ドキュメント | `docs/` | 基本設計の変更時のみ更新 |
 | 作業単位ドキュメント | `.steering/[YYYYMMDD]-[タイトル]/` | 作業ごとに新規・履歴保持 |
 | Web/API 実装 | `apps/web/src/` | レイヤ別（domain / services / repositories / config / schemas / components） |
-| iOS 実装 | `apps/ios/` | センサー・同期のみ。判定ロジックは持たせない |
+| iOS 実装 | `apps/ios/` | 主製品UI、認証、計測、同期、端末内保存。見直し計算はサーバー側に置く |
 | DB スキーマ | `apps/web/prisma/schema.prisma` | 単一ソース |
 | 設定値（閾値等） | `apps/web/src/config/` | Zod 検証・外出し |
 | 合成データ | `prisma/seed.ts` / `tests/` | 実 PII 禁止 |
 | WBS 正本 | `wbs/wbs.yml` | 進捗の単一ソース。Sheets は生成ビュー |
 | WBS 同期設定（非秘密） | `wbs/wbs.config.yml` | spreadsheetId・列順等。秘密は書かない |
-| 人手の操作手順 | `manuals/` | 外部サービスの GUI 設定・認証 |
+| 人手の操作手順 | `manuals/` | ローカル専用・Git非追跡。外部サービスのGUI設定・認証 |
 | SA 鍵等の秘密 | `secrets/`（gitignore） | `.gitkeep` のみ追跡。鍵はコミットしない |
 | 図・ダイアグラム | 関連 `docs/*.md` 内 Mermaid | 独立フォルダを作らない |
 

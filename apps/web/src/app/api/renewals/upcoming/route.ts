@@ -1,5 +1,5 @@
-import { getCurrentUserId } from "@/lib/user";
-import { ok, serverError } from "@/lib/api";
+import { authenticateRequest } from "@/lib/auth";
+import { ok, serverError, unauthorized } from "@/lib/api";
 import { listSubscriptions } from "@/repositories/subscriptions";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +12,13 @@ const MAX_DAYS = 365;
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const raw = Number(url.searchParams.get("days"));
-  const days =
-    Number.isInteger(raw) && raw >= 1 && raw <= MAX_DAYS ? raw : DEFAULT_DAYS;
+  const days = Number.isInteger(raw) && raw >= 1 && raw <= MAX_DAYS ? raw : DEFAULT_DAYS;
 
   try {
+    const auth = await authenticateRequest(req);
+    if (!auth) return unauthorized();
     const now = new Date();
-    const subs = await listSubscriptions(getCurrentUserId());
+    const subs = await listSubscriptions(auth.actor.userId);
     const items = subs
       .filter((s) => s.status === "active" && s.nextRenewalDate)
       .map((s) => ({

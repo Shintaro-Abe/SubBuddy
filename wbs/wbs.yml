@@ -1366,13 +1366,13 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "Apple認証・テナント認可・配布版固定ユーザー隔離"
-    progress: 30
+    progress: 95
     status: "進行中"
     plannedStart: "2026-07-13"
     plannedEnd: "2026-08-07"
     predecessors: ["TF-1.2.4"]
     deliverable: "iPhone/Web共通ユーザー、短期・更新トークン、セッション・端末失効、他テナント拒否"
-    note: "steering: .steering/20260713-auth-tenant-boundary/。rebaseline T-19/T-22。user_localは配布版でフェイルクローズ"
+    note: "steering: .steering/20260713-auth-tenant-boundary/。Web/API実装と自動回帰は完了。iOSのXcode検証とRender/TestFlight実環境の再確認待ち。user_localは配布版でフェイルクローズ"
 
   - id: "REL-0.2.1"
     parent: "REL-0.2"
@@ -1418,10 +1418,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "Apple認証交換・更新・サインアウトAPI"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-23"
     plannedEnd: "2026-07-24"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.3"]
 
   - id: "REL-0.2.5"
@@ -1429,10 +1431,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "Web HttpOnly Cookie・CSRF防御・保持ログイン"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-27"
     plannedEnd: "2026-07-28"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.4"]
 
   - id: "REL-0.2.6"
@@ -1440,10 +1444,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "iPhone Keychain・自動更新・401再認証"
-    progress: 0
-    status: "未着手"
+    progress: 80
+    status: "進行中"
     plannedStart: "2026-07-29"
     plannedEnd: "2026-07-30"
+    actualStart: "2026-07-14"
+    note: "Keychain、単一refresh、401後1回再試行、再認証状態を実装。Xcodeが必要なコンパイル・実機検証待ち"
     predecessors: ["REL-0.2.4"]
 
   - id: "REL-0.2.7"
@@ -1451,10 +1457,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "主要APIの認証済みuserId境界への移行"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-31"
     plannedEnd: "2026-08-03"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.5", "REL-0.2.6"]
 
   - id: "REL-0.2.8"
@@ -1462,10 +1470,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "配布版user_local禁止と起動時フェイルクローズ"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-08-04"
     plannedEnd: "2026-08-04"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.7"]
 
   - id: "REL-0.2.9"
@@ -1473,10 +1483,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "セッション・端末の個別失効と全サインアウト"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-08-05"
     plannedEnd: "2026-08-05"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.7"]
 
   - id: "REL-0.2.10"
@@ -1484,12 +1496,15 @@ tasks:
     level: 3
     phase: "検証"
     name: "未認証・別テナント・失効・再利用の回帰試験"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-08-06"
     plannedEnd: "2026-08-07"
+    actualStart: "2026-07-14"
+    actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.8", "REL-0.2.9"]
     deliverable: "未認証401、他テナント404、失効後拒否、トークン平文非保存の証跡"
+    note: "Vitest 24ファイル158件、型チェック、ESLint、変更対象のsecret scanが合格"
 
   - id: "REL-0.3"
     parent: "REL-0"

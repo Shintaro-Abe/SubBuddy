@@ -1,14 +1,16 @@
-import { getCurrentUserId } from "@/lib/user";
-import { ok, serverError } from "@/lib/api";
+import { authenticateRequest } from "@/lib/auth";
+import { ok, serverError, unauthorized } from "@/lib/api";
 import { listSubscriptions } from "@/repositories/subscriptions";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 /** 月額/年額合計・件数（アクティブな契約のみ）。functional-design §10。 */
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const subs = await listSubscriptions(getCurrentUserId());
+    const auth = await authenticateRequest(req);
+    if (!auth) return unauthorized();
+    const subs = await listSubscriptions(auth.actor.userId);
     const active = subs.filter((s) => s.status === "active");
 
     let monthlyTotal = 0;

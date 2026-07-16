@@ -2,7 +2,7 @@
 title: "ターミナルの出力をマウス選択コピーすると日本語が文字化けする問題を回避する"
 type: troubleshooting
 created: 2026-06-07
-updated: 2026-06-07
+updated: 2026-07-15
 expires_review: 2026-12-07
 confidence: high
 tags:
@@ -19,6 +19,8 @@ aliases:
 ---
 
 # ターミナルの出力をマウス選択コピーすると日本語が文字化けする問題を回避する
+
+> 現行性注記（2026-07-15）：本書はClaude Codeで観測した履歴であり、現在利用するCodex CLIでの再現確認ではない。同じ症状が出た場合の切り分け手順としてのみ使う。
 
 ## TL;DR
 

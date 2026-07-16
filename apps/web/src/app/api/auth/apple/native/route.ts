@@ -1,7 +1,25 @@
-import { ok, badRequest, fromZodError, serverError, unauthorized } from "@/lib/api";
-import { AppleIdentityTokenError, verifyAppleIdentityToken } from "@/lib/apple-auth";
-import { upsertAppleUser } from "@/services/auth";
-import { appleCallbackSchema } from "@/schemas/auth";
+import {
+  ok,
+  badRequest,
+  conflict,
+  fromZodError,
+  serverError,
+  serviceUnavailable,
+  unauthorized,
+} from "@/lib/api";
+import {
+  AppleIdentityTokenError,
+  hashAppleNonce,
+  verifyAppleIdentityToken,
+} from "@/lib/apple-auth";
+import { parseAuthConfig } from "@/config/auth";
+import {
+  AppleOutageError,
+  exchangeAppleIdentityForSession,
+  SessionLimitError,
+  upsertAppleUser,
+} from "@/services/auth";
+import { appleNativeSchema } from "@/schemas/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,17 +35,32 @@ export async function POST(req: Request) {
     return badRequest("request body must be valid JSON");
   }
 
-  const parsed = appleCallbackSchema.safeParse(body);
+  const parsed = appleNativeSchema.safeParse(body);
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
+    const config = parseAuthConfig();
+    if (config.mode !== "local" && config.appleOutageStartedAt) return serviceUnavailable();
     const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
-      expectedNonce: parsed.data.nonce,
+      allowedClientIds: config.mode === "local" ? undefined : config.appleAllowedClientIds,
+      expectedNonce: hashAppleNonce(parsed.data.nonce),
+      subjectHashSalt: config.mode === "local" ? undefined : config.appleSubjectHashSalt,
     });
+
+    if (config.mode !== "local") {
+      const result = await exchangeAppleIdentityForSession(identity, { clientType: "ios" }, config);
+      return ok(result);
+    }
+
     const actor = await upsertAppleUser(identity);
     return ok({ actor });
   } catch (error) {
-    if (error instanceof AppleIdentityTokenError) return unauthorized();
+    if (error instanceof AppleIdentityTokenError) {
+      console.warn("apple_native_auth_rejected", { reason: error.reason });
+      return unauthorized();
+    }
+    if (error instanceof AppleOutageError) return serviceUnavailable();
+    if (error instanceof SessionLimitError) return conflict("session limit reached");
     return serverError();
   }
 }

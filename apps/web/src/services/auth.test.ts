@@ -1,11 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { hashDeviceSyncToken } from "@/lib/auth";
 import {
+  AppleOutageError,
   createAuthSession,
   deleteAppleUserAccount,
+  exchangeAppleIdentityForSession,
+  listActiveSessions,
   RefreshSessionError,
   registerDeviceForAppleUser,
+  registerDeviceForSession,
   revokeDeviceForAppleUser,
+  revokeSession,
+  SessionLimitError,
   rotateAuthSession,
   upsertAppleUser,
 } from "@/services/auth";
@@ -17,6 +23,8 @@ const authConfig: CloudAuthConfig = {
   mode: "cloud-testflight",
   databaseUrl: "postgresql://synthetic.invalid/synthetic",
   appleAllowedClientIds: ["com.subbuddy.web", "com.subbuddy.app"],
+  appleWebClientId: "com.subbuddy.web",
+  appleRedirectUri: "https://testflight.subbuddy.example/sign-in",
   appleSubjectHashSalt: "synthetic-subject-hash-salt-32-bytes",
   tokenIssuer: "https://testflight-api.subbuddy.example",
   tokenAudience: "subbuddy-cloud-testflight",
@@ -26,6 +34,7 @@ const authConfig: CloudAuthConfig = {
   idleTtlSeconds: 2592000,
   absoluteTtlSeconds: 7776000,
   appleOutageGraceSeconds: 259200,
+  appleOutageStartedAt: null,
   accessCookieName: "__Host-subbuddy-testflight-access",
   refreshCookieName: "__Host-subbuddy-testflight-refresh",
   csrfCookieName: "__Host-subbuddy-testflight-csrf",
@@ -70,10 +79,30 @@ function fakeDb() {
 }
 
 describe("auth service", () => {
+  it("有効sessionが10件なら新規sessionだけを拒否する", async () => {
+    const create = vi.fn();
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+      authSession: { count: async () => 10, create },
+    };
+
+    await expect(
+      createAuthSession(
+        { userId: "synthetic_user_a", clientType: "ios" },
+        authConfig,
+        db as never,
+        NOW,
+      ),
+    ).rejects.toBeInstanceOf(SessionLimitError);
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("iOS sessionを発行しrefresh tokenはhashだけ保存する", async () => {
     let createArgs: unknown;
     const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
       authSession: {
+        count: async () => 0,
         create: async (args: unknown) => {
           createArgs = args;
           return { id: "synthetic_session_a" };
@@ -116,7 +145,9 @@ describe("auth service", () => {
   it("保持しないWeb sessionはサーバー側も24時間で失効する", async () => {
     let createArgs: { data: { idleExpiresAt: Date; absoluteExpiresAt: Date } } | undefined;
     const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
       authSession: {
+        count: async () => 0,
         create: async (args: { data: { idleExpiresAt: Date; absoluteExpiresAt: Date } }) => {
           createArgs = args;
           return { id: "synthetic_session_web" };
@@ -253,6 +284,44 @@ describe("auth service", () => {
     });
   });
 
+  it("Apple障害の猶予期間終了時はsessionを消さず一時障害として拒否する", async () => {
+    const create = vi.fn();
+    const current = {
+      id: "synthetic_session_old",
+      userId: "synthetic_user_a",
+      clientType: "ios",
+      tokenFamilyId: "synthetic_family_a",
+      deviceId: "synthetic_device_a",
+      rememberBrowser: false,
+      replacedBySessionId: null,
+      idleExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      absoluteExpiresAt: new Date("2026-10-01T00:00:00.000Z"),
+      revokedAt: null,
+    } as const;
+    const tx = {
+      authSession: {
+        findUnique: async () => current,
+        findFirst: async () => ({ createdAt: new Date("2026-07-01T00:00:00.000Z") }),
+        create,
+      },
+    };
+    const db = {
+      $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      authSession: { updateMany: vi.fn() },
+    };
+    const outageConfig = {
+      ...authConfig,
+      appleOutageStartedAt: new Date("2026-07-10T00:00:00.000Z"),
+      appleOutageGraceSeconds: 259200,
+    };
+
+    await expect(
+      rotateAuthSession("synthetic-refresh-old", outageConfig, db as never, NOW),
+    ).rejects.toBeInstanceOf(AppleOutageError);
+    expect(create).not.toHaveBeenCalled();
+    expect(db.authSession.updateMany).not.toHaveBeenCalled();
+  });
+
   it("Apple subject hash でユーザーを upsert し AuthenticatedActor を返す", async () => {
     const { db, calls } = fakeDb();
     const actor = await upsertAppleUser({ subjectHash: "subject-hash" }, db as never);
@@ -263,6 +332,124 @@ describe("auth service", () => {
       create: { name: "Apple user", appleSubjectHash: "subject-hash" },
       select: { id: true },
     });
+  });
+
+  it("session一覧はPIIを含めず現在sessionだけを識別する", async () => {
+    const db = {
+      authSession: {
+        findMany: async () => [
+          {
+            id: "synthetic_session_a",
+            clientType: "ios",
+            createdAt: NOW,
+            lastUsedAt: NOW,
+            device: { name: "Test iPhone" },
+          },
+        ],
+      },
+    };
+
+    await expect(
+      listActiveSessions("synthetic_user_a", "synthetic_session_a", db as never, NOW),
+    ).resolves.toEqual([
+      {
+        id: "synthetic_session_a",
+        clientType: "ios",
+        deviceName: "Test iPhone",
+        createdAt: NOW,
+        lastUsedAt: NOW,
+        current: true,
+      },
+    ]);
+  });
+
+  it("session失効時は紐づく端末tokenも同時に失効する", async () => {
+    const calls: unknown[] = [];
+    const tx = {
+      authSession: {
+        findFirst: async () => ({ deviceId: "synthetic_device_a" }),
+        updateMany: async (args: unknown) => {
+          calls.push(args);
+          return { count: 1 };
+        },
+      },
+      device: {
+        updateMany: async (args: unknown) => {
+          calls.push(args);
+          return { count: 1 };
+        },
+      },
+    };
+    const db = {
+      $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      authSession: tx.authSession,
+      device: tx.device,
+    };
+
+    await expect(
+      revokeSession("synthetic_user_a", "synthetic_session_a", "signed_out", db as never, NOW),
+    ).resolves.toBe(true);
+    expect(calls).toContainEqual({
+      where: {
+        id: "synthetic_device_a",
+        userId: "synthetic_user_a",
+        revokedAt: null,
+      },
+      data: { revokedAt: NOW },
+    });
+  });
+
+  it("Apple subject hashで解決した同じユーザーへiOS sessionを紐づける", async () => {
+    const storedUserIds: string[] = [];
+    const db = {
+      user: {
+        upsert: async () => ({ id: "synthetic_user_shared" }),
+      },
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+      authSession: {
+        count: async () => 0,
+        create: async (args: { data: { userId: string } }) => {
+          storedUserIds.push(args.data.userId);
+          return { id: args.data.userId };
+        },
+      },
+    };
+
+    const result = await exchangeAppleIdentityForSession(
+      { subjectHash: "synthetic-shared-subject-hash" },
+      { clientType: "ios" },
+      authConfig,
+      db as never,
+      NOW,
+    );
+
+    expect(result.actor.userId).toBe("synthetic_user_shared");
+    expect(storedUserIds).toEqual(["synthetic_user_shared"]);
+    await expect(
+      verifyAccessToken(result.session.accessToken, authConfig, NOW),
+    ).resolves.toMatchObject({
+      userId: "synthetic_user_shared",
+      sessionId: result.session.sessionId,
+    });
+  });
+
+  it("Apple障害中は新規session交換を拒否する", async () => {
+    const db = {
+      user: { upsert: vi.fn() },
+      authSession: { count: vi.fn(), create: vi.fn() },
+      $transaction: vi.fn(),
+    };
+
+    await expect(
+      exchangeAppleIdentityForSession(
+        { subjectHash: "synthetic-shared-subject-hash" },
+        { clientType: "ios" },
+        { ...authConfig, appleOutageStartedAt: NOW },
+        db as never,
+        NOW,
+      ),
+    ).rejects.toBeInstanceOf(AppleOutageError);
+    expect(db.user.upsert).not.toHaveBeenCalled();
   });
 
   it("デバイス同期トークンを平文保存せず hash だけ保存する", async () => {
@@ -324,6 +511,28 @@ describe("auth service", () => {
       },
       select: { id: true, name: true },
     });
+  });
+
+  it("session紐付け失敗時はtransactionを失敗として扱う", async () => {
+    const { db } = fakeDb();
+    const tx = {
+      ...db,
+      authSession: { updateMany: async () => ({ count: 0 }) },
+    };
+    const transactionDb = {
+      $transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(tx),
+    };
+
+    await expect(
+      registerDeviceForSession(
+        "user_1",
+        "missing_session",
+        "iPhone",
+        "synthetic-client-device-a",
+        transactionDb as never,
+        () => "raw-device-token",
+      ),
+    ).resolves.toBeNull();
   });
 
   it("所有ユーザーと device id が一致する有効 device だけ失効する", async () => {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscription } from "@/repositories/subscriptions";
 import { listLatestRecommendations } from "@/repositories/recommendations";
 import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
@@ -41,7 +41,7 @@ export default async function SubscriptionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const userId = getCurrentUserId();
+  const userId = await requireServerUserId();
   const s = await getSubscription(userId, id);
   if (!s) notFound();
 
@@ -95,7 +95,11 @@ export default async function SubscriptionDetailPage({
             value={`${formatYen(s.amount)} / ${s.billingCycle === "yearly" ? "年" : "月"}`}
             amount
           />
-          <Row label="月額換算" value={formatYen(toMonthlyAmount(s.amount, s.billingCycle))} amount />
+          <Row
+            label="月額換算"
+            value={formatYen(toMonthlyAmount(s.amount, s.billingCycle))}
+            amount
+          />
           <Row
             label={isCapacity ? "年額換算（月額×12の目安）" : "年額換算"}
             value={formatYen(toYearlyAmount(s.amount, s.billingCycle))}
@@ -105,7 +109,9 @@ export default async function SubscriptionDetailPage({
           <Row label="重要度" value={`${s.importance} / 5`} />
           <Row
             label="状態"
-            value={s.status === "active" ? "継続中" : s.status === "paused" ? "一時停止" : "解約済み"}
+            value={
+              s.status === "active" ? "継続中" : s.status === "paused" ? "一時停止" : "解約済み"
+            }
           />
           {s.notes && <Row label="メモ" value={s.notes} />}
         </section>
@@ -121,11 +127,7 @@ export default async function SubscriptionDetailPage({
               ) : (
                 <>
                   {rec.daysSinceLastUse !== null && (
-                    <Row
-                      label="最終利用からの日数"
-                      value={`${rec.daysSinceLastUse} 日`}
-                      amount
-                    />
+                    <Row label="最終利用からの日数" value={`${rec.daysSinceLastUse} 日`} amount />
                   )}
                   <Row label="重複あり" value={rec.hasOverlap ? "あり" : "なし"} />
 

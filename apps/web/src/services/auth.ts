@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { AuthClientType } from "@prisma/client";
-import type { CloudAuthConfig } from "@/config/auth";
+import { isAppleOutageAccessAllowed, type CloudAuthConfig } from "@/config/auth";
 import { prisma } from "@/lib/prisma";
 import { hashDeviceSyncToken, type AuthenticatedActor } from "@/lib/auth";
 import type { AppleIdentity } from "@/lib/apple-auth";
@@ -48,10 +48,16 @@ export type RegisteredDevice = {
   deviceSyncToken: string;
 };
 
-type SessionAuthDb = Pick<typeof prisma, "authSession">;
+type SessionAuthDb = Pick<typeof prisma, "$transaction" | "authSession">;
+type SessionStoreDb = Pick<typeof prisma, "authSession">;
+type DeviceStoreDb = Pick<AuthDb, "device">;
+type AppleSessionExchangeDb = Pick<AuthDb, "user"> & SessionAuthDb;
+const MAX_ACTIVE_SESSIONS = 10;
 
 export type IssuedSession = {
   sessionId: string;
+  clientType: AuthClientType;
+  rememberBrowser: boolean;
   accessToken: string;
   accessExpiresAt: Date;
   refreshToken: string;
@@ -66,10 +72,29 @@ export type CreateSessionInput = {
   rememberBrowser?: boolean;
 };
 
+export type AppleSessionExchange = {
+  actor: AuthenticatedActor;
+  session: IssuedSession;
+};
+
 export class RefreshSessionError extends Error {
   constructor() {
     super("refresh session rejected");
     this.name = "RefreshSessionError";
+  }
+}
+
+export class SessionLimitError extends Error {
+  constructor() {
+    super("active session limit reached");
+    this.name = "SessionLimitError";
+  }
+}
+
+export class AppleOutageError extends Error {
+  constructor() {
+    super("Apple sign-in is temporarily unavailable");
+    this.name = "AppleOutageError";
   }
 }
 
@@ -99,29 +124,156 @@ export async function createAuthSession(
   const refreshAbsoluteExpiresAt = new Date(now.getTime() + absoluteTtlSeconds * 1000);
   const access = await issueAccessToken(input.userId, sessionId, config, now);
 
-  await db.authSession.create({
-    data: {
-      id: sessionId,
-      userId: input.userId,
-      clientType: input.clientType,
-      tokenFamilyId,
-      refreshTokenHash: hashRefreshToken(refreshToken),
-      deviceId: input.deviceId,
-      rememberBrowser: input.rememberBrowser === true,
-      lastUsedAt: now,
-      idleExpiresAt: refreshIdleExpiresAt,
-      absoluteExpiresAt: refreshAbsoluteExpiresAt,
-    },
-  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await db.$transaction(
+        async (tx) => {
+          const activeSessions = await tx.authSession.count({
+            where: {
+              userId: input.userId,
+              revokedAt: null,
+              idleExpiresAt: { gt: now },
+              absoluteExpiresAt: { gt: now },
+            },
+          });
+          if (activeSessions >= MAX_ACTIVE_SESSIONS) throw new SessionLimitError();
+          await tx.authSession.create({
+            data: {
+              id: sessionId,
+              userId: input.userId,
+              clientType: input.clientType,
+              tokenFamilyId,
+              refreshTokenHash: hashRefreshToken(refreshToken),
+              deviceId: input.deviceId,
+              rememberBrowser: input.rememberBrowser === true,
+              lastUsedAt: now,
+              idleExpiresAt: refreshIdleExpiresAt,
+              absoluteExpiresAt: refreshAbsoluteExpiresAt,
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
+      break;
+    } catch (error) {
+      if (error instanceof SessionLimitError) throw error;
+      const isSerializationConflict =
+        typeof error === "object" && error !== null && "code" in error && error.code === "P2034";
+      if (!isSerializationConflict || attempt === 2) throw error;
+    }
+  }
 
   return {
     sessionId,
+    clientType: input.clientType,
+    rememberBrowser: input.rememberBrowser === true,
     accessToken: access.token,
     accessExpiresAt: access.expiresAt,
     refreshToken,
     refreshIdleExpiresAt,
     refreshAbsoluteExpiresAt,
   };
+}
+
+export type SessionSummary = {
+  id: string;
+  clientType: AuthClientType;
+  deviceName: string | null;
+  createdAt: Date;
+  lastUsedAt: Date;
+  current: boolean;
+};
+
+export async function listActiveSessions(
+  userId: string,
+  currentSessionId: string | null,
+  db: SessionAuthDb = prisma,
+  now = new Date(),
+): Promise<SessionSummary[]> {
+  const sessions = await db.authSession.findMany({
+    where: {
+      userId,
+      revokedAt: null,
+      idleExpiresAt: { gt: now },
+      absoluteExpiresAt: { gt: now },
+    },
+    select: {
+      id: true,
+      clientType: true,
+      createdAt: true,
+      lastUsedAt: true,
+      device: { select: { name: true } },
+    },
+    orderBy: { lastUsedAt: "desc" },
+  });
+  return sessions.map((session) => ({
+    id: session.id,
+    clientType: session.clientType,
+    deviceName: session.device?.name ?? null,
+    createdAt: session.createdAt,
+    lastUsedAt: session.lastUsedAt,
+    current: session.id === currentSessionId,
+  }));
+}
+
+type SessionRevocationDb = Pick<typeof prisma, "$transaction" | "authSession" | "device">;
+
+export async function revokeSession(
+  userId: string,
+  sessionId: string,
+  reason: string,
+  db: SessionRevocationDb = prisma,
+  now = new Date(),
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const session = await tx.authSession.findFirst({
+      where: { id: sessionId, userId, revokedAt: null },
+      select: { deviceId: true },
+    });
+    if (!session) return false;
+    await tx.authSession.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: now, revokeReason: reason },
+    });
+    if (session.deviceId) {
+      await tx.device.updateMany({
+        where: { id: session.deviceId, userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    }
+    return true;
+  });
+}
+
+export async function revokeAllSessionsAndDevices(
+  userId: string,
+  reason: string,
+  db: SessionRevocationDb = prisma,
+  now = new Date(),
+): Promise<void> {
+  await db.$transaction(async (tx) => {
+    await tx.authSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now, revokeReason: reason },
+    });
+    await tx.device.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+  });
+}
+
+export async function attachDeviceToSession(
+  userId: string,
+  sessionId: string,
+  deviceId: string,
+  db: SessionStoreDb = prisma,
+): Promise<boolean> {
+  const result = await db.authSession.updateMany({
+    where: { id: sessionId, userId, clientType: "ios", revokedAt: null },
+    data: { deviceId },
+  });
+  return result.count === 1;
 }
 
 export async function rotateAuthSession(
@@ -165,6 +317,17 @@ export async function rotateAuthSession(
 
       if (current.revokedAt || current.idleExpiresAt <= now || current.absoluteExpiresAt <= now) {
         return null;
+      }
+      if (config.appleOutageStartedAt) {
+        const familyRoot = await tx.authSession.findFirst({
+          where: { tokenFamilyId: current.tokenFamilyId },
+          select: { createdAt: true },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!familyRoot) return null;
+        if (!isAppleOutageAccessAllowed(config, familyRoot.createdAt, now)) {
+          throw new AppleOutageError();
+        }
       }
 
       const usesLongLivedSession = current.clientType === "ios" || current.rememberBrowser === true;
@@ -210,6 +373,8 @@ export async function rotateAuthSession(
 
       return {
         userId: current.userId,
+        clientType: current.clientType,
+        rememberBrowser: current.rememberBrowser,
         idleExpiresAt: nextIdleExpiresAt,
         absoluteExpiresAt: current.absoluteExpiresAt,
       };
@@ -219,6 +384,8 @@ export async function rotateAuthSession(
     const access = await issueAccessToken(result.userId, nextSessionId, config, now);
     return {
       sessionId: nextSessionId,
+      clientType: result.clientType,
+      rememberBrowser: result.rememberBrowser,
       accessToken: access.token,
       accessExpiresAt: access.expiresAt,
       refreshToken: nextRefreshToken,
@@ -240,9 +407,9 @@ export async function rotateAuthSession(
 
 export async function upsertAppleUser(
   identity: Pick<AppleIdentity, "subjectHash">,
-  db: AuthDb = prisma,
+  db: Pick<AuthDb, "user"> = prisma,
+  now = new Date(),
 ): Promise<AuthenticatedActor> {
-  const now = new Date();
   const user = await db.user.upsert({
     where: { appleSubjectHash: identity.subjectHash },
     create: {
@@ -255,6 +422,31 @@ export async function upsertAppleUser(
   });
 
   return { kind: "user", userId: user.id, authProvider: "apple" };
+}
+
+export async function exchangeAppleIdentityForSession(
+  identity: Pick<AppleIdentity, "subjectHash">,
+  input: Omit<CreateSessionInput, "userId">,
+  config: CloudAuthConfig,
+  db: AppleSessionExchangeDb = prisma,
+  now = new Date(),
+): Promise<AppleSessionExchange> {
+  if (config.appleOutageStartedAt) throw new AppleOutageError();
+  const actor = await upsertAppleUser(identity, db, now);
+  const session = await createAuthSession({ ...input, userId: actor.userId }, config, db, now);
+  return { actor, session };
+}
+
+export async function appleIdentityBelongsToUser(
+  identity: Pick<AppleIdentity, "subjectHash">,
+  userId: string,
+  db: Pick<typeof prisma, "user"> = prisma,
+): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { appleSubjectHash: identity.subjectHash },
+    select: { id: true },
+  });
+  return user?.id === userId;
 }
 
 export async function deleteAppleUserAccount(
@@ -275,7 +467,7 @@ export async function registerDeviceForAppleUser(
   userId: string,
   deviceName: string | undefined,
   clientDeviceId: string | undefined,
-  db: AuthDb = prisma,
+  db: DeviceStoreDb = prisma,
   tokenFactory = generateDeviceSyncToken,
 ): Promise<RegisteredDevice> {
   const deviceSyncToken = tokenFactory();
@@ -312,6 +504,35 @@ export async function registerDeviceForAppleUser(
   return { device, deviceSyncToken };
 }
 
+class SessionAttachError extends Error {}
+
+export async function registerDeviceForSession(
+  userId: string,
+  sessionId: string,
+  deviceName: string | undefined,
+  clientDeviceId: string | undefined,
+  db: Pick<typeof prisma, "$transaction"> = prisma,
+  tokenFactory = generateDeviceSyncToken,
+): Promise<RegisteredDevice | null> {
+  try {
+    return await db.$transaction(async (tx) => {
+      const registered = await registerDeviceForAppleUser(
+        userId,
+        deviceName,
+        clientDeviceId,
+        tx,
+        tokenFactory,
+      );
+      const attached = await attachDeviceToSession(userId, sessionId, registered.device.id, tx);
+      if (!attached) throw new SessionAttachError();
+      return registered;
+    });
+  } catch (error) {
+    if (error instanceof SessionAttachError) return null;
+    throw error;
+  }
+}
+
 export async function revokeDeviceForAppleUser(
   userId: string,
   deviceId: string,
@@ -322,4 +543,24 @@ export async function revokeDeviceForAppleUser(
     data: { revokedAt: new Date() },
   });
   return result.count > 0;
+}
+
+export async function revokeDeviceAndSessions(
+  userId: string,
+  deviceId: string,
+  db: SessionRevocationDb = prisma,
+  now = new Date(),
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const device = await tx.device.updateMany({
+      where: { id: deviceId, userId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    if (device.count !== 1) return false;
+    await tx.authSession.updateMany({
+      where: { userId, deviceId, revokedAt: null },
+      data: { revokedAt: now, revokeReason: "device_revoked" },
+    });
+    return true;
+  });
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Decision } from "@prisma/client";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { DECISION_DOT_CLASS, DECISION_LABEL, formatYen } from "@/lib/display";
 import { RecomputeButton } from "@/components/RecomputeButton";
@@ -16,15 +16,14 @@ const ORDER: Decision[] = [
 ];
 
 export default async function RecommendationsPage() {
-  const rows = await getSubscriptionsWithLatestRecommendation(getCurrentUserId());
+  const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
   const ready = rows.filter((r) => r.recommendation?.dataStatus === "ready");
   const observing = rows.filter((r) => r.recommendation?.dataStatus === "observing");
   const unjudged = rows.filter((r) => !r.recommendation);
 
   const groups = ORDER.map((decision) => ({
     decision,
-    items: ready
-      .filter((r) => r.recommendation?.decision === decision),
+    items: ready.filter((r) => r.recommendation?.decision === decision),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -46,16 +45,24 @@ export default async function RecommendationsPage() {
       {groups.map((g) => (
         <section key={g.decision} style={{ marginTop: 28 }}>
           <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
-            <span className={`badge ${DECISION_DOT_CLASS[g.decision]}`}><span className="dot" /></span>
-            <span className="title" style={{ fontSize: 18 }}>{DECISION_LABEL[g.decision]}</span>
-            <span className="caption num" style={{ margin: 0 }}>{g.items.length} 件</span>
+            <span className={`badge ${DECISION_DOT_CLASS[g.decision]}`}>
+              <span className="dot" />
+            </span>
+            <span className="title" style={{ fontSize: 18 }}>
+              {DECISION_LABEL[g.decision]}
+            </span>
+            <span className="caption num" style={{ margin: 0 }}>
+              {g.items.length} 件
+            </span>
           </div>
           <div className="panel" style={{ padding: "4px 16px" }}>
             {g.items.map(({ subscription: s, recommendation: rec }) => (
               <Link key={s.id} href={`/subscriptions/${s.id}`} className="rowitem">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{s.name}</div>
-                  <div className="caption" style={{ margin: "2px 0 0" }}>{rec!.reason}</div>
+                  <div className="caption" style={{ margin: "2px 0 0" }}>
+                    {rec!.reason}
+                  </div>
                 </div>
                 <div className="num shrink-0 text-right">{formatYen(rec!.monthlyAmount)} /月</div>
               </Link>
@@ -67,9 +74,15 @@ export default async function RecommendationsPage() {
       {observing.length > 0 && (
         <section style={{ marginTop: 28 }}>
           <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
-            <span className="badge b-observe"><span className="dot" /></span>
-            <span className="title" style={{ fontSize: 18 }}>観測中</span>
-            <span className="caption num" style={{ margin: 0 }}>{observing.length} 件</span>
+            <span className="badge b-observe">
+              <span className="dot" />
+            </span>
+            <span className="title" style={{ fontSize: 18 }}>
+              観測中
+            </span>
+            <span className="caption num" style={{ margin: 0 }}>
+              {observing.length} 件
+            </span>
           </div>
           <div className="panel" style={{ padding: "4px 16px" }}>
             {observing.map(({ subscription: s, recommendation: rec }) => (

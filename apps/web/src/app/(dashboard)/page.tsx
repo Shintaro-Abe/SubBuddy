@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentUserId } from "@/lib/user";
+import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 import { daysUntil, formatYen } from "@/lib/display";
@@ -18,7 +18,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 export default async function DashboardPage() {
-  const rows = await getSubscriptionsWithLatestRecommendation(getCurrentUserId());
+  const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
   const active = rows.filter((r) => r.subscription.status === "active");
 
   let monthlyTotal = 0;

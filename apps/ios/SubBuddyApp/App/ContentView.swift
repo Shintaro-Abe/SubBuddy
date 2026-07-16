@@ -14,7 +14,7 @@ struct ContentView: View {
         NavigationStack {
             List {
                 Section("API") {
-                    TextField("https://example.onrender.com", text: $apiBaseURLInput)
+                    TextField("https://app.sub-buddy.com", text: $apiBaseURLInput)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
@@ -24,7 +24,8 @@ struct ContentView: View {
                 }
 
                 Section("Account") {
-                    SignInWithAppleButton(.signIn) { _ in
+                    SignInWithAppleButton(.signIn) { request in
+                        authSession.prepareAppleAuthorizationRequest(request)
                     } onCompletion: { result in
                         Task {
                             switch result {
@@ -46,6 +47,21 @@ struct ContentView: View {
                             .font(.caption.monospaced())
                             .foregroundStyle(.secondary)
                     }
+
+                    Button("Verify Contract API") {
+                        Task { await authSession.verifyContractAPI() }
+                    }
+                    .disabled(!authSession.isSignedIn || authSession.isWorking)
+
+                    Button("Sign Out") {
+                        Task { await authSession.signOutCurrentSession() }
+                    }
+                    .disabled(!authSession.isSignedIn || authSession.isWorking)
+
+                    Button("Revoke This Device", role: .destructive) {
+                        Task { await authSession.revokeCurrentDevice() }
+                    }
+                    .disabled(authSession.deviceId == nil || authSession.isWorking)
                 }
 
                 Section("Screen Time") {

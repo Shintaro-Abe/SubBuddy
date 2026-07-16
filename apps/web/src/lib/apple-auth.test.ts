@@ -2,6 +2,7 @@ import { createSign, generateKeyPairSync, type JsonWebKey } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AppleIdentityTokenError,
+  hashAppleNonce,
   hashAppleSubject,
   verifyAppleIdentityToken,
 } from "@/lib/apple-auth";
@@ -36,7 +37,11 @@ function signAppleToken(payloadOverrides: Record<string, unknown> = {}) {
     ...payloadOverrides,
   });
   const signingInput = `${header}.${payload}`;
-  const signature = createSign("RSA-SHA256").update(signingInput).end().sign(privateKey).toString("base64url");
+  const signature = createSign("RSA-SHA256")
+    .update(signingInput)
+    .end()
+    .sign(privateKey)
+    .toString("base64url");
   return `${signingInput}.${signature}`;
 }
 
@@ -75,7 +80,10 @@ describe("verifyAppleIdentityToken", () => {
         now: NOW,
         fetchImpl: fetchJwks,
       }),
-    ).rejects.toBeInstanceOf(AppleIdentityTokenError);
+    ).rejects.toMatchObject({
+      name: "AppleIdentityTokenError",
+      reason: "audience_mismatch",
+    });
   });
 
   it("aud 許可リスト内なら Web / iOS の複数 aud を受け入れる（ADR 0004）", async () => {
@@ -96,6 +104,35 @@ describe("verifyAppleIdentityToken", () => {
       fetchImpl: fetchJwks,
     });
     expect(ios.subject).toBe("apple-user-alpha");
+    expect(ios.subjectHash).toBe(web.subjectHash);
+  });
+
+  it("native nonce はクライアントの生値をSHA-256にしたclaimと照合できる", async () => {
+    const rawNonce = "synthetic-native-nonce-with-enough-entropy";
+    const identity = await verifyAppleIdentityToken(
+      signAppleToken({ nonce: hashAppleNonce(rawNonce) }),
+      {
+        clientId: CLIENT_ID,
+        expectedNonce: hashAppleNonce(rawNonce),
+        now: NOW,
+        fetchImpl: fetchJwks,
+      },
+    );
+
+    expect(identity.subjectHash).toBe(hashAppleSubject("apple-user-alpha"));
+  });
+
+  it("明示した環境別saltでApple subjectをハッシュする", async () => {
+    const identity = await verifyAppleIdentityToken(signAppleToken(), {
+      clientId: CLIENT_ID,
+      subjectHashSalt: "synthetic-testflight-salt",
+      now: NOW,
+      fetchImpl: fetchJwks,
+    });
+
+    expect(identity.subjectHash).toBe(
+      hashAppleSubject("apple-user-alpha", "synthetic-testflight-salt"),
+    );
   });
 
   it("許可リストにない aud は拒否する（ADR 0004）", async () => {
@@ -116,7 +153,10 @@ describe("verifyAppleIdentityToken", () => {
         now: NOW,
         fetchImpl: fetchJwks,
       }),
-    ).rejects.toBeInstanceOf(AppleIdentityTokenError);
+    ).rejects.toMatchObject({
+      name: "AppleIdentityTokenError",
+      reason: "nonce_mismatch",
+    });
   });
 
   it("署名が壊れた token は拒否する", async () => {

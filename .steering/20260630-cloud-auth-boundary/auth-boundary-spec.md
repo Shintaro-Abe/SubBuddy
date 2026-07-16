@@ -1,6 +1,8 @@
 # 認証境界・実行モード仕様
 
 > 対象: `.steering/20260630-cloud-auth-boundary/` の詳細仕様。コード実装前に、実行モード・認証 provider・テナント分離の境界を固定する。
+>
+> 現行性注記（2026-07-15）：本書はクラウド認証境界の初期設計履歴である。短期アクセストークン、ローテーション更新トークン、Cookie/CSRF、セッション失効、`user_local`隔離を含む現行仕様は`.steering/20260713-auth-tenant-boundary/`と`docs/architecture.md`を正とする。
 
 ## 1. 実行モード
 

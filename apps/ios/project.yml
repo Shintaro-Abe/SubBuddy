@@ -29,6 +29,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app
         PRODUCT_NAME: SubBuddy
+        PRODUCT_MODULE_NAME: SubBuddyApp
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_ENTITLEMENTS: SubBuddyApp/SubBuddyApp.entitlements
@@ -89,6 +90,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.subbuddy.app.tests
         GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SubBuddy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SubBuddy"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
 schemes:
   SubBuddyApp:

@@ -13,41 +13,48 @@ import type { NormalizedUsageDaily } from "@/domain/usage/normalize";
 function fakeDb(ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   const calls: { where: unknown; update: unknown }[] = [];
   const db = {
+    $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
     subscription: {
       findMany: async (args: { where: { id: { in: string[] } } }) =>
-        ownedSubscriptionIds
-          .filter((id) => args.where.id.in.includes(id))
-          .map((id) => ({ id })),
+        ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findUnique: async () => null,
+      findMany: async () => [],
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
       },
     },
-  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+  } as unknown as Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
   return { db, calls };
 }
 
-function fakeDbWithExisting(existingByKey: Record<string, unknown>, ownedSubscriptionIds = ["sub_1", "sub_2"]) {
+type ExistingUsageRow = {
+  subscriptionId: string;
+  usageDate: Date;
+  used: boolean;
+  usageBucket: UsageBucket;
+  estimatedMinutesMin: number | null;
+  estimatedMinutesMax: number | null;
+  source: string;
+};
+
+function fakeDbWithExisting(existingRows: ExistingUsageRow[], ownedSubscriptionIds = ["sub_1", "sub_2"]) {
   const calls: { where: unknown; update: unknown }[] = [];
   const db = {
+    $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
     subscription: {
       findMany: async (args: { where: { id: { in: string[] } } }) =>
-        ownedSubscriptionIds
-          .filter((id) => args.where.id.in.includes(id))
-          .map((id) => ({ id })),
+        ownedSubscriptionIds.filter((id) => args.where.id.in.includes(id)).map((id) => ({ id })),
     },
     iosUsageDailySummary: {
-      findUnique: async (args: { where: { subscriptionId_usageDate: { subscriptionId: string } } }) =>
-        existingByKey[args.where.subscriptionId_usageDate.subscriptionId] ?? null,
+      findMany: async () => existingRows,
       upsert: async (args: { where: unknown; update: unknown }) => {
         calls.push({ where: args.where, update: args.update });
         return {};
       },
     },
-  } as unknown as Pick<PrismaClient, "iosUsageDailySummary" | "subscription">;
+  } as unknown as Pick<PrismaClient, "$transaction" | "iosUsageDailySummary" | "subscription">;
   return { db, calls };
 }
 
@@ -115,15 +122,17 @@ describe("upsertUsageDailyBatch", () => {
         source: "ios_device_activity",
       },
     ];
-    const { db, calls } = fakeDbWithExisting({
-      sub_1: {
+    const { db, calls } = fakeDbWithExisting([
+      {
+        subscriptionId: "sub_1",
+        usageDate: new Date("2026-05-30T00:00:00.000Z"),
         used: true,
         usageBucket: UsageBucket.m60_plus,
         estimatedMinutesMin: 60,
         estimatedMinutesMax: 119,
         source: "ios_device_activity",
       },
-    });
+    ]);
 
     await upsertUsageDailyBatch("user_local", incoming, db);
 
@@ -134,6 +143,20 @@ describe("upsertUsageDailyBatch", () => {
       estimatedMinutesMax: 119,
       source: "ios_device_activity",
     });
+  });
+
+  it("既存行はバッチごとに1回だけ読み込む", async () => {
+    let findManyCalls = 0;
+    const { db } = fakeDb();
+    const summary = (db as never as { iosUsageDailySummary: { findMany: () => Promise<unknown[]> } })
+      .iosUsageDailySummary;
+    summary.findMany = async () => {
+      findManyCalls += 1;
+      return [];
+    };
+
+    await upsertUsageDailyBatch("user_local", items, db);
+    expect(findManyCalls).toBe(1);
   });
 });
 
