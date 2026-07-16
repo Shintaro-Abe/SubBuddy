@@ -284,6 +284,44 @@ describe("auth service", () => {
     });
   });
 
+  it("Apple障害の猶予期間終了時はsessionを消さず一時障害として拒否する", async () => {
+    const create = vi.fn();
+    const current = {
+      id: "synthetic_session_old",
+      userId: "synthetic_user_a",
+      clientType: "ios",
+      tokenFamilyId: "synthetic_family_a",
+      deviceId: "synthetic_device_a",
+      rememberBrowser: false,
+      replacedBySessionId: null,
+      idleExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      absoluteExpiresAt: new Date("2026-10-01T00:00:00.000Z"),
+      revokedAt: null,
+    } as const;
+    const tx = {
+      authSession: {
+        findUnique: async () => current,
+        findFirst: async () => ({ createdAt: new Date("2026-07-01T00:00:00.000Z") }),
+        create,
+      },
+    };
+    const db = {
+      $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      authSession: { updateMany: vi.fn() },
+    };
+    const outageConfig = {
+      ...authConfig,
+      appleOutageStartedAt: new Date("2026-07-10T00:00:00.000Z"),
+      appleOutageGraceSeconds: 259200,
+    };
+
+    await expect(
+      rotateAuthSession("synthetic-refresh-old", outageConfig, db as never, NOW),
+    ).rejects.toBeInstanceOf(AppleOutageError);
+    expect(create).not.toHaveBeenCalled();
+    expect(db.authSession.updateMany).not.toHaveBeenCalled();
+  });
+
   it("Apple subject hash でユーザーを upsert し AuthenticatedActor を返す", async () => {
     const { db, calls } = fakeDb();
     const actor = await upsertAppleUser({ subjectHash: "subject-hash" }, db as never);

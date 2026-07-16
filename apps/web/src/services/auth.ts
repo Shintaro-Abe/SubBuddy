@@ -324,8 +324,9 @@ export async function rotateAuthSession(
           select: { createdAt: true },
           orderBy: { createdAt: "asc" },
         });
-        if (!familyRoot || !isAppleOutageAccessAllowed(config, familyRoot.createdAt, now)) {
-          return null;
+        if (!familyRoot) return null;
+        if (!isAppleOutageAccessAllowed(config, familyRoot.createdAt, now)) {
+          throw new AppleOutageError();
         }
       }
 

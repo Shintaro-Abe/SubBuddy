@@ -1,9 +1,17 @@
 import { parseAuthConfig } from "@/config/auth";
-import { badRequest, forbidden, fromZodError, serverError, unauthorized, ok } from "@/lib/api";
+import {
+  badRequest,
+  forbidden,
+  fromZodError,
+  ok,
+  serverError,
+  serviceUnavailable,
+  unauthorized,
+} from "@/lib/api";
 import { hasAllowedOrigin, hasValidCsrfToken, readCookie } from "@/lib/auth";
 import { setWebSessionCookies } from "@/lib/web-auth";
 import { refreshSessionSchema } from "@/schemas/auth";
-import { RefreshSessionError, rotateAuthSession } from "@/services/auth";
+import { AppleOutageError, RefreshSessionError, rotateAuthSession } from "@/services/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +44,7 @@ export async function POST(req: Request) {
     }
     return ok({ session });
   } catch (error) {
+    if (error instanceof AppleOutageError) return serviceUnavailable();
     if (error instanceof RefreshSessionError) return unauthorized();
     return serverError();
   }
