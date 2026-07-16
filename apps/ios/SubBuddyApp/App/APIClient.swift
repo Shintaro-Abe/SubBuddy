@@ -32,6 +32,24 @@ actor APIClient {
         }
     }
 
+    func prepareForNewSignIn() async throws {
+        let refreshToken = try keychain.string(for: .refreshToken)
+        guard accessToken != nil || refreshToken != nil else {
+            return
+        }
+
+        do {
+            let _: SignOutResponse = try await sendAuthenticated(
+                path: "/api/auth/logout",
+                method: "POST",
+                body: EmptyRequest()
+            )
+            clearSession()
+        } catch APIError.reauthenticationRequired {
+            // The old session is already unusable and sendAuthenticated cleared it locally.
+        }
+    }
+
     func registerDevice(identityToken: String, clientDeviceId: String, name: String) async throws -> DeviceRegistrationResponse {
         let refreshToken = try keychain.string(for: .refreshToken)
         if accessToken != nil || refreshToken != nil {

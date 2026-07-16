@@ -134,6 +134,7 @@ final class AuthSession: ObservableObject {
         do {
             let clientDeviceId = try loadOrCreateClientDeviceId()
             let client = client(for: apiBaseURL)
+            try await client.prepareForNewSignIn()
             let signIn = try await client.signInWithApple(identityToken: identityToken, nonce: nonce)
             if let session = signIn.session {
                 try await client.applySession(session)
