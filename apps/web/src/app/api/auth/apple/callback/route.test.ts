@@ -19,7 +19,7 @@ vi.mock("@/services/auth", async (importOriginal) => ({
 }));
 
 import { POST } from "./route";
-import { hashAppleNonce } from "@/lib/apple-auth";
+import { AppleIdentityTokenError } from "@/lib/apple-auth";
 
 const config = {
   mode: "cloud-testflight",
@@ -80,9 +80,24 @@ describe("POST /api/auth/apple/callback", () => {
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(mocks.verifyAppleIdentityToken).toHaveBeenCalledWith("synthetic.identity.token", {
       allowedClientIds: config.appleAllowedClientIds,
-      expectedNonce: hashAppleNonce(nonce),
+      expectedNonce: nonce,
       subjectHashSalt: config.appleSubjectHashSalt,
     });
+  });
+
+  it("Apple token拒否時は値を含めず固定理由コードだけを記録する", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mocks.verifyAppleIdentityToken.mockRejectedValue(
+      new AppleIdentityTokenError("nonce_mismatch"),
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(401);
+    expect(warn).toHaveBeenCalledWith("apple_web_auth_rejected", {
+      reason: "nonce_mismatch",
+    });
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("synthetic"));
   });
 
   it("state不一致はApple token検証前に403", async () => {

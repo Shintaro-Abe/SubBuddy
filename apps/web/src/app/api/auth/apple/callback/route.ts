@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
     const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
       allowedClientIds: config.appleAllowedClientIds,
-      expectedNonce: hashAppleNonce(nonce),
+      expectedNonce: nonce,
       subjectHashSalt: config.appleSubjectHashSalt,
     });
     const result = await exchangeAppleIdentityForSession(
@@ -78,7 +78,10 @@ export async function POST(req: Request) {
     clearAuthFlowCookies(response, config);
     return response;
   } catch (error) {
-    if (error instanceof AppleIdentityTokenError) return unauthorized();
+    if (error instanceof AppleIdentityTokenError) {
+      console.warn("apple_web_auth_rejected", { reason: error.reason });
+      return unauthorized();
+    }
     if (error instanceof AppleOutageError) return serviceUnavailable();
     if (error instanceof SessionLimitError) return conflict("session limit reached");
     return serverError();

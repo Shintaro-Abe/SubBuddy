@@ -1,6 +1,6 @@
 # テスト実施状況台帳
 
-> 基準日時: 2026-07-15 UTC<br>
+> 基準日時: 2026-07-16 UTC<br>
 > 対象: 実際に始めた、または実施したことを確認できるテストだけ。今後行う予定のテストは含めない。<br>
 > 個人情報の保護: 件数、結果、作り物のテストデータによる確認内容だけを記録する。実在する人の情報、パスワード類、詳しい実行記録は載せない。
 
@@ -38,6 +38,7 @@
 | 2026-07-15 | Render事前設定手順 | MD・生成HTML・認証設定・機密情報の検査 | 現行認証に必要な設定がそろい、実値を含まず、MDとHTMLが一致するか | 合格 | 必須認証設定12件と障害時設定を確認。MDからHTMLを再生成して一致し、差分形式とgitleaks検査も合格 | [Render事前設定手順](../manuals/render-predeploy-setup.md) |
 | 2026-07-15 | iPhoneの現行認証確認機能と実機手順 | Xcode単体テスト、コード差分・MD・生成HTML・機密情報の検査 | 契約API、15分後の更新、サインアウト、端末失効の実機確認を現行構成で実行できるか | 不合格 | Mac実機の`Product > Test`で、製品名から生成されたSwiftモジュール`SubBuddy`とテストの`@testable import SubBuddyApp`の不一致を検出。製品名は維持し、`PRODUCT_MODULE_NAME`をターゲット名へ統一した。全テストのimportとの一致と差分形式を確認し、修正後のXcode再実行待ち | [iOS現行認証実機手順](../manuals/ios-render-e2e-testflight-prep.md) |
 | 2026-07-15 | iPhone Appleサインイン401診断 | Web単体テスト、型、書き方、ログ内容の検査 | Appleトークンや個人情報を記録せず、401の検証失敗理由をRenderで特定できるか | 合格 | Appleトークン検証の拒否ログがなかったため、401を後続の端末登録へ絞り込んだ。外部応答は変えず、Bearer・session・端末紐付けの固定理由コードだけを記録する。Web自動テスト27ファイル170件、型チェック、ESLintが合格 | [ログイン機能の記録](../.steering/20260713-auth-tenant-boundary/tasklist.md) |
+| 2026-07-16 | Web版Appleサインイン401修正 | Web単体テスト、型、書き方、ログ内容の検査 | WebとiPhoneで異なるnonceの渡し方を正しく検証し、拒否理由に認証情報を含めないか | 合格 | WebはApple JavaScript SDKへ渡した生のnonce、iPhoneはSHA-256値を照合する。Webの拒否ログは固定理由コードだけに限定した。対象テスト5件、Web全体27ファイル171件、型チェック、ESLintが合格 | [ログイン機能の記録](../.steering/20260713-auth-tenant-boundary/tasklist.md) |
 
 ## テストの詳しい内訳
 
