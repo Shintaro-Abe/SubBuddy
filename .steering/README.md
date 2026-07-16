@@ -9,7 +9,7 @@
 | 論点 | 正とする作業文書 | 現在の状態 |
 |---|---|---|
 | 外部TestFlightから一般公開までの全体計画 | `20260711-release-roadmap-rebaseline/` | 計画承認済み。認証以外の多数の実装・運用ゲートは未完了 |
-| Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/` | 実装・Web自動試験済み。Xcode/Render実機確認はT-13に保留 |
+| Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/` | 実装、Web自動試験、Xcode・Render実機確認、main反映まで完了 |
 | iOS計測・同期の現行実装履歴 | `20260707-testflight-ios-implementation/` | 開発用UIで主要処理を実装済み。利用者向け主製品UI、7日計測、Archive/codesignは未完了 |
 | Web版のデザイン基準 | `20260618-web-ui-implementation/` | 実装済みWeb UIをiPhoneのブランド正本として利用 |
 

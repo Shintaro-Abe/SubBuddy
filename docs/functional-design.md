@@ -730,7 +730,7 @@ flowchart TB
 - 集計はオンデバイスで行い、SubBuddy API へは集計値のみ送信。詳細 Screen Time データは端末内に留める。
 - DeviceActivityMonitor Extension は通信しない。しきい値到達時に App Group へ `activityName × usage_date × usage_bucket` を upsert し、本体アプリがフォアグラウンドで同期する。
 - iOS の device sync token は Keychain に保存し、App Group の平文ファイルや UserDefaults に置かない。
-- iOS Spikeと開発実機で計測からRender同期まで確認済み。現行認証セッションでの実機再確認、7日連続計測、Archive/codesignは外部TestFlight前の未完了ゲートである。
+- iOS Spikeと開発実機で計測からRender同期まで確認済み。現行認証セッションでのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは外部TestFlight前の未完了ゲートである。
 
 ---
 

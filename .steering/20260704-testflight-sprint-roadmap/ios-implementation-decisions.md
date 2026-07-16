@@ -9,7 +9,7 @@
 > 反映先：`docs/adr/0004〜0006`、`docs/functional-design.md`、`docs/architecture.md`、`docs/glossary.md`、
 > `.steering/20260606-ios-screen-time-spike/stage7-main-distribution-guide.md`、`memory/gym-visit-auto-import-research.md`。
 >
-> 現行性注記（2026-07-15）：本書は実装前の決定履歴である。完了状況は`.steering/20260707-testflight-ios-implementation/tasklist.md`、認証の現行設計と残る実環境確認は`.steering/20260713-auth-tenant-boundary/`、外部TestFlightまでの全体計画は`.steering/20260711-release-roadmap-rebaseline/`を正とする。下記チェックリストは当時のスナップショットであり、現在の進捗表ではない。
+> 現行性注記（2026-07-16）：本書は実装前の決定履歴である。完了状況は`.steering/20260707-testflight-ios-implementation/tasklist.md`、完了した認証の現行設計・実環境確認は`.steering/20260713-auth-tenant-boundary/`、外部TestFlightまでの全体計画は`.steering/20260711-release-roadmap-rebaseline/`を正とする。下記チェックリストは当時のスナップショットであり、現在の進捗表ではない。
 
 ---
 

@@ -89,7 +89,7 @@ flowchart TB
 | 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |
 | 同期 | URLSession（HTTPS） | SubBuddy API へ**集計値のみ**送信 |
 
-> iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤での再確認、7日連続計測、Archive/codesignは未完了であり、外部TestFlight前のゲートに残る。
+> iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤でのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 
 ### 3.3 採用しない技術（スコープ外）
 

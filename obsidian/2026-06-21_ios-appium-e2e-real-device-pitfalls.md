@@ -21,7 +21,7 @@ aliases:
 
 # 実機 iPhone で Appium E2E 自動化を組むときの落とし穴集
 
-> 現行性注記（2026-07-15）：LAN IPと`USAGE_SYNC_TOKEN`の記述はlocal mode / Spikeの履歴である。外部TestFlightの主経路はRender HTTPS、Appleサインイン、短期アクセストークン、ローテーション更新トークン、デバイス同期トークンを使う。現行認証経路の実機確認は`.steering/20260713-auth-tenant-boundary/tasklist.md`のT-13に残る。
+> 現行性注記（2026-07-16）：LAN IPと`USAGE_SYNC_TOKEN`の記述はlocal mode / Spikeの履歴である。外部TestFlightの主経路はRender HTTPS、Appleサインイン、短期アクセストークン、ローテーション更新トークン、デバイス同期トークンを使う。現行認証経路のXcode・Render実機確認は`.steering/20260713-auth-tenant-boundary/tasklist.md`のT-13で完了した。
 
 ## TL;DR
 

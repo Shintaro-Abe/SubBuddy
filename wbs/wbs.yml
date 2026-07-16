@@ -1366,13 +1366,14 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "Apple認証・テナント認可・配布版固定ユーザー隔離"
-    progress: 95
-    status: "進行中"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-13"
     plannedEnd: "2026-08-07"
+    actualEnd: "2026-07-16"
     predecessors: ["TF-1.2.4"]
     deliverable: "iPhone/Web共通ユーザー、短期・更新トークン、セッション・端末失効、他テナント拒否"
-    note: "steering: .steering/20260713-auth-tenant-boundary/。Web/API実装と自動回帰は完了。iOSのXcode検証とRender/TestFlight実環境の再確認待ち。user_localは配布版でフェイルクローズ"
+    note: "steering: .steering/20260713-auth-tenant-boundary/。Web/API実装、自動回帰、iOSのXcode検証、Render上のWeb・iPhone実機確認、main反映まで完了。user_localは配布版でフェイルクローズ"
 
   - id: "REL-0.2.1"
     parent: "REL-0.2"
@@ -1444,12 +1445,13 @@ tasks:
     level: 3
     phase: "実装"
     name: "iPhone Keychain・自動更新・401再認証"
-    progress: 80
-    status: "進行中"
+    progress: 100
+    status: "完了"
     plannedStart: "2026-07-29"
     plannedEnd: "2026-07-30"
     actualStart: "2026-07-14"
-    note: "Keychain、単一refresh、401後1回再試行、再認証状態を実装。Xcodeが必要なコンパイル・実機検証待ち"
+    actualEnd: "2026-07-16"
+    note: "Keychain、単一refresh、401後1回再試行、再認証状態を実装。iOS単体テスト6件とRender実機確認が合格"
     predecessors: ["REL-0.2.4"]
 
   - id: "REL-0.2.7"
@@ -1504,7 +1506,7 @@ tasks:
     actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.8", "REL-0.2.9"]
     deliverable: "未認証401、他テナント404、失効後拒否、トークン平文非保存の証跡"
-    note: "Vitest 24ファイル158件、型チェック、ESLint、変更対象のsecret scanが合格"
+    note: "最終的にVitest 28ファイル174件、型チェック、ESLint、本番ビルド、secret scanが合格"
 
   - id: "REL-0.3"
     parent: "REL-0"
