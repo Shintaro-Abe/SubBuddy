@@ -95,7 +95,7 @@ actor APIClient {
         clearSession()
     }
 
-    private func sendAuthenticated<RequestBody: Encodable, ResponseBody: Decodable>(
+    func sendAuthenticated<RequestBody: Encodable, ResponseBody: Decodable>(
         path: String,
         method: String,
         body: RequestBody
@@ -111,11 +111,16 @@ actor APIClient {
             if accessToken == attemptedAccessToken {
                 _ = try await refreshSession()
             }
-            return try await send(path: path, method: method, body: body, bearerToken: accessToken)
+            do {
+                return try await send(path: path, method: method, body: body, bearerToken: accessToken)
+            } catch APIError.httpStatus(401) {
+                clearSession()
+                throw APIError.reauthenticationRequired
+            }
         }
     }
 
-    private func sendAuthenticated<ResponseBody: Decodable>(
+    func sendAuthenticated<ResponseBody: Decodable>(
         path: String,
         method: String
     ) async throws -> ResponseBody {
@@ -130,7 +135,12 @@ actor APIClient {
             if accessToken == attemptedAccessToken {
                 _ = try await refreshSession()
             }
-            return try await send(path: path, method: method, bearerToken: accessToken)
+            do {
+                return try await send(path: path, method: method, bearerToken: accessToken)
+            } catch APIError.httpStatus(401) {
+                clearSession()
+                throw APIError.reauthenticationRequired
+            }
         }
     }
 
@@ -184,7 +194,7 @@ actor APIClient {
         try? keychain.delete(.sessionId)
     }
 
-    private func send<RequestBody: Encodable, ResponseBody: Decodable>(
+    func send<RequestBody: Encodable, ResponseBody: Decodable>(
         path: String,
         method: String,
         body: RequestBody,
@@ -204,7 +214,7 @@ actor APIClient {
         return try await perform(request)
     }
 
-    private func send<ResponseBody: Decodable>(
+    func send<ResponseBody: Decodable>(
         path: String,
         method: String,
         bearerToken: String?

@@ -9,9 +9,13 @@ enum AppConstants {
     static let defaultDeviceName = "iPhone"
 
     static var apiBaseURL: URL? {
-        let userValue = UserDefaults.standard.string(forKey: "api_base_url") ?? ""
         let bundleValue = Bundle.main.object(forInfoDictionaryKey: "SUBBUDDY_API_BASE_URL") as? String ?? ""
-        let rawValue = userValue.isEmpty ? bundleValue : userValue
+        #if DEBUG
+        let developerOverride = UserDefaults.standard.string(forKey: "api_base_url") ?? ""
+        let rawValue = developerOverride.isEmpty ? bundleValue : developerOverride
+        #else
+        let rawValue = bundleValue
+        #endif
         return validatedAPIBaseURL(rawValue)
     }
 

@@ -22,6 +22,8 @@ targets:
       - path: SubBuddyApp/App
       - path: SubBuddyApp/Shared
       - path: SubBuddyApp/Assets.xcassets
+      - path: SubBuddyApp/Resources
+        buildPhase: resources
     dependencies:
       - target: SubBuddyMonitorExtension
         embed: true
@@ -34,13 +36,20 @@ targets:
         CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_ENTITLEMENTS: SubBuddyApp/SubBuddyApp.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        SUBBUDDY_API_BASE_URL: ""
+        SUBBUDDY_API_BASE_URL: "${SUBBUDDY_API_BASE_URL}"
     info:
       path: SubBuddyApp/Info.plist
       properties:
         CFBundleDisplayName: SubBuddy
         CFBundleIconName: AppIcon
         SUBBUDDY_API_BASE_URL: $(SUBBUDDY_API_BASE_URL)
+        UIAppFonts:
+          - ZenKakuGothicNew-Regular.ttf
+          - ZenKakuGothicNew-Bold.ttf
+          - ShipporiMincho-SemiBold.ttf
+          - BIZUDPGothic-Regular.ttf
+          - BIZUDPGothic-Bold.ttf
+          - EBGaramond[wght].ttf
         UILaunchScreen: {}
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:

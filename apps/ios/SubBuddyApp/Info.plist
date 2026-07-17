@@ -24,6 +24,15 @@
 	<string>1</string>
 	<key>SUBBUDDY_API_BASE_URL</key>
 	<string>$(SUBBUDDY_API_BASE_URL)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>ZenKakuGothicNew-Regular.ttf</string>
+		<string>ZenKakuGothicNew-Bold.ttf</string>
+		<string>ShipporiMincho-SemiBold.ttf</string>
+		<string>BIZUDPGothic-Regular.ttf</string>
+		<string>BIZUDPGothic-Bold.ttf</string>
+		<string>EBGaramond[wght].ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiresFullScreen</key>

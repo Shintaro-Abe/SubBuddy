@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-15（iOS実装・認証セッション基盤・現行ディレクトリ構成を反映）
+> 最終更新：2026-07-17（iPhone利用者向けUI・検証スクリプト・現行ディレクトリ構成を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -136,18 +136,23 @@ apps/web/
 apps/ios/
 ├── project.yml                    # XcodeGenのプロジェクト定義
 ├── SubBuddyApp/
-│   ├── App/                       # SwiftUI画面、認証、計測、同期、Keychain
+│   ├── App/                       # SwiftUI画面、デザイン、APIモデル、認証、計測、同期、Keychain
 │   ├── Shared/                    # App Group共有の対応表・集計レコード
+│   ├── Resources/                 # 同梱フォントとOFLライセンス
 │   └── Assets.xcassets/           # アプリアイコン等
 ├── SubBuddyMonitorExtension/      # しきい値超過イベント受信Extension
-└── SubBuddyAppTests/              # 共有処理のXCTest
+├── SubBuddyAppTests/              # 共有処理・UIモデル・表示整形のXCTest
+└── scripts/                       # XcodeGen・Simulator build・単体テストの検証スクリプト
 ```
 
 ### 5.1 配置ルール（iPhone 側）
 
 - iPhone から SubBuddy API へ送るのは **集計値のみ**（詳細ログ・生の位置情報は送らない。`product-requirements.md` 非機能要件 / `architecture.md` §3.2）。
+- Web版と共通利用するフォントは`SubBuddyApp/Resources/Fonts/`、配布条件を示すライセンスは`SubBuddyApp/Resources/FontLicenses/`へ置き、`project.yml`のresourcesと`UIAppFonts`へ登録する。
 - iOSの更新トークン、セッションID、デバイス同期トークン、端末内生成IDはKeychainに置く。利用量集計と計測対象対応表はApp Group内のファイルへ置く。
 - `project.yml`を正本としてXcodeGenで`.xcodeproj`を生成する。生成物を正本にしない。
+- SwiftUIはルート状態、3タブ、機能別View、ViewModel相当の`ProductStore`、API/表示モデル、デザイントークンを`SubBuddyApp/App/`内で分離する。合成プレビューは`PreviewFixtures.swift`へ置く。
+- 利用者向けUIの基本回帰は`apps/ios/scripts/verify-main-ui.sh`でXcodeGen、Simulator build、単体テストを一続きで実行する。利用可能なiPhone Simulatorは自動選択する。
 - entitlement・署名情報・プロビジョニングプロファイル等の**秘密情報はコミットしない**（`.gitignore` で除外）。
 
 ---

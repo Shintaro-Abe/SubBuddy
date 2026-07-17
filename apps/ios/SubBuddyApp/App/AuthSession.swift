@@ -1,43 +1,44 @@
 import AuthenticationServices
+import Combine
 import CryptoKit
 import Foundation
 import Security
 
 @MainActor
 final class AuthSession: ObservableObject {
-    @Published private(set) var statusMessage = "Not signed in"
+    @Published private(set) var statusMessage = "サインインしていません"
     @Published private(set) var isSignedIn = false
     @Published private(set) var deviceId: String?
     @Published private(set) var isWorking = false
 
     private let keychain = KeychainStore()
     private var pendingAppleNonce: String?
+    private var pendingAccountDeletionNonce: String?
     private var apiClient: APIClient?
     private var apiClientBaseURL: URL?
 
     init() {
         deviceId = try? keychain.string(for: .deviceId)
-        isSignedIn = (try? keychain.string(for: .refreshToken)) != nil ||
-            (try? keychain.string(for: .deviceSyncToken)) != nil
+        isSignedIn = (try? keychain.string(for: .refreshToken)) != nil
         if isSignedIn {
-            statusMessage = "Device token is saved"
+            statusMessage = "サインイン済みです"
         }
     }
 
     func handleAppleAuthorization(_ authorization: ASAuthorization) async {
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-            statusMessage = "Apple credential is unavailable"
+            statusMessage = "Appleの認証情報を確認できませんでした"
             return
         }
 
         guard let tokenData = credential.identityToken,
               let identityToken = String(data: tokenData, encoding: .utf8) else {
-            statusMessage = "Apple identity token is unavailable"
+            statusMessage = "Appleの本人確認情報を確認できませんでした"
             return
         }
 
         guard let nonce = pendingAppleNonce else {
-            statusMessage = "Apple sign-in request is unavailable"
+            statusMessage = "Appleサインインをやり直してください"
             return
         }
         pendingAppleNonce = nil
@@ -52,17 +53,70 @@ final class AuthSession: ObservableObject {
             request.nonce = Self.sha256(nonce)
         } catch {
             pendingAppleNonce = nil
-            statusMessage = "Apple sign-in request could not be prepared"
+            statusMessage = "Appleサインインを準備できませんでした"
         }
     }
 
     func handleAppleAuthorizationError(_ error: Error) {
-        statusMessage = "Sign in failed: \(error.localizedDescription)"
+        statusMessage = "Appleサインインを完了できませんでした"
+    }
+
+    func requireReauthentication() {
+        isSignedIn = false
+        statusMessage = "安全のため、Appleで再認証してください"
+    }
+
+    func prepareAccountDeletionRequest(_ request: ASAuthorizationAppleIDRequest) {
+        do {
+            let nonce = try Self.generateNonce()
+            pendingAccountDeletionNonce = nonce
+            request.nonce = Self.sha256(nonce)
+        } catch {
+            pendingAccountDeletionNonce = nil
+            statusMessage = "削除の本人確認を準備できませんでした"
+        }
+    }
+
+    func deleteAccount(with authorization: ASAuthorization) async -> Bool {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let identityToken = String(data: tokenData, encoding: .utf8),
+              let nonce = pendingAccountDeletionNonce,
+              let apiBaseURL = AppConstants.apiBaseURL else {
+            statusMessage = "削除の本人確認を完了できませんでした"
+            return false
+        }
+        pendingAccountDeletionNonce = nil
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let deleted = try await client(for: apiBaseURL).deleteAccount(
+                identityToken: identityToken,
+                nonce: nonce
+            )
+            guard deleted else {
+                statusMessage = "アカウントを削除できませんでした"
+                return false
+            }
+            try? keychain.delete(.refreshToken)
+            try? keychain.delete(.sessionId)
+            try? keychain.delete(.deviceSyncToken)
+            try? keychain.delete(.deviceId)
+            UserDefaults.standard.set(false, forKey: "onboarding_completed")
+            UserDefaults.standard.set(false, forKey: "has_seen_intro")
+            deviceId = nil
+            isSignedIn = false
+            statusMessage = "アカウントとデータを削除しました"
+            return true
+        } catch {
+            handleAuthenticatedRequestError(error, action: "アカウント削除")
+            return false
+        }
     }
 
     func verifyContractAPI() async {
         guard let apiBaseURL = AppConstants.apiBaseURL else {
-            statusMessage = "API base URL is not configured"
+            statusMessage = "配布用の接続設定がありません"
             return
         }
 
@@ -72,7 +126,7 @@ final class AuthSession: ObservableObject {
         do {
             let items = try await client(for: apiBaseURL).listSubscriptions()
             isSignedIn = true
-            statusMessage = "Contract API verified: \(items.count) item(s)"
+            statusMessage = "契約を\(items.count)件確認しました"
         } catch {
             handleAuthenticatedRequestError(error, action: "Contract API check")
         }
@@ -80,7 +134,7 @@ final class AuthSession: ObservableObject {
 
     func signOutCurrentSession() async {
         guard let apiBaseURL = AppConstants.apiBaseURL else {
-            statusMessage = "API base URL is not configured"
+            statusMessage = "配布用の接続設定がありません"
             return
         }
 
@@ -90,20 +144,20 @@ final class AuthSession: ObservableObject {
         do {
             try await client(for: apiBaseURL).signOut()
             isSignedIn = false
-            statusMessage = "Signed out"
+            statusMessage = "サインアウトしました"
         } catch {
             isSignedIn = false
-            statusMessage = "Signed out on this device; server sign-out could not be confirmed"
+            statusMessage = "このiPhoneではサインアウトしました。サーバー側の完了は確認できませんでした"
         }
     }
 
     func revokeCurrentDevice() async {
         guard let apiBaseURL = AppConstants.apiBaseURL else {
-            statusMessage = "API base URL is not configured"
+            statusMessage = "配布用の接続設定がありません"
             return
         }
         guard let deviceId else {
-            statusMessage = "Registered device is unavailable"
+            statusMessage = "登録済み端末を確認できませんでした"
             return
         }
 
@@ -116,7 +170,7 @@ final class AuthSession: ObservableObject {
             try? keychain.delete(.deviceId)
             self.deviceId = nil
             isSignedIn = false
-            statusMessage = "Device revoked"
+            statusMessage = "この端末を解除しました"
         } catch {
             handleAuthenticatedRequestError(error, action: "Device revocation")
         }
@@ -124,7 +178,7 @@ final class AuthSession: ObservableObject {
 
     private func signInAndRegisterDevice(identityToken: String, nonce: String) async {
         guard let apiBaseURL = AppConstants.apiBaseURL else {
-            statusMessage = "API base URL is not configured"
+            statusMessage = "配布用の接続設定がありません"
             return
         }
 
@@ -149,13 +203,13 @@ final class AuthSession: ObservableObject {
             try keychain.set(registration.device.id, for: .deviceId)
             deviceId = registration.device.id
             isSignedIn = true
-            statusMessage = "Signed in and device registered"
+            statusMessage = "サインインしました"
         } catch {
             if let apiError = error as? APIError, case .reauthenticationRequired = apiError {
                 isSignedIn = false
-                statusMessage = "Sign in with Apple is required again"
+                statusMessage = "Appleで再認証してください"
             } else {
-                statusMessage = "Sign in failed: \(error.localizedDescription)"
+                statusMessage = "サインインを完了できませんでした"
             }
         }
     }
@@ -173,9 +227,9 @@ final class AuthSession: ObservableObject {
     private func handleAuthenticatedRequestError(_ error: Error, action: String) {
         if let apiError = error as? APIError, case .reauthenticationRequired = apiError {
             isSignedIn = false
-            statusMessage = "Sign in with Apple is required again"
+            statusMessage = "Appleで再認証してください"
         } else {
-            statusMessage = "\(action) failed: \(error.localizedDescription)"
+            statusMessage = "\(action)を完了できませんでした"
         }
     }
 

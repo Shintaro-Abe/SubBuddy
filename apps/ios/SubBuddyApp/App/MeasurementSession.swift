@@ -1,3 +1,4 @@
+import Combine
 import FamilyControls
 import Foundation
 
@@ -5,7 +6,7 @@ import Foundation
 final class MeasurementSession: ObservableObject {
     @Published var subscriptionId = ""
     @Published var selection = FamilyActivitySelection()
-    @Published private(set) var statusMessage = "Not monitoring"
+    @Published private(set) var statusMessage = "計測は停止しています"
     @Published private(set) var recordCount = 0
     @Published private(set) var isMonitoring = false
     @Published private(set) var isSyncing = false
@@ -18,17 +19,17 @@ final class MeasurementSession: ObservableObject {
     func startMonitoring() {
         let trimmedSubscriptionId = subscriptionId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedSubscriptionId.isEmpty else {
-            statusMessage = "Subscription ID is required"
+            statusMessage = "対象の契約を確認できませんでした"
             return
         }
         guard !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty else {
-            statusMessage = "Select at least one measured app"
+            statusMessage = "計測するアプリを1つ以上選んでください"
             return
         }
 
         let activityName = mappingStore.activityName(for: trimmedSubscriptionId)
         guard let selectionData = try? JSONEncoder().encode(selection) else {
-            statusMessage = "Monitoring failed: selection encoding failed"
+            statusMessage = "選択したアプリを保存できませんでした"
             return
         }
         guard mappingStore.save(SubscriptionMapping(
@@ -36,28 +37,28 @@ final class MeasurementSession: ObservableObject {
             activityName: activityName,
             selection: selectionData
         )) else {
-            statusMessage = "Monitoring failed: shared mapping store unavailable"
+            statusMessage = "計測設定を保存できませんでした"
             return
         }
 
         do {
             try scheduler.startMonitoring(activityName: activityName, selection: selection)
             isMonitoring = true
-            statusMessage = "Monitoring started"
+            statusMessage = "計測を開始しました"
         } catch {
-            statusMessage = "Monitoring failed: \(error.localizedDescription)"
+            statusMessage = "計測を開始できませんでした"
         }
     }
 
     func stopMonitoring() {
         scheduler.stopAll()
         isMonitoring = false
-        statusMessage = "Monitoring stopped"
+        statusMessage = "計測を停止しました"
     }
 
     func refreshRecords() {
         recordCount = store.readAll().count
-        statusMessage = "Records: \(recordCount)"
+        statusMessage = "端末内の未送信記録は\(recordCount)件です"
     }
 
     func syncRecords() async {
@@ -67,9 +68,9 @@ final class MeasurementSession: ObservableObject {
         do {
             let count = try await syncService.syncAll()
             refreshRecords()
-            statusMessage = "Synced records: \(count)"
+            statusMessage = "\(count)件を同期しました"
         } catch {
-            statusMessage = "Sync failed: \(error.localizedDescription)"
+            statusMessage = "同期できませんでした。通信を確認して、もう一度お試しください"
         }
     }
 }

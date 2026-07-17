@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-15（テスト監査台帳、認証境界、文書の現行性ルールを反映）
+> 最終更新：2026-07-17（iPhone UI構成、テスト監査台帳、認証境界を反映）
 > 関連：`architecture.md`（技術仕様）、`repository-structure.md`（構成）、`functional-design.md`（機能設計）、`glossary.md`（用語）
 
 ---
@@ -67,6 +67,8 @@
 
 - 型：UpperCamelCase、プロパティ・メソッド：lowerCamelCase（Swift API Design Guidelines に準拠）。
 - ドメイン用語は TypeScript 側と意味を一致させる（`glossary.md` 準拠）。
+- 画面はルート状態、機能別View、状態・API境界、表示モデル、デザイントークンを分離する。API URLや内部IDを利用者入力にしない。
+- PreviewとXCTestには合成データだけを使い、実在の契約・金額・Apple識別子・端末IDを含めない。
 
 ### 3.3 DB（Prisma / PostgreSQL）
 
@@ -77,8 +79,9 @@
 
 ## 4. スタイリング規約（UI）
 
-- **Tailwind CSS を共通デザインシステムとして使用**し、統一感を保つ（要求 14）。
-- 任意の生 CSS・インラインスタイルは原則使わない。色・余白・タイポはユーティリティクラスに統一。
+- Webは**Tailwind CSSを共通デザインシステムとして使用**し、色・余白・タイポをユーティリティクラスへ揃える（要求14）。任意の生CSS・インラインスタイルは原則使わない。
+- iPhoneはWeb版の色・余白・情報の強弱・中立トーンをSwiftUI用デザイントークンへ対応付ける。SwiftUI標準操作、Dynamic Type、VoiceOverを優先し、WebのCSSや配置をそのまま移植しない。
+- 書体はWeb版を正本とし、iPhoneの本文・見出しは`Zen Kaku Gothic New`、大見出しは`Shippori Mincho`、金額・主要数値は`BIZ UDPGothic`へ対応付ける。`Font.custom(..., relativeTo:)`でDynamic Typeを維持し、フォントファイルとOFLライセンスは`SubBuddyApp/Resources/`で一緒に管理する。
 - 繰り返すパターンは**コンポーネント化**して再利用（`src/components/`）。クラス文字列の重複を避ける。
 - レスポンシブはモバイル優先（必要に応じてブレークポイント）。
 - アクセシビリティ：意味のある要素（`button`/`a`/見出し階層）を用い、`alt`・ラベルを付与。
@@ -94,6 +97,7 @@
 - 閾値変更の影響はテストで固定（`config` の値を流し込み、判定差分を検証）。
 - 開発中のPlaywright E2Eは変更リスクに応じて実施する。リリースゲートで指定されたWeb主要導線・対応ブラウザのE2Eは必須とし、「任意」にはしない。
 - 新しい独立した品質確認を始める前に`.audit/test-status.md`へ対象と状態「実施中」を記録し、終了後に結果と未確認範囲を同じ行へ反映する。
+- iPhone UIの基本回帰はMacで`apps/ios/scripts/verify-main-ui.sh`を実行する。Simulator buildと単体テストだけで、実機API結合、Screen Time、VoiceOver、画面サイズ、性能の確認を代替しない。
 
 ---
 

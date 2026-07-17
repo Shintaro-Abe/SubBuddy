@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-15（確認優先度、認証セッション、集計値最小化、現行リリース範囲を反映）
+> 最終更新：2026-07-17（確認優先度、iPhone主タブ、認証セッション、集計値最小化を反映）
 > 関連：`product-requirements.md`、`functional-design.md`、`architecture.md`、`repository-structure.md`、`development-guidelines.md`
 
 ---
@@ -47,6 +47,7 @@
 | 利用量センサー | Usage Sensor | — | 利用量を計測する側の総称。iPhone（Screen Time・位置情報）が担う。 |
 | 計測対象アプリ | Measured App | — | サブスクに対応する既存アプリ（Netflix・YouTube 等）。DeviceActivity で使用時間を測る対象。**SubBuddy 本体アプリとは別物**。1サブスク=1計測対象アプリで、対応付けは iOS 上のユーザー手動選択（`FamilyActivityToken` は不透明で bundleId を取れないため。ADR 0005）。 |
 | SubBuddy 本体アプリ | Host App | — | iPhone に1つ入れる SubBuddy 本体アプリ。計測対象アプリと区別する。 |
+| 主タブ | Primary Tab | `AppTab` | iPhone利用者向けUIの主要目的を分ける「ホーム」「契約」「見直し」。設定は主タブにせずホームから開く。 |
 | コネクタ / アダプタ | Connector / Adapter | `connectors/<source>` | 取得源ごとの入力を検証し、必要最小限の集計値へ変換する境界。現時点では汎用プラグイン機構を実装していない。 |
 | 取り込み | Ingestion | `ingestion` | 外部シグナルを検証・最小化・正規化して永続化する処理。Screen Timeは詳細ログや全アプリ一覧を保存せず、日別集計値だけを扱う。 |
 | 正規化 | Normalize | `normalize` | 外部入力を検証し、サーバーが扱う共通の集計形式へ変換すること。不要な原本・詳細ログは保持しない。 |

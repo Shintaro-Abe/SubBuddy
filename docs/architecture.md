@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-15（認証セッション実装、iOS App Group保存、Render構成を反映）
+> 最終更新：2026-07-17（iPhone主製品UI、認証セッション、iOS検証境界を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -77,7 +77,7 @@ flowchart TB
 
 > バージョンの具体値（Node / Next / Postgres 等）は `repository-structure.md` または `package.json` / `.tool-versions` を一次情報とし、本書では固定しない（陳腐化防止）。
 
-### 3.2 iPhone 側（利用量センサー）
+### 3.2 iPhone 側（主製品UI・利用量センサー）
 
 | 領域 | 採用技術 | 用途 |
 |---|---|---|
@@ -412,6 +412,6 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 
 ### 14.5 対応環境
 
-- iOS 17.4以降、iPhone専用、縦向き。小画面・標準画面の実機、大画面、提出時点の最新iOSを回帰対象とする。
+- iOS 17.4以降、iPhone専用、縦向き。標準画面・大画面、提出時点の最新iOSを回帰対象とする。
 - WebはmacOS・iOSのSafari/Chrome最新と1つ前を正式対応、Edge/Firefox最新版を動作確認対象とし、画面幅360px以上を前提とする。
 - iPhoneはVoiceOver・最大Dynamic Type・44ポイント操作領域、Webはキーボード・可視フォーカス・200%拡大・通常文字4.5:1以上のコントラストを満たす。
