@@ -1,5 +1,6 @@
 import FamilyControls
 import Foundation
+import ManagedSettings
 import os
 
 private let logger = Logger(subsystem: "com.subbuddy.app", category: "MappingStore")
