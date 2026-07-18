@@ -181,7 +181,7 @@
 |---|---|---|
 | ダッシュボード | Dashboard | サブスク一覧・支出・レコメンドを俯瞰する Web 画面。 |
 | サブスクカード | Subscription Card | 一覧で 1 サブスクを表すカード UI コンポーネント。 |
-| 計測対象選択 | Activity Picker | iPhone で計測対象アプリ/Web を選ぶ操作（FamilyActivityPicker。UC-09）。 |
+| 計測対象選択 | Activity Picker | iPhoneで契約に対応するアプリを1つ選ぶ操作（FamilyActivityPicker。UC-09）。同じアプリを複数契約へ重複して紐付けない。 |
 
 ---
 

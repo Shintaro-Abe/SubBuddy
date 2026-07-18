@@ -2,7 +2,13 @@ import DeviceActivity
 import FamilyControls
 import Foundation
 
-final class MonitorScheduler {
+protocol MonitoringScheduling {
+    func startMonitoring(activityName: String, selection: FamilyActivitySelection) throws
+    func stopMonitoring(activityName: String)
+    var activeActivities: [String] { get }
+}
+
+final class MonitorScheduler: MonitoringScheduling {
     private let center = DeviceActivityCenter()
 
     func startMonitoring(activityName: String, selection: FamilyActivitySelection) throws {
@@ -27,8 +33,8 @@ final class MonitorScheduler {
         try center.startMonitoring(activity, during: schedule, events: events)
     }
 
-    func stopAll() {
-        center.stopMonitoring()
+    func stopMonitoring(activityName: String) {
+        center.stopMonitoring([DeviceActivityName(rawValue: activityName)])
     }
 
     var activeActivities: [String] {

@@ -83,7 +83,7 @@ flowchart TB
 |---|---|---|
 | 言語 / UI | Swift / SwiftUI | iOS アプリ本体 |
 | 利用量計測 | FamilyControls / DeviceActivity / ManagedSettings | Screen Time のしきい値イベント取得（要 entitlement） |
-| 対象選択 | FamilyActivityPicker | 計測対象アプリ/Webドメインの選択（UC-09） |
+| 対象選択 | FamilyActivityPicker | 1契約につき1つの計測対象アプリを選択（UC-09）。同じアプリの契約間重複は端末内で拒否 |
 | 集計イベント | DeviceActivityMonitor Extension | しきい値（1m/5m/15m/30m/60m/120m）超過イベントを受信し日別集計 |
 | 秘密情報の保存 | Keychain（ThisDeviceOnly） | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID |
 | 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |

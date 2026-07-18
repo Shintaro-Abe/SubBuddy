@@ -495,6 +495,8 @@ struct MeasurementSetupView: View {
     @StateObject private var session = MeasurementSession()
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @State private var showsPicker = false
+    @State private var draftSelection = FamilyActivitySelection()
+    @State private var showsRemoveConfiguration = false
 
     var body: some View {
         Form {
@@ -516,8 +518,15 @@ struct MeasurementSetupView: View {
                 }
             } else {
                 Section("計測対象") {
-                    Button("アプリを選ぶ") { showsPicker = true }
-                        .familyActivityPicker(isPresented: $showsPicker, selection: $session.selection)
+                    Button("アプリを1つ選ぶ") {
+                        draftSelection = session.selection
+                        showsPicker = true
+                    }
+                    .disabled(session.isMonitoring)
+                    .familyActivityPicker(isPresented: $showsPicker, selection: $draftSelection)
+                    if let applicationToken = session.selection.applicationTokens.first {
+                        Label(applicationToken)
+                    }
                     Text("選択中のアプリ \(session.selection.applicationTokens.count)件")
                         .foregroundStyle(AppColor.secondaryText)
                 }
@@ -526,19 +535,43 @@ struct MeasurementSetupView: View {
                         Button("計測を停止", role: .destructive) { session.stopMonitoring() }
                     } else {
                         Button("この契約の計測を始める") { session.startMonitoring() }
-                            .disabled(session.selection.applicationTokens.isEmpty && session.selection.categoryTokens.isEmpty)
+                            .disabled(!MeasurementSession.isSingleApplication(session.selection))
                     }
                     Text(localizedStatus)
                         .font(.appFootnote)
                         .foregroundStyle(AppColor.secondaryText)
+                    if !session.isMonitoring && !session.selection.applicationTokens.isEmpty {
+                        Button("アプリとの紐付けを解除", role: .destructive) {
+                            showsRemoveConfiguration = true
+                        }
+                    }
                 }
             }
         }
         .appListBackground()
         .navigationTitle("利用状況を計測")
         .onAppear {
-            session.subscriptionId = subscription.id
+            session.load(subscriptionId: subscription.id)
+            draftSelection = session.selection
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+        }
+        .onChange(of: showsPicker) { _, isPresented in
+            guard !isPresented else { return }
+            session.select(draftSelection)
+            draftSelection = session.selection
+        }
+        .confirmationDialog(
+            "計測するアプリとの紐付けを解除しますか？",
+            isPresented: $showsRemoveConfiguration,
+            titleVisibility: .visible
+        ) {
+            Button("紐付けを解除", role: .destructive) {
+                session.removeConfiguration()
+                draftSelection = session.selection
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("この契約の計測設定だけを削除します。クラウドへ同期済みの集計値は削除しません。")
         }
     }
 

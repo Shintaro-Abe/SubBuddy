@@ -25,9 +25,15 @@ final class ProductStore: ObservableObject {
     private var client: (any ProductAPIProviding)?
     private var clientBaseURL: URL?
     private let usesInjectedClient: Bool
+    private let measurementCleaner: any MeasurementConfigurationCleaning
 
-    init(client: (any ProductAPIProviding)? = nil, previewSnapshot: ProductPreviewSnapshot? = nil) {
+    init(
+        client: (any ProductAPIProviding)? = nil,
+        previewSnapshot: ProductPreviewSnapshot? = nil,
+        measurementCleaner: any MeasurementConfigurationCleaning = MeasurementConfigurationCleaner()
+    ) {
         self.client = client
+        self.measurementCleaner = measurementCleaner
         usesInjectedClient = client != nil
         guard let previewSnapshot else { return }
         subscriptions = previewSnapshot.subscriptions
@@ -54,6 +60,9 @@ final class ProductStore: ObservableObject {
 
         do {
             subscriptions = try await client.subscriptions()
+            measurementCleaner.removeOrphanedConfigurations(
+                validSubscriptionIDs: Set(subscriptions.map(\.id))
+            )
             lastUpdatedAt = Date()
             return subscriptions.isEmpty ? .empty : .populated
         } catch {
@@ -82,6 +91,9 @@ final class ProductStore: ObservableObject {
             async let catalog = client.serviceCatalog()
 
             self.subscriptions = try await subscriptions
+            measurementCleaner.removeOrphanedConfigurations(
+                validSubscriptionIDs: Set(self.subscriptions.map(\.id))
+            )
             self.dashboard = try await dashboard
             self.spending = try await spending
             self.recommendations = try await recommendations
@@ -128,6 +140,7 @@ final class ProductStore: ObservableObject {
         defer { isSaving = false }
         do {
             try await client.deleteSubscription(id: id)
+            measurementCleaner.removeConfiguration(subscriptionId: id)
             subscriptions.removeAll { $0.id == id }
             await loadAll()
             return errorMessage == nil

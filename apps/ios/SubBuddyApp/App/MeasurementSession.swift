@@ -2,6 +2,45 @@ import Combine
 import FamilyControls
 import Foundation
 
+protocol MeasurementConfigurationCleaning {
+    func removeConfiguration(subscriptionId: String)
+    func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>)
+}
+
+final class MeasurementConfigurationCleaner: MeasurementConfigurationCleaning {
+    private let scheduler: any MonitoringScheduling
+    private let mappingStore: any SubscriptionMappingStoring
+
+    init(
+        scheduler: any MonitoringScheduling = MonitorScheduler(),
+        mappingStore: any SubscriptionMappingStoring = MappingStore()
+    ) {
+        self.scheduler = scheduler
+        self.mappingStore = mappingStore
+    }
+
+    func removeConfiguration(subscriptionId: String) {
+        let activityName = mappingStore.activityName(for: subscriptionId)
+        scheduler.stopMonitoring(activityName: activityName)
+        _ = mappingStore.remove(subscriptionId: subscriptionId)
+    }
+
+    func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>) {
+        for activityName in scheduler.activeActivities
+            where mappingStore.subscriptionId(for: activityName) == nil {
+            scheduler.stopMonitoring(activityName: activityName)
+        }
+
+        let orphaned = mappingStore.subscriptionIDs().filter {
+            !validSubscriptionIDs.contains($0)
+        }
+        let idsToRemove = Set(orphaned + mappingStore.invalidOrDuplicateSubscriptionIDs())
+        for subscriptionId in idsToRemove {
+            removeConfiguration(subscriptionId: subscriptionId)
+        }
+    }
+}
+
 @MainActor
 final class MeasurementSession: ObservableObject {
     @Published var subscriptionId = ""
@@ -11,10 +50,91 @@ final class MeasurementSession: ObservableObject {
     @Published private(set) var isMonitoring = false
     @Published private(set) var isSyncing = false
 
-    private let scheduler = MonitorScheduler()
-    private let mappingStore = MappingStore()
+    private let scheduler: any MonitoringScheduling
+    private let mappingStore: any SubscriptionMappingStoring
     private let store = SharedStore()
     private let syncService = UsageSyncService()
+
+    init(
+        scheduler: any MonitoringScheduling = MonitorScheduler(),
+        mappingStore: any SubscriptionMappingStoring = MappingStore()
+    ) {
+        self.scheduler = scheduler
+        self.mappingStore = mappingStore
+    }
+
+    func load(subscriptionId: String) {
+        self.subscriptionId = subscriptionId
+        let activityName = mappingStore.activityName(for: subscriptionId)
+        let isActive = scheduler.activeActivities.contains(activityName)
+
+        guard let mapping = mappingStore.mapping(for: subscriptionId) else {
+            if isActive {
+                scheduler.stopMonitoring(activityName: activityName)
+            }
+            selection = FamilyActivitySelection()
+            isMonitoring = false
+            statusMessage = isActive
+                ? "保存済み設定がないため計測を停止しました。アプリを選び直してください"
+                : "計測は停止しています"
+            return
+        }
+
+        guard let savedSelection = try? JSONDecoder().decode(
+            FamilyActivitySelection.self,
+            from: mapping.selection
+        ), Self.isSingleApplication(savedSelection) else {
+            if isActive {
+                scheduler.stopMonitoring(activityName: activityName)
+            }
+            _ = mappingStore.remove(subscriptionId: subscriptionId)
+            selection = FamilyActivitySelection()
+            isMonitoring = false
+            statusMessage = "以前の計測設定を使えません。アプリを1つ選び直してください"
+            return
+        }
+
+        selection = savedSelection
+        isMonitoring = isActive
+        statusMessage = isActive ? "計測を開始しました" : "計測は停止しています"
+    }
+
+    func select(_ candidate: FamilyActivitySelection) {
+        guard !isMonitoring else {
+            statusMessage = "計測対象を変更するには、現在の計測を停止してください"
+            return
+        }
+        guard Self.isSingleApplication(candidate) else {
+            statusMessage = "計測するアプリを1つだけ選んでください"
+            return
+        }
+        if mappingStore.conflictingSubscriptionId(
+            for: candidate,
+            excluding: subscriptionId
+        ) != nil {
+            statusMessage = "このアプリは別の契約で計測しています"
+            return
+        }
+
+        selection = candidate
+        statusMessage = "アプリを1つ選択しました"
+    }
+
+    static func isSingleApplication(_ selection: FamilyActivitySelection) -> Bool {
+        isSingleApplication(
+            applicationCount: selection.applicationTokens.count,
+            categoryCount: selection.categoryTokens.count,
+            webDomainCount: selection.webDomainTokens.count
+        )
+    }
+
+    static func isSingleApplication(
+        applicationCount: Int,
+        categoryCount: Int,
+        webDomainCount: Int
+    ) -> Bool {
+        applicationCount == 1 && categoryCount == 0 && webDomainCount == 0
+    }
 
     func startMonitoring() {
         let trimmedSubscriptionId = subscriptionId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -22,8 +142,15 @@ final class MeasurementSession: ObservableObject {
             statusMessage = "対象の契約を確認できませんでした"
             return
         }
-        guard !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty else {
-            statusMessage = "計測するアプリを1つ以上選んでください"
+        guard Self.isSingleApplication(selection) else {
+            statusMessage = "計測するアプリを1つだけ選んでください"
+            return
+        }
+        guard mappingStore.conflictingSubscriptionId(
+            for: selection,
+            excluding: trimmedSubscriptionId
+        ) == nil else {
+            statusMessage = "このアプリは別の契約で計測しています"
             return
         }
 
@@ -51,9 +178,22 @@ final class MeasurementSession: ObservableObject {
     }
 
     func stopMonitoring() {
-        scheduler.stopAll()
+        let activityName = mappingStore.activityName(for: subscriptionId)
+        scheduler.stopMonitoring(activityName: activityName)
         isMonitoring = false
         statusMessage = "計測を停止しました"
+    }
+
+    func removeConfiguration() {
+        let activityName = mappingStore.activityName(for: subscriptionId)
+        scheduler.stopMonitoring(activityName: activityName)
+        guard mappingStore.remove(subscriptionId: subscriptionId) else {
+            statusMessage = "計測設定を解除できませんでした"
+            return
+        }
+        selection = FamilyActivitySelection()
+        isMonitoring = false
+        statusMessage = "アプリとの紐付けを解除しました"
     }
 
     func refreshRecords() {

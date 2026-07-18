@@ -1,3 +1,4 @@
+import FamilyControls
 import XCTest
 import UIKit
 @testable import SubBuddyApp
@@ -158,7 +159,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testProductStoreLoadsDashboardCollectionsFromInjectedBoundary() async {
-        let store = ProductStore(client: SyntheticProductAPI())
+        let store = ProductStore(
+            client: SyntheticProductAPI(),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
 
         await store.loadAll()
 
@@ -170,7 +174,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testExistingSubscriptionLoadUsesOnlySubscriptionEndpoint() async {
-        let store = ProductStore(client: ExistingSubscriptionProductAPI(result: .populated))
+        let store = ProductStore(
+            client: ExistingSubscriptionProductAPI(result: .populated),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
 
         let outcome = await store.loadExistingSubscriptions()
 
@@ -181,7 +188,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testExistingSubscriptionLoadKeepsEmptyResultOnOnboarding() async {
-        let store = ProductStore(client: ExistingSubscriptionProductAPI(result: .empty))
+        let store = ProductStore(
+            client: ExistingSubscriptionProductAPI(result: .empty),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
 
         let outcome = await store.loadExistingSubscriptions()
 
@@ -192,7 +202,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testExistingSubscriptionLoadSeparatesFailureFromEmptyResult() async {
-        let store = ProductStore(client: ExistingSubscriptionProductAPI(result: .failure))
+        let store = ProductStore(
+            client: ExistingSubscriptionProductAPI(result: .failure),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
 
         let outcome = await store.loadExistingSubscriptions()
 
@@ -203,7 +216,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testExistingSubscriptionLoadRequestsReauthenticationForExpiredSession() async {
-        let store = ProductStore(client: ExistingSubscriptionProductAPI(result: .reauthenticationRequired))
+        let store = ProductStore(
+            client: ExistingSubscriptionProductAPI(result: .reauthenticationRequired),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
 
         let outcome = await store.loadExistingSubscriptions()
 
@@ -214,7 +230,10 @@ final class ProductUITests: XCTestCase {
 
     @MainActor
     func testProductStoreClearsSensitiveDataAtAuthenticationBoundary() async {
-        let store = ProductStore(client: SyntheticProductAPI())
+        let store = ProductStore(
+            client: SyntheticProductAPI(),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
         await store.loadAll()
 
         store.clearSensitiveData()
@@ -225,6 +244,240 @@ final class ProductUITests: XCTestCase {
         XCTAssertNil(store.spending)
         XCTAssertNil(store.lastUpdatedAt)
     }
+
+    func testMeasurementSelectionRequiresExactlyOneApplication() {
+        XCTAssertTrue(MeasurementSession.isSingleApplication(
+            applicationCount: 1,
+            categoryCount: 0,
+            webDomainCount: 0
+        ))
+        XCTAssertFalse(MeasurementSession.isSingleApplication(
+            applicationCount: 0,
+            categoryCount: 0,
+            webDomainCount: 0
+        ))
+        XCTAssertFalse(MeasurementSession.isSingleApplication(
+            applicationCount: 2,
+            categoryCount: 0,
+            webDomainCount: 0
+        ))
+        XCTAssertFalse(MeasurementSession.isSingleApplication(
+            applicationCount: 1,
+            categoryCount: 1,
+            webDomainCount: 0
+        ))
+        XCTAssertFalse(MeasurementSession.isSingleApplication(
+            applicationCount: 1,
+            categoryCount: 0,
+            webDomainCount: 1
+        ))
+    }
+
+    @MainActor
+    func testMeasurementLoadStopsOrphanedActivityWithoutSavedMapping() {
+        let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-sub"])
+        let mappings = SyntheticMappingStore()
+        let session = MeasurementSession(scheduler: scheduler, mappingStore: mappings)
+
+        session.load(subscriptionId: "synthetic-sub")
+
+        XCTAssertFalse(session.isMonitoring)
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-sub"])
+        XCTAssertTrue(session.statusMessage.contains("設定がないため計測を停止"))
+    }
+
+    @MainActor
+    func testMeasurementLoadRemovesInvalidMultipleTargetLegacyMapping() throws {
+        let selectionData = try JSONEncoder().encode(FamilyActivitySelection())
+        let mapping = SubscriptionMapping(
+            subscriptionId: "synthetic-sub",
+            activityName: "sub_synthetic-sub",
+            selection: selectionData
+        )
+        let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-sub"])
+        let mappings = SyntheticMappingStore(mappings: [mapping])
+        let session = MeasurementSession(scheduler: scheduler, mappingStore: mappings)
+
+        session.load(subscriptionId: "synthetic-sub")
+
+        XCTAssertFalse(session.isMonitoring)
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-sub"])
+        XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-sub"])
+        XCTAssertTrue(session.statusMessage.contains("選び直してください"))
+    }
+
+    @MainActor
+    func testMeasurementStopTargetsOnlyCurrentSubscription() {
+        let scheduler = RecordingMonitoringScheduler(activeActivities: [
+            "sub_synthetic-current",
+            "sub_synthetic-other",
+        ])
+        let session = MeasurementSession(
+            scheduler: scheduler,
+            mappingStore: SyntheticMappingStore()
+        )
+        session.subscriptionId = "synthetic-current"
+
+        session.stopMonitoring()
+
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-current"])
+        XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-other"))
+    }
+
+    @MainActor
+    func testRemovingMeasurementConfigurationKeepsOtherActivity() {
+        let scheduler = RecordingMonitoringScheduler(activeActivities: [
+            "sub_synthetic-current",
+            "sub_synthetic-other",
+        ])
+        let mappings = SyntheticMappingStore()
+        let session = MeasurementSession(scheduler: scheduler, mappingStore: mappings)
+        session.subscriptionId = "synthetic-current"
+
+        session.removeConfiguration()
+
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-current"])
+        XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-current"])
+        XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-other"))
+        XCTAssertTrue(session.selection.applicationTokens.isEmpty)
+    }
+
+    func testOrphanedMeasurementCleanupKeepsExistingSubscription() {
+        let mappings = SyntheticMappingStore(mappings: [
+            SubscriptionMapping(
+                subscriptionId: "synthetic-existing",
+                activityName: "sub_synthetic-existing",
+                selection: Data()
+            ),
+            SubscriptionMapping(
+                subscriptionId: "synthetic-deleted",
+                activityName: "sub_synthetic-deleted",
+                selection: Data()
+            ),
+        ])
+        let scheduler = RecordingMonitoringScheduler(activeActivities: [
+            "sub_synthetic-existing",
+            "sub_synthetic-deleted",
+        ])
+        let cleaner = MeasurementConfigurationCleaner(
+            scheduler: scheduler,
+            mappingStore: mappings
+        )
+
+        cleaner.removeOrphanedConfigurations(validSubscriptionIDs: ["synthetic-existing"])
+
+        XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-deleted"])
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-deleted"])
+        XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-existing"))
+    }
+
+    func testOrphanedActivityWithoutMappingIsStoppedDuringReconciliation() {
+        let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-orphan"])
+        let cleaner = MeasurementConfigurationCleaner(
+            scheduler: scheduler,
+            mappingStore: SyntheticMappingStore()
+        )
+
+        cleaner.removeOrphanedConfigurations(validSubscriptionIDs: [])
+
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-orphan"])
+        XCTAssertTrue(scheduler.activeActivities.isEmpty)
+    }
+
+    @MainActor
+    func testDeletingSubscriptionRemovesOnlyItsMeasurementConfiguration() async {
+        let cleaner = RecordingMeasurementCleaner()
+        let store = ProductStore(client: SyntheticProductAPI(), measurementCleaner: cleaner)
+        await store.loadAll()
+
+        let deleted = await store.delete(id: PreviewFixtures.video.id)
+
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(cleaner.removedSubscriptionIDs, [PreviewFixtures.video.id])
+    }
+}
+
+private final class RecordingMonitoringScheduler: MonitoringScheduling {
+    private(set) var stoppedActivities: [String] = []
+    var activeActivities: [String]
+
+    init(activeActivities: [String] = []) {
+        self.activeActivities = activeActivities
+    }
+
+    func startMonitoring(activityName: String, selection: FamilyActivitySelection) throws {
+        if !activeActivities.contains(activityName) {
+            activeActivities.append(activityName)
+        }
+    }
+
+    func stopMonitoring(activityName: String) {
+        stoppedActivities.append(activityName)
+        activeActivities.removeAll { $0 == activityName }
+    }
+}
+
+private final class SyntheticMappingStore: SubscriptionMappingStoring {
+    private var mappings: [SubscriptionMapping]
+    private(set) var removedSubscriptionIDs: [String] = []
+
+    init(mappings: [SubscriptionMapping] = []) {
+        self.mappings = mappings
+    }
+
+    func save(_ mapping: SubscriptionMapping) -> Bool {
+        mappings.removeAll { $0.subscriptionId == mapping.subscriptionId }
+        mappings.append(mapping)
+        return true
+    }
+
+    func mapping(for subscriptionId: String) -> SubscriptionMapping? {
+        mappings.first { $0.subscriptionId == subscriptionId }
+    }
+
+    func conflictingSubscriptionId(
+        for selection: FamilyActivitySelection,
+        excluding subscriptionId: String
+    ) -> String? {
+        nil
+    }
+
+    func remove(subscriptionId: String) -> Bool {
+        removedSubscriptionIDs.append(subscriptionId)
+        mappings.removeAll { $0.subscriptionId == subscriptionId }
+        return true
+    }
+
+    func activityName(for subscriptionId: String) -> String {
+        "sub_\(subscriptionId)"
+    }
+
+    func subscriptionId(for activityName: String) -> String? {
+        mappings.first { $0.activityName == activityName }?.subscriptionId
+    }
+
+    func subscriptionIDs() -> [String] {
+        mappings.map(\.subscriptionId)
+    }
+
+    func invalidOrDuplicateSubscriptionIDs() -> [String] {
+        []
+    }
+}
+
+private final class RecordingMeasurementCleaner: MeasurementConfigurationCleaning {
+    private(set) var removedSubscriptionIDs: [String] = []
+
+    func removeConfiguration(subscriptionId: String) {
+        removedSubscriptionIDs.append(subscriptionId)
+    }
+
+    func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>) {}
+}
+
+private final class NoopMeasurementCleaner: MeasurementConfigurationCleaning {
+    func removeConfiguration(subscriptionId: String) {}
+    func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>) {}
 }
 
 private actor ExistingSubscriptionProductAPI: ProductAPIProviding {
