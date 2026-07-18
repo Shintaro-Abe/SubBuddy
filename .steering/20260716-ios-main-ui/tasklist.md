@@ -60,6 +60,7 @@
 - T-9/T-11: 修正版の初回Mac buildで、AppとMonitor Extensionの共有ファイルが`ApplicationToken`の定義元をimportしていない問題を確認した。`MappingStore.swift`へ`ManagedSettings`を明示importし、Extensionターゲットでも同じ型依存を解決するよう修正した。修正後のMac build待ち。
 - T-9/T-11: 次のMacテストcompileで、状態を持たない1アプリ件数判定が`MeasurementSession`のMainActor隔離を継承していた問題を確認した。件数だけを評価する純粋関数を`nonisolated`にし、同期テストから安全に呼べるよう修正した。修正後のMac build・30テスト待ち。
 - T-9/T-11: 2026-07-18に依存・MainActor修正後のMac検証スクリプトが成功し、Simulator buildとiOS全テストが失敗0件で合格した。実機での選択・計測状態復元、複数・重複拒否、契約単位停止、紐付け解除、計測・同期は再確認待ち。
+- T-8/T-9/T-11: Screen Time実機回帰で同期後も最近30日の利用日が1日にならない問題を確認した。見直しスナップショットが利用日・利用分を固定0、単価をnullで保存していたことが原因。集計値と月額÷利用日数の単価を保存し、0日では単価を作らないよう修正した。Web自動テスト30ファイル179件、型、ソースlint、本番buildが合格。Render配備後の実機再確認待ち。
 
 ## 完了チェック
 

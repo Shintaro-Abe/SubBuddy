@@ -12,7 +12,10 @@ import { toUsageBucketWire } from "@/lib/usage-bucket";
 import { toMonthlyAmount } from "@/lib/money";
 import { listSubscriptions } from "@/repositories/subscriptions";
 import { listUsageForSubscription } from "@/repositories/usage";
-import { appendRecommendationSnapshot } from "@/repositories/recommendations";
+import {
+  appendRecommendationSnapshot,
+  buildRecommendationUsageMetrics,
+} from "@/repositories/recommendations";
 import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
 import { prisma } from "@/lib/prisma";
 
@@ -195,7 +198,16 @@ export async function recomputeRecommendations(
       },
       config,
     );
-    await appendRecommendationSnapshot(userId, s.id, result);
+    await appendRecommendationSnapshot(
+      userId,
+      s.id,
+      result,
+      buildRecommendationUsageMetrics(
+        monthlyAmt,
+        agg.usageDays30d,
+        agg.usageMinutes30d,
+      ),
+    );
     results.push({ subscriptionId: s.id, name: s.name, ...result });
   }
   return results;

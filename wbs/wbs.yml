@@ -1585,7 +1585,7 @@ tasks:
     actualStart: "2026-07-16"
     predecessors: ["REL-0.3.2", "REL-0.4"]
     deliverable: "確認優先度、事実、根拠、不足情報、選択肢、公式導線"
-    note: "中立表示と既存API接続は実装済み。代替候補、節約額、構造化根拠はREL-0.4の見直しAPI修復待ち"
+    note: "中立表示と既存API接続は実装済み。利用日・利用分の固定0と1利用日単価の固定null保存は修正し、自動テスト合格。Render配備後の実機再確認待ち。代替候補、節約額、構造化根拠はREL-0.4の残作業"
 
   - id: "REL-0.3.6"
     parent: "REL-0.3"
@@ -1617,13 +1617,14 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "見直し計算・保存・表示の修復と確認優先度への移行"
-    progress: 0
-    status: "未着手"
+    progress: 10
+    status: "進行中"
+    actualStart: "2026-07-18"
     plannedStart: "2026-09-21"
     plannedEnd: "2026-10-09"
     predecessors: ["REL-0.2"]
     deliverable: "利用実績・単価・候補・節約額・根拠・注意点の一致、重大エラー0件"
-    note: "steering T-21/T-34/T-35/T-46/T-50。継続・解約を断定しない"
+    note: "steering T-21/T-34/T-35/T-46/T-50。利用日・利用分・1利用日単価の固定値保存を先行修正し、Web自動テスト30ファイル179件、型、ソースlint、本番buildが合格。Render実機再確認、代替候補、節約額、構造化根拠等は未完了。継続・解約を断定しない"
 
   - id: "REL-0.5"
     parent: "REL-0"

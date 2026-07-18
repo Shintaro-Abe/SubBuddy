@@ -4,10 +4,29 @@ import type { RecommendationResult } from "@/domain/scoring/computeRecommendatio
 
 type Db = Pick<PrismaClient, "recommendationSnapshot">;
 
+export interface RecommendationUsageMetrics {
+  usageDays30d: number;
+  usageMinutes30d: number;
+  costPerUsageDay: number | null;
+}
+
+export function buildRecommendationUsageMetrics(
+  monthlyAmount: number,
+  usageDays30d: number,
+  usageMinutes30d: number,
+): RecommendationUsageMetrics {
+  return {
+    usageDays30d,
+    usageMinutes30d,
+    costPerUsageDay: usageDays30d > 0 ? monthlyAmount / usageDays30d : null,
+  };
+}
+
 export function appendRecommendationSnapshot(
   userId: string,
   subscriptionId: string,
   result: RecommendationResult,
+  usage: RecommendationUsageMetrics,
   db: Db = prisma,
 ) {
   return db.recommendationSnapshot.create({
@@ -21,11 +40,11 @@ export function appendRecommendationSnapshot(
       cancelScore: 0,
       monthlyAmount: result.monthlyAmount,
       yearlyAmount: result.yearlyAmount,
-      usageDays30d: 0,
-      usageMinutes30d: 0,
+      usageDays30d: usage.usageDays30d,
+      usageMinutes30d: usage.usageMinutes30d,
       daysSinceLastUse: result.daysSinceLastUse,
       daysUntilRenewal: result.daysUntilRenewal,
-      costPerUsageDay: null,
+      costPerUsageDay: usage.costPerUsageDay,
       hasOverlap: result.hasOverlap,
       confidence: result.confidence,
       reason: result.reason,
