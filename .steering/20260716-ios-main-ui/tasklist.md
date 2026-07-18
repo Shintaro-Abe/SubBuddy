@@ -59,6 +59,7 @@
 - T-9/T-11: 計測開始後に画面を開き直すと選択と計測中表示が失われる実機指摘を受け、保存済み選択と`DeviceActivityCenter.activities`から状態を復元するよう修正した。v1を1契約1アプリに固定し、複数・カテゴリ・Webドメイン選択と契約間重複を拒否する。全件停止を契約単位停止へ変更し、紐付け解除、契約削除・削除済み契約の後片付けを追加した。自動確認と修正後の実機回帰は実施中。
 - T-9/T-11: 修正版の初回Mac buildで、AppとMonitor Extensionの共有ファイルが`ApplicationToken`の定義元をimportしていない問題を確認した。`MappingStore.swift`へ`ManagedSettings`を明示importし、Extensionターゲットでも同じ型依存を解決するよう修正した。修正後のMac build待ち。
 - T-9/T-11: 次のMacテストcompileで、状態を持たない1アプリ件数判定が`MeasurementSession`のMainActor隔離を継承していた問題を確認した。件数だけを評価する純粋関数を`nonisolated`にし、同期テストから安全に呼べるよう修正した。修正後のMac build・30テスト待ち。
+- T-9/T-11: 2026-07-18に依存・MainActor修正後のMac検証スクリプトが成功し、Simulator buildとiOS全テストが失敗0件で合格した。実機での選択・計測状態復元、複数・重複拒否、契約単位停止、紐付け解除、計測・同期は再確認待ち。
 
 ## 完了チェック
 
