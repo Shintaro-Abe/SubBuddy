@@ -15,6 +15,7 @@
     "test:e2e:report": "playwright show-report",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:catalog": "tsx prisma/bootstrap-service-catalog.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "verify:cloud-apis": "tsx --env-file=.env scripts/verify-cloud-apis.mjs",
