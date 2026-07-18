@@ -128,7 +128,7 @@ final class MeasurementSession: ObservableObject {
         )
     }
 
-    static func isSingleApplication(
+    nonisolated static func isSingleApplication(
         applicationCount: Int,
         categoryCount: Int,
         webDomainCount: Int
