@@ -905,7 +905,7 @@ tasks:
     level: 2
     phase: "TestFlight"
     name: "iPhone アプリ"
-    progress: 60
+    progress: 65
     status: "進行中"
     plannedStart: "2026-07-06"
     plannedEnd: "2026-08-03"
@@ -944,7 +944,7 @@ tasks:
     plannedStart: "2026-07-26"
     plannedEnd: "2026-07-26"
     predecessors: ["TF-1.3.2"]
-    note: "自分の実機＝開発用 entitlement で可能（審査待ちと独立）"
+    note: "自分の実機＝開発用 entitlement で可能（審査待ちと独立）。7日連続、強制終了、再起動、通信切断からの再送、同日再送、日付境界を確認する実機手順を作成済み。実際の開始日までは未着手を維持"
   - id: "TF-1.3.4"
     parent: "TF-1.3"
     level: 3
@@ -1523,7 +1523,7 @@ tasks:
     actualStart: "2026-07-16"
     predecessors: ["REL-0.2"]
     deliverable: "ホーム・契約・見直し・設定、支出、更新、計測、容量管理、出力、退会"
-    note: "steering: .steering/20260716-ios-main-ui/。利用者向けUIと既存API接続を実装し、Simulator build・単体テスト22件以上、Render実機での初回導線・中断再開・契約CRUD・iCloud+容量・支出更新数値・16分更新・サインアウト・セッション解除・Screen Time未許可経路、標準・大画面、VoiceOver、最大Dynamic Type、200契約性能が合格。金額未入力、見直し全出力、出力・通知・問い合わせは残作業"
+    note: "steering: .steering/20260716-ios-main-ui/。利用者向けUIと既存API接続を実装し、Simulator build・単体テスト22件以上、Render実機での初回導線・中断再開・契約CRUD・iCloud+容量・支出更新数値・Screen Timeの1件選択・状態復元・15分到達・同期・見直し反映・同日再送、サインアウト・セッション解除・Screen Time未許可経路、標準・大画面、VoiceOver、最大Dynamic Type、200契約性能が合格。金額未入力、見直し全出力、出力・通知・問い合わせ、7日連続計測は残作業"
 
   - id: "REL-0.3.1"
     parent: "REL-0.3"
@@ -1592,12 +1592,12 @@ tasks:
     level: 3
     phase: "実装"
     name: "iPhone計測・同期・設定・信頼導線を利用者向けに再構成"
-    progress: 70
+    progress: 80
     status: "進行中"
     actualStart: "2026-07-16"
     predecessors: ["REL-0.3.2"]
     deliverable: "Screen Time権限・対象選択・同期、端末・セッション、サインアウト、完全退会入口"
-    note: "既存機能の再構成とApple再認証付き退会入口は実装済み。実機でサインイン、16分更新、サインアウト、現在以外のセッション解除、Screen Time未許可経路が合格。計測状態の再表示不整合を修正し、1契約1アプリ、重複拒否、契約単位停止、紐付け解除、契約削除時の後片付けを追加。修正後のSimulator build・iOS全テストは合格。計測実機回帰、退会実動作、データ出力、通知配信、問い合わせ送信は未完了"
+    note: "既存機能の再構成とApple再認証付き退会入口は実装済み。実機でサインイン、Screen Timeの1件選択・状態復元・重複拒否・15分到達・同期・見直し反映・同日再送・契約単位停止・明示解除、契約直接削除時の監視・紐付け・端末内未送信記録・同期済み利用集計・見直し結果の後片付けと他契約への非影響、サインアウト、現在以外のセッション解除、Screen Time未許可経路が合格。契約削除是正後のSimulator build・iOS全テスト、既存孤立記録整理の合成回帰も合格。7日連続、日付境界、再起動、通信切断からの再送、退会実動作、データ出力、通知配信、問い合わせ送信は未完了"
 
   - id: "REL-0.3.7"
     parent: "REL-0.3"
@@ -1663,7 +1663,7 @@ tasks:
     plannedEnd: "2026-12-04"
     predecessors: ["REL-0.3", "REL-0.4", "REL-0.5"]
     deliverable: "実機一気通貫、日境界・再送・順不同・再インストール・権限拒否の証跡"
-    note: "7日連続計測は圧縮しない。実データを証跡へ持ち出さない"
+    note: "7日連続計測は圧縮しない。実データを証跡へ持ち出さない。合成契約による7日連続、強制終了、再起動、通信切断からの再送、同日再送、日付境界、後片付けの実機手順は作成済み。実際の開始日までは未着手を維持"
 
   - id: "REL-0.8"
     parent: "REL-0"

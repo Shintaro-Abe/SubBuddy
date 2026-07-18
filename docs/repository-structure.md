@@ -149,7 +149,7 @@ apps/ios/
 
 - iPhone から SubBuddy API へ送るのは **集計値のみ**（詳細ログ・生の位置情報は送らない。`product-requirements.md` 非機能要件 / `architecture.md` §3.2）。
 - Web版と共通利用するフォントは`SubBuddyApp/Resources/Fonts/`、配布条件を示すライセンスは`SubBuddyApp/Resources/FontLicenses/`へ置き、`project.yml`のresourcesと`UIAppFonts`へ登録する。
-- iOSの更新トークン、セッションID、デバイス同期トークン、端末内生成IDはKeychainに置く。利用量集計と計測対象対応表はApp Group内のファイルへ置く。
+- iOSの更新トークン、セッションID、デバイス同期トークン、端末内生成IDはKeychainに置く。利用量集計と計測対象対応表はApp Group内のファイルへ置き、紐付け解除・契約削除時は対象の未送信利用記録も同時に削除する。
 - `project.yml`を正本としてXcodeGenで`.xcodeproj`を生成する。生成物を正本にしない。
 - SwiftUIはルート状態、3タブ、機能別View、ViewModel相当の`ProductStore`、API/表示モデル、デザイントークンを`SubBuddyApp/App/`内で分離する。合成プレビューは`PreviewFixtures.swift`へ置く。
 - 利用者向けUIの基本回帰は`apps/ios/scripts/verify-main-ui.sh`でXcodeGen、Simulator build、単体テストを一続きで実行する。利用可能なiPhone Simulatorは自動選択する。

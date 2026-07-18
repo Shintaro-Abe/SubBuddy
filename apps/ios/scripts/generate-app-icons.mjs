@@ -1,8 +1,24 @@
-import { deflateSync } from "node:zlib";
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const outputDir = new URL("../SubBuddyApp/Assets.xcassets/AppIcon.appiconset/", import.meta.url);
+const outputDir = fileURLToPath(
+  new URL("../SubBuddyApp/Assets.xcassets/AppIcon.appiconset/", import.meta.url),
+);
+const defaultSource = fileURLToPath(
+  new URL("./assets/app-icon-source-1024.png", import.meta.url),
+);
+const source = process.argv[2] ? resolve(process.argv[2]) : defaultSource;
 
 const icons = [
   ["iphone", "20x20", "2x", 40],
@@ -25,105 +41,63 @@ const icons = [
   ["ios-marketing", "1024x1024", "1x", 1024],
 ];
 
-function crc32(buffer) {
-  let crc = 0xffffffff;
-  for (const byte of buffer) {
-    crc ^= byte;
-    for (let i = 0; i < 8; i += 1) {
-      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+if (process.platform !== "darwin") {
+  throw new Error("App icon generation requires macOS and the built-in sips command.");
+}
+
+const workingDir = mkdtempSync(join(tmpdir(), "subbuddy-app-icons-"));
+
+try {
+  const images = icons.map(([idiom, size, scale, pixels]) => {
+    const filename = `app-icon-${idiom}-${size.replace(".", "_")}-scale${scale}.png`;
+    const temporaryOutput = join(workingDir, filename);
+    const result = spawnSync(
+      "sips",
+      ["-z", String(pixels), String(pixels), source, "--out", temporaryOutput],
+      { encoding: "utf8" },
+    );
+
+    if (result.status !== 0) {
+      throw new Error(result.stderr || result.stdout || `sips failed for ${filename}`);
+    }
+
+    return { idiom, size, scale, filename, temporaryOutput };
+  });
+
+  mkdirSync(outputDir, { recursive: true });
+  const expectedFilenames = new Set(images.map(({ filename }) => filename));
+
+  for (const existing of readdirSync(outputDir)) {
+    if (existing.endsWith(".png") && !expectedFilenames.has(existing)) {
+      unlinkSync(join(outputDir, existing));
     }
   }
-  return (crc ^ 0xffffffff) >>> 0;
-}
 
-function chunk(type, data) {
-  const typeBuffer = Buffer.from(type);
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(Buffer.concat([typeBuffer, data])));
-  return Buffer.concat([length, typeBuffer, data, crc]);
-}
-
-function png(size) {
-  const header = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-
-  const rows = [];
-  const center = (size - 1) / 2;
-  const radius = size * 0.32;
-
-  for (let y = 0; y < size; y += 1) {
-    const row = Buffer.alloc(1 + size * 4);
-    row[0] = 0;
-    for (let x = 0; x < size; x += 1) {
-      const offset = 1 + x * 4;
-      const t = (x + y) / Math.max(1, size * 2 - 2);
-      let r = Math.round(22 + 28 * t);
-      let g = Math.round(64 + 78 * t);
-      let b = Math.round(82 + 78 * t);
-
-      const dx = x - center;
-      const dy = y - center;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance < radius) {
-        r = 239;
-        g = 246;
-        b = 242;
-      }
-      if (Math.abs(dx) < size * 0.035 && distance < radius * 0.76) {
-        r = 21;
-        g = 91;
-        b = 99;
-      }
-      if (Math.abs(dy) < size * 0.035 && distance < radius * 0.76) {
-        r = 21;
-        g = 91;
-        b = 99;
-      }
-
-      row[offset] = r;
-      row[offset + 1] = g;
-      row[offset + 2] = b;
-      row[offset + 3] = 255;
-    }
-    rows.push(row);
+  for (const { filename, temporaryOutput } of images) {
+    copyFileSync(temporaryOutput, join(outputDir, filename));
   }
 
-  const idat = deflateSync(Buffer.concat(rows));
-  return Buffer.concat([
-    header,
-    chunk("IHDR", ihdr),
-    chunk("IDAT", idat),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
+  writeFileSync(
+    join(outputDir, "Contents.json"),
+    `${JSON.stringify(
+      {
+        images: images.map(({ idiom, size, scale, filename }) => ({
+          idiom,
+          size,
+          scale,
+          filename,
+        })),
+        info: {
+          author: "xcode",
+          version: 1,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  console.log(`Generated ${images.length} app icons from ${basename(source)}.`);
+} finally {
+  rmSync(workingDir, { recursive: true, force: true });
 }
-
-mkdirSync(outputDir, { recursive: true });
-
-for (const filename of readdirSync(outputDir)) {
-  if (filename.endsWith(".png")) {
-    unlinkSync(join(outputDir.pathname, filename));
-  }
-}
-
-const images = icons.map(([idiom, size, scale, pixels]) => {
-  const filename = `app-icon-${idiom}-${size.replace(".", "_")}-scale${scale}.png`;
-  writeFileSync(join(outputDir.pathname, filename), png(pixels));
-  return { idiom, size, scale, filename };
-});
-
-writeFileSync(
-  join(outputDir.pathname, "Contents.json"),
-  `${JSON.stringify({
-    images,
-    info: {
-      author: "xcode",
-      version: 1,
-    },
-  }, null, 2)}\n`
-);

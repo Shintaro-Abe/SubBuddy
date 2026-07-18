@@ -729,6 +729,8 @@ flowchart TB
 - Shortcuts 由来の起動シグナルは iPhone アプリの機能として吸収し、外部ショートカット設定を v1 の主経路にしない。既存の `ios_shortcut` ソース値は互換のため残す。
 - 集計はオンデバイスで行い、SubBuddy API へは集計値のみ送信。詳細 Screen Time データは端末内に留める。
 - DeviceActivityMonitor Extension は通信しない。しきい値到達時に App Group へ `activityName × usage_date × usage_bucket` を upsert し、本体アプリがフォアグラウンドで同期する。
+- 紐付け解除または契約削除では、対象契約の監視、計測対象対応表、端末内の未送信利用記録をまとめて削除する。契約一覧の再読込時には、対応表を失った孤立記録も整理し、別契約の記録は残す。
+- 契約削除の確認画面では、計測対象の紐付け、端末内未送信記録、同期済み利用集計、見直し結果が削除されること、他契約へ影響しないこと、元に戻せないことを削除前に示す。契約を残して計測だけやめる場合は、別操作の「アプリとの紐付けを解除」を使う。
 - iOS の device sync token は Keychain に保存し、App Group の平文ファイルや UserDefaults に置かない。
 - iOS Spikeと開発実機で計測からRender同期まで確認済み。現行認証セッションでのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは外部TestFlight前の未完了ゲートである。
 

@@ -76,4 +76,24 @@ final class SharedStoreTests: XCTestCase {
 
         XCTAssertTrue(store.readAll().isEmpty)
     }
+
+    func testRemovingActivityDeletesOnlyItsRecords() {
+        let store = SharedStore(fileURL: fileURL)
+        store.upsert(
+            activityId: "synthetic_removed",
+            eventId: "synthetic_event_15m",
+            date: "2099-01-01",
+            bucket: .m15Plus
+        )
+        store.upsert(
+            activityId: "synthetic_kept",
+            eventId: "synthetic_event_30m",
+            date: "2099-01-01",
+            bucket: .m30Plus
+        )
+
+        XCTAssertTrue(store.remove(activityId: "synthetic_removed"))
+
+        XCTAssertEqual(store.readAll().map(\.activityId), ["synthetic_kept"])
+    }
 }

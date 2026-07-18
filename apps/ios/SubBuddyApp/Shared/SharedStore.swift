@@ -12,7 +12,13 @@ struct UsageRecord: Codable, Equatable {
     let sequence: Int
 }
 
-final class SharedStore {
+protocol UsageRecordStoring {
+    func readAll() -> [UsageRecord]
+    @discardableResult
+    func remove(activityId: String) -> Bool
+}
+
+final class SharedStore: UsageRecordStoring {
     private let fileURL: URL?
 
     var isAvailable: Bool {
@@ -102,6 +108,25 @@ final class SharedStore {
             }
         } catch {
             logger.error("remove error: \(error.localizedDescription)")
+        }
+    }
+
+    /// 契約との紐付けを解除した計測対象について、未送信記録を端末内から削除する。
+    @discardableResult
+    func remove(activityId: String) -> Bool {
+        guard fileURL != nil else {
+            logger.error("remove activity failed: App Group container unavailable")
+            return false
+        }
+
+        do {
+            try mutate { records in
+                records.removeAll { $0.activityId == activityId }
+            }
+            return true
+        } catch {
+            logger.error("remove activity error: \(error.localizedDescription)")
+            return false
         }
     }
 

@@ -10,18 +10,23 @@ protocol MeasurementConfigurationCleaning {
 final class MeasurementConfigurationCleaner: MeasurementConfigurationCleaning {
     private let scheduler: any MonitoringScheduling
     private let mappingStore: any SubscriptionMappingStoring
+    private let usageStore: any UsageRecordStoring
 
     init(
         scheduler: any MonitoringScheduling = MonitorScheduler(),
-        mappingStore: any SubscriptionMappingStoring = MappingStore()
+        mappingStore: any SubscriptionMappingStoring = MappingStore(),
+        usageStore: any UsageRecordStoring = SharedStore()
     ) {
         self.scheduler = scheduler
         self.mappingStore = mappingStore
+        self.usageStore = usageStore
     }
 
     func removeConfiguration(subscriptionId: String) {
-        let activityName = mappingStore.activityName(for: subscriptionId)
+        let activityName = mappingStore.mapping(for: subscriptionId)?.activityName
+            ?? mappingStore.activityName(for: subscriptionId)
         scheduler.stopMonitoring(activityName: activityName)
+        _ = usageStore.remove(activityId: activityName)
         _ = mappingStore.remove(subscriptionId: subscriptionId)
     }
 
@@ -38,6 +43,13 @@ final class MeasurementConfigurationCleaner: MeasurementConfigurationCleaning {
         for subscriptionId in idsToRemove {
             removeConfiguration(subscriptionId: subscriptionId)
         }
+
+        let orphanedActivityIDs = Set(usageStore.readAll().map(\.activityId)).filter {
+            mappingStore.subscriptionId(for: $0) == nil
+        }
+        for activityId in orphanedActivityIDs {
+            _ = usageStore.remove(activityId: activityId)
+        }
     }
 }
 
@@ -52,15 +64,17 @@ final class MeasurementSession: ObservableObject {
 
     private let scheduler: any MonitoringScheduling
     private let mappingStore: any SubscriptionMappingStoring
-    private let store = SharedStore()
+    private let usageStore: any UsageRecordStoring
     private let syncService = UsageSyncService()
 
     init(
         scheduler: any MonitoringScheduling = MonitorScheduler(),
-        mappingStore: any SubscriptionMappingStoring = MappingStore()
+        mappingStore: any SubscriptionMappingStoring = MappingStore(),
+        usageStore: any UsageRecordStoring = SharedStore()
     ) {
         self.scheduler = scheduler
         self.mappingStore = mappingStore
+        self.usageStore = usageStore
     }
 
     func load(subscriptionId: String) {
@@ -72,6 +86,7 @@ final class MeasurementSession: ObservableObject {
             if isActive {
                 scheduler.stopMonitoring(activityName: activityName)
             }
+            _ = usageStore.remove(activityId: activityName)
             selection = FamilyActivitySelection()
             isMonitoring = false
             statusMessage = isActive
@@ -87,6 +102,7 @@ final class MeasurementSession: ObservableObject {
             if isActive {
                 scheduler.stopMonitoring(activityName: activityName)
             }
+            _ = usageStore.remove(activityId: mapping.activityName)
             _ = mappingStore.remove(subscriptionId: subscriptionId)
             selection = FamilyActivitySelection()
             isMonitoring = false
@@ -185,8 +201,13 @@ final class MeasurementSession: ObservableObject {
     }
 
     func removeConfiguration() {
-        let activityName = mappingStore.activityName(for: subscriptionId)
+        let activityName = mappingStore.mapping(for: subscriptionId)?.activityName
+            ?? mappingStore.activityName(for: subscriptionId)
         scheduler.stopMonitoring(activityName: activityName)
+        guard usageStore.remove(activityId: activityName) else {
+            statusMessage = "端末内の利用記録を削除できませんでした"
+            return
+        }
         guard mappingStore.remove(subscriptionId: subscriptionId) else {
             statusMessage = "計測設定を解除できませんでした"
             return
@@ -197,7 +218,7 @@ final class MeasurementSession: ObservableObject {
     }
 
     func refreshRecords() {
-        recordCount = store.readAll().count
+        recordCount = usageStore.readAll().count
         statusMessage = "端末内の未送信記録は\(recordCount)件です"
     }
 

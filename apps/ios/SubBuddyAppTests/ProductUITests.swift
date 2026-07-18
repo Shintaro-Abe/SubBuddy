@@ -4,6 +4,16 @@ import UIKit
 @testable import SubBuddyApp
 
 final class ProductUITests: XCTestCase {
+    func testSubscriptionDeletionExplainsMeasurementCleanupAndScope() {
+        let message = SubscriptionDeletionCopy.confirmationMessage
+
+        XCTAssertTrue(message.contains("計測対象アプリとの紐付け"))
+        XCTAssertTrue(message.contains("端末内の未送信利用記録"))
+        XCTAssertTrue(message.contains("クラウドへ同期済みの利用集計"))
+        XCTAssertTrue(message.contains("他の契約には影響しません"))
+        XCTAssertTrue(message.contains("元に戻せません"))
+    }
+
     func testWebBrandFontsAreRegisteredInAppBundle() {
         let fonts = [
             (file: "ZenKakuGothicNew-Regular", postScriptName: "ZenKakuGothicNew-Regular"),
@@ -331,12 +341,18 @@ final class ProductUITests: XCTestCase {
             "sub_synthetic-other",
         ])
         let mappings = SyntheticMappingStore()
-        let session = MeasurementSession(scheduler: scheduler, mappingStore: mappings)
+        let usageStore = RecordingUsageStore()
+        let session = MeasurementSession(
+            scheduler: scheduler,
+            mappingStore: mappings,
+            usageStore: usageStore
+        )
         session.subscriptionId = "synthetic-current"
 
         session.removeConfiguration()
 
         XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-current"])
+        XCTAssertEqual(usageStore.removedActivityIDs, ["sub_synthetic-current"])
         XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-current"])
         XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-other"))
         XCTAssertTrue(session.selection.applicationTokens.isEmpty)
@@ -359,28 +375,61 @@ final class ProductUITests: XCTestCase {
             "sub_synthetic-existing",
             "sub_synthetic-deleted",
         ])
+        let usageStore = RecordingUsageStore(records: [
+            UsageRecord(
+                activityId: "sub_synthetic-existing",
+                eventId: "synthetic_event_15m",
+                date: "2099-01-01",
+                bucket: .m15Plus,
+                generatedAt: Date(timeIntervalSince1970: 0),
+                sequence: 1
+            ),
+            UsageRecord(
+                activityId: "sub_synthetic-deleted",
+                eventId: "synthetic_event_15m",
+                date: "2099-01-01",
+                bucket: .m15Plus,
+                generatedAt: Date(timeIntervalSince1970: 0),
+                sequence: 1
+            ),
+        ])
         let cleaner = MeasurementConfigurationCleaner(
             scheduler: scheduler,
-            mappingStore: mappings
+            mappingStore: mappings,
+            usageStore: usageStore
         )
 
         cleaner.removeOrphanedConfigurations(validSubscriptionIDs: ["synthetic-existing"])
 
         XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-deleted"])
         XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-deleted"])
+        XCTAssertEqual(usageStore.removedActivityIDs, ["sub_synthetic-deleted"])
+        XCTAssertEqual(usageStore.readAll().map(\.activityId), ["sub_synthetic-existing"])
         XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-existing"))
     }
 
     func testOrphanedActivityWithoutMappingIsStoppedDuringReconciliation() {
         let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-orphan"])
+        let usageStore = RecordingUsageStore(records: [
+            UsageRecord(
+                activityId: "sub_synthetic-orphan",
+                eventId: "synthetic_event_15m",
+                date: "2099-01-01",
+                bucket: .m15Plus,
+                generatedAt: Date(timeIntervalSince1970: 0),
+                sequence: 1
+            ),
+        ])
         let cleaner = MeasurementConfigurationCleaner(
             scheduler: scheduler,
-            mappingStore: SyntheticMappingStore()
+            mappingStore: SyntheticMappingStore(),
+            usageStore: usageStore
         )
 
         cleaner.removeOrphanedConfigurations(validSubscriptionIDs: [])
 
         XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-orphan"])
+        XCTAssertEqual(usageStore.removedActivityIDs, ["sub_synthetic-orphan"])
         XCTAssertTrue(scheduler.activeActivities.isEmpty)
     }
 
@@ -462,6 +511,25 @@ private final class SyntheticMappingStore: SubscriptionMappingStoring {
 
     func invalidOrDuplicateSubscriptionIDs() -> [String] {
         []
+    }
+}
+
+private final class RecordingUsageStore: UsageRecordStoring {
+    private var records: [UsageRecord]
+    private(set) var removedActivityIDs: [String] = []
+
+    init(records: [UsageRecord] = []) {
+        self.records = records
+    }
+
+    func readAll() -> [UsageRecord] {
+        records
+    }
+
+    func remove(activityId: String) -> Bool {
+        removedActivityIDs.append(activityId)
+        records.removeAll { $0.activityId == activityId }
+        return true
     }
 }
 

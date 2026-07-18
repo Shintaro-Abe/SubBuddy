@@ -1,6 +1,10 @@
 import FamilyControls
 import SwiftUI
 
+enum SubscriptionDeletionCopy {
+    static let confirmationMessage = "契約に紐づく計測対象アプリとの紐付け、端末内の未送信利用記録、クラウドへ同期済みの利用集計と見直し結果も削除されます。他の契約には影響しません。この操作は元に戻せません。"
+}
+
 private enum SubscriptionFilter: String, CaseIterable, Identifiable {
     case all = "すべて"
     case renewal = "更新間近"
@@ -221,7 +225,7 @@ struct SubscriptionDetailView: View {
                     }
                     Button("キャンセル", role: .cancel) {}
                 } message: {
-                    Text("契約に紐づく利用集計と見直し結果も削除されます。この操作は元に戻せません。")
+                    Text(SubscriptionDeletionCopy.confirmationMessage)
                 }
             } else if store.isLoading {
                 ProgressView("契約を読み込んでいます")
