@@ -80,13 +80,14 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
 
   it("再計算失敗は500になり、再実行可能なままにする", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.recomputeRecommendations.mockRejectedValue(new Error("synthetic failure"));
+    const failure = new Error("synthetic failure");
+    mocks.recomputeRecommendations.mockRejectedValue(failure);
     const response = await DELETE(request(), context());
 
     expect(response.status).toBe(500);
     expect(consoleError).toHaveBeenCalledWith(
       "DELETE /api/subscriptions/[id]/usage failed",
-      expect.any(Error),
+      failure,
     );
   });
 });

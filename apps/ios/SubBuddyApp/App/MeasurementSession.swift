@@ -27,13 +27,13 @@ protocol MeasurementDataDeleting {
 }
 
 final class MeasurementDataService: MeasurementDataDeleting {
-    private let client: APIClient?
+    private let client: (any ProductAPIProviding)?
 
     init() {
         client = AppConstants.apiBaseURL.map { APIClient(baseURL: $0) }
     }
 
-    init(client: APIClient) {
+    init(client: any ProductAPIProviding) {
         self.client = client
     }
 
@@ -41,11 +41,7 @@ final class MeasurementDataService: MeasurementDataDeleting {
         guard let client else {
             throw APIError.invalidURL
         }
-        let _: DeleteResponse = try await client.sendAuthenticated(
-            path: "/api/subscriptions/\(subscriptionId)/usage",
-            method: "DELETE",
-            body: EmptyRequest()
-        )
+        try await client.deleteMeasurementData(subscriptionId: subscriptionId)
     }
 }
 
@@ -158,6 +154,7 @@ final class MeasurementSession: ObservableObject {
     private let mutationStore: any MeasurementMutationStoring
     private let measurementDataService: any MeasurementDataDeleting
     private let isAuthorized: () -> Bool
+    private let isStoredSelectionValid: (FamilyActivitySelection) -> Bool
     private let syncService = UsageSyncService()
 
     init(
@@ -168,6 +165,9 @@ final class MeasurementSession: ObservableObject {
         measurementDataService: any MeasurementDataDeleting = MeasurementDataService(),
         isAuthorized: @escaping () -> Bool = {
             AuthorizationCenter.shared.authorizationStatus == .approved
+        },
+        isStoredSelectionValid: @escaping (FamilyActivitySelection) -> Bool = {
+            MeasurementSession.isSingleApplication($0)
         }
     ) {
         self.scheduler = scheduler
@@ -176,6 +176,7 @@ final class MeasurementSession: ObservableObject {
         self.mutationStore = mutationStore
         self.measurementDataService = measurementDataService
         self.isAuthorized = isAuthorized
+        self.isStoredSelectionValid = isStoredSelectionValid
     }
 
     func load(subscriptionId: String) {
@@ -210,7 +211,7 @@ final class MeasurementSession: ObservableObject {
         guard let savedSelection = try? JSONDecoder().decode(
             FamilyActivitySelection.self,
             from: mapping.selection
-        ), Self.isSingleApplication(savedSelection) else {
+        ), isStoredSelectionValid(savedSelection) else {
             if isActive {
                 scheduler.stopMonitoring(activityName: activityName)
             }
@@ -345,7 +346,7 @@ final class MeasurementSession: ObservableObject {
               let savedSelection = try? JSONDecoder().decode(
                 FamilyActivitySelection.self,
                 from: mapping.selection
-              ), Self.isSingleApplication(savedSelection) else {
+              ), isStoredSelectionValid(savedSelection) else {
             isMonitoring = false
             hasConfiguration = false
             statusMessage = "計測対象は未設定です"

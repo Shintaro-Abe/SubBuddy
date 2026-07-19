@@ -310,19 +310,34 @@ final class ProductUITests: XCTestCase {
         ))
     }
 
-    func testMeasurementPolicyStopsOnRevokeAndBecomesEligibleOnRegrant() {
-        XCTAssertFalse(MeasurementPolicy.shouldMonitor(
-            isAuthorized: false,
-            hasValidSubscription: true,
-            hasSingleApplication: true,
-            hasPendingMutation: false
-        ))
-        XCTAssertTrue(MeasurementPolicy.shouldMonitor(
-            isAuthorized: true,
-            hasValidSubscription: true,
-            hasSingleApplication: true,
-            hasPendingMutation: false
-        ))
+    @MainActor
+    func testAuthorizationResynchronizationStopsOnRevokeAndRestartsOnRegrant() throws {
+        var isAuthorized = true
+        let selection = FamilyActivitySelection()
+        let mapping = SubscriptionMapping(
+            subscriptionId: "synthetic-sub",
+            activityName: "sub_synthetic-sub",
+            selection: try JSONEncoder().encode(selection)
+        )
+        let scheduler = RecordingMonitoringScheduler()
+        let session = MeasurementSession(
+            scheduler: scheduler,
+            mappingStore: SyntheticMappingStore(mappings: [mapping]),
+            isAuthorized: { isAuthorized },
+            isStoredSelectionValid: { _ in true }
+        )
+        session.load(subscriptionId: "synthetic-sub")
+        XCTAssertTrue(session.isMonitoring)
+
+        isAuthorized = false
+        session.authorizationDidChange()
+        XCTAssertFalse(session.isMonitoring)
+        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-sub"])
+
+        isAuthorized = true
+        session.authorizationDidChange()
+        XCTAssertTrue(session.isMonitoring)
+        XCTAssertEqual(scheduler.activeActivities, ["sub_synthetic-sub"])
     }
 
     func testMeasurementMutationStorePersistsAndRemovesPendingOperation() throws {
@@ -528,6 +543,18 @@ final class ProductUITests: XCTestCase {
         XCTAssertTrue(deleted)
         XCTAssertEqual(cleaner.removedSubscriptionIDs, [PreviewFixtures.video.id])
     }
+
+    @MainActor
+    func testMeasurementDataServiceUsesInjectedProductAPI() async throws {
+        let api = SyntheticProductAPI()
+        let store = ProductStore(client: api)
+        let service = store.makeMeasurementDataService()
+
+        try await service.deleteMeasurementData(subscriptionId: "synthetic-sub")
+
+        let deletedSubscriptionIDs = await api.deletedMeasurementSubscriptionIDs()
+        XCTAssertEqual(deletedSubscriptionIDs, ["synthetic-sub"])
+    }
 }
 
 private final class RecordingMonitoringScheduler: MonitoringScheduling {
@@ -706,11 +733,16 @@ private actor ExistingSubscriptionProductAPI: ProductAPIProviding {
     func createSubscription(_ input: SubscriptionInput) async throws -> Subscription { throw SyntheticAPIError.unused }
     func updateSubscription(id: String, input: SubscriptionInput) async throws -> Subscription { throw SyntheticAPIError.unused }
     func deleteSubscription(id: String) async throws { throw SyntheticAPIError.unused }
+    func deleteMeasurementData(subscriptionId: String) async throws {
+        throw SyntheticAPIError.unused
+    }
     func recomputeRecommendations() async throws { throw SyntheticAPIError.unused }
     func revokeSession(id: String) async throws { throw SyntheticAPIError.unused }
 }
 
 private actor SyntheticProductAPI: ProductAPIProviding {
+    private var measurementDeletionIDs: [String] = []
+
     func dashboardSummary() async throws -> DashboardSummary {
         DashboardSummary(activeCount: 1, totalCount: 1, monthlyTotal: 1_000, yearlyTotal: 12_000, currency: "JPY")
     }
@@ -734,6 +766,10 @@ private actor SyntheticProductAPI: ProductAPIProviding {
     }
 
     func deleteSubscription(id: String) async throws {}
+    func deleteMeasurementData(subscriptionId: String) async throws {
+        measurementDeletionIDs.append(subscriptionId)
+    }
+    func deletedMeasurementSubscriptionIDs() -> [String] { measurementDeletionIDs }
     func recomputeRecommendations() async throws {}
     func revokeSession(id: String) async throws {}
 }
