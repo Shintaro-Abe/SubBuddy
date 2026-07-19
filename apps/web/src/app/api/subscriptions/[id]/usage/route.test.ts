@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   parseAuthConfig: vi.fn(),
@@ -38,6 +38,10 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
     mocks.recomputeRecommendations.mockResolvedValue([]);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("所有契約の計測データを削除して利用量なしで再計算する", async () => {
     const response = await DELETE(request(), context());
 
@@ -75,9 +79,15 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
   });
 
   it("再計算失敗は500になり、再実行可能なままにする", async () => {
-    mocks.recomputeRecommendations.mockRejectedValue(new Error("synthetic failure"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const failure = new Error("synthetic failure");
+    mocks.recomputeRecommendations.mockRejectedValue(failure);
     const response = await DELETE(request(), context());
 
     expect(response.status).toBe(500);
+    expect(consoleError).toHaveBeenCalledWith(
+      "DELETE /api/subscriptions/[id]/usage failed",
+      failure,
+    );
   });
 });

@@ -7,6 +7,7 @@ protocol ProductAPIProviding: Sendable {
     func createSubscription(_ input: SubscriptionInput) async throws -> Subscription
     func updateSubscription(id: String, input: SubscriptionInput) async throws -> Subscription
     func deleteSubscription(id: String) async throws
+    func deleteMeasurementData(subscriptionId: String) async throws
     func recommendations() async throws -> [Recommendation]
     func recomputeRecommendations() async throws
     func upcomingRenewals(days: Int) async throws -> [UpcomingRenewal]
@@ -47,6 +48,14 @@ extension APIClient {
     func deleteSubscription(id: String) async throws {
         let _: DeleteResponse = try await sendAuthenticated(
             path: "/api/subscriptions/\(id)",
+            method: "DELETE",
+            body: EmptyRequest()
+        )
+    }
+
+    func deleteMeasurementData(subscriptionId: String) async throws {
+        let _: DeleteResponse = try await sendAuthenticated(
+            path: "/api/subscriptions/\(subscriptionId)/usage",
             method: "DELETE",
             body: EmptyRequest()
         )
