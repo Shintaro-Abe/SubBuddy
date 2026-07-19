@@ -27,11 +27,20 @@ protocol MeasurementDataDeleting {
 }
 
 final class MeasurementDataService: MeasurementDataDeleting {
+    private let client: APIClient?
+
+    init() {
+        client = AppConstants.apiBaseURL.map { APIClient(baseURL: $0) }
+    }
+
+    init(client: APIClient) {
+        self.client = client
+    }
+
     func deleteMeasurementData(subscriptionId: String) async throws {
-        guard let baseURL = AppConstants.apiBaseURL else {
+        guard let client else {
             throw APIError.invalidURL
         }
-        let client = APIClient(baseURL: baseURL)
         let _: DeleteResponse = try await client.sendAuthenticated(
             path: "/api/subscriptions/\(subscriptionId)/usage",
             method: "DELETE",
@@ -248,11 +257,9 @@ final class MeasurementSession: ObservableObject {
     }
 
     func isCurrentSelection(_ candidate: FamilyActivitySelection) -> Bool {
-        guard let current = try? JSONEncoder().encode(selection),
-              let other = try? JSONEncoder().encode(candidate) else {
-            return false
-        }
-        return current == other
+        selection.applicationTokens == candidate.applicationTokens
+            && selection.categoryTokens == candidate.categoryTokens
+            && selection.webDomainTokens == candidate.webDomainTokens
     }
 
     func replaceSelection(with candidate: FamilyActivitySelection) async {

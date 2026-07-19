@@ -187,6 +187,13 @@ final class ProductStore: ObservableObject {
         )
     }
 
+    func makeMeasurementDataService() -> any MeasurementDataDeleting {
+        guard let client = configuredClient() as? APIClient else {
+            return MeasurementDataService()
+        }
+        return MeasurementDataService(client: client)
+    }
+
     func clearSensitiveData() {
         subscriptions = []
         recommendations = []

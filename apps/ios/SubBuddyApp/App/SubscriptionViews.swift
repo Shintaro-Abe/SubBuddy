@@ -499,15 +499,29 @@ struct SubscriptionFormView: View {
 }
 
 struct MeasurementSetupView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: ProductStore
     let subscription: Subscription
     let validSubscriptionIDs: Set<String>
-    @StateObject private var session = MeasurementSession()
+    @StateObject private var session: MeasurementSession
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @State private var showsPicker = false
     @State private var draftSelection = FamilyActivitySelection()
     @State private var showsRemoveConfiguration = false
     @State private var showsReplaceConfiguration = false
+
+    init(
+        store: ProductStore,
+        subscription: Subscription,
+        validSubscriptionIDs: Set<String>
+    ) {
+        self.store = store
+        self.subscription = subscription
+        self.validSubscriptionIDs = validSubscriptionIDs
+        _session = StateObject(wrappedValue: MeasurementSession(
+            measurementDataService: store.makeMeasurementDataService()
+        ))
+    }
 
     var body: some View {
         Form {
@@ -579,7 +593,11 @@ struct MeasurementSetupView: View {
         .onAppear {
             session.load(subscriptionId: subscription.id)
             draftSelection = session.selection
-            authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+            refreshAuthorizationState()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshAuthorizationState()
         }
         .onChange(of: showsPicker) { _, isPresented in
             guard !isPresented else { return }
@@ -648,8 +666,13 @@ struct MeasurementSetupView: View {
     private func requestAuthorization() async {
         do { try await AuthorizationCenter.shared.requestAuthorization(for: .individual) }
         catch { }
+        refreshAuthorizationState()
+    }
+
+    private func refreshAuthorizationState() {
         authorizationStatus = AuthorizationCenter.shared.authorizationStatus
         session.authorizationDidChange(validSubscriptionIDs: validSubscriptionIDs)
+        draftSelection = session.selection
     }
 }
 

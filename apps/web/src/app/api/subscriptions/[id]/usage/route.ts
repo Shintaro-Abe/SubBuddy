@@ -22,7 +22,8 @@ export async function DELETE(req: Request, { params }: Ctx) {
     // 対象契約の古い根拠を復活させないため、削除済み利用量を使わず全件を再計算する。
     await recomputeRecommendations(auth.actor.userId);
     return ok({ deleted: true });
-  } catch {
+  } catch (error) {
+    console.error("DELETE /api/subscriptions/[id]/usage failed", error);
     return serverError();
   }
 }

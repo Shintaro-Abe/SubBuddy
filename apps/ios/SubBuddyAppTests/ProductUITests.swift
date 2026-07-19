@@ -310,6 +310,21 @@ final class ProductUITests: XCTestCase {
         ))
     }
 
+    func testMeasurementPolicyStopsOnRevokeAndBecomesEligibleOnRegrant() {
+        XCTAssertFalse(MeasurementPolicy.shouldMonitor(
+            isAuthorized: false,
+            hasValidSubscription: true,
+            hasSingleApplication: true,
+            hasPendingMutation: false
+        ))
+        XCTAssertTrue(MeasurementPolicy.shouldMonitor(
+            isAuthorized: true,
+            hasValidSubscription: true,
+            hasSingleApplication: true,
+            hasPendingMutation: false
+        ))
+    }
+
     func testMeasurementMutationStorePersistsAndRemovesPendingOperation() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("subbuddy-measurement-mutation-synthetic", isDirectory: true)
