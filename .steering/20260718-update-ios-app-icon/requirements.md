@@ -6,8 +6,8 @@ SubBuddyの新しいブランドシンボルを、WebファビコンとiPhone・
 
 ## 変更内容
 
-- やること: `tmp/subbuddy_chatgpt.svg`から16・32・48pxを内包するICO形式のWebファビコンを生成して置き換える。
-- やること: `tmp/ChatGPT Image 2026年7月19日 18_20_55.png`から、既存Asset Catalogが要求する18サイズを生成して置き換える。
+- やること: `tmp/subbuddy_recraft_2.svg`から16・32・48pxを内包するICO形式のWebファビコンを生成して置き換える。
+- やること: 同じ`tmp/subbuddy_recraft_2.svg`から、既存Asset Catalogが要求する18サイズのPNGを生成して置き換える。
 - やること: `Contents.json`の対応関係と画像仕様を検証する。
 - やること: iOS生成スクリプトの正本1024px PNGも新しい画像へ変更し、旧アイコンへ戻る再発を防ぐ。
 - やらないこと: アプリの機能、画面、Bundle ID、表示名を変更しない。

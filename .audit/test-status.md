@@ -18,7 +18,7 @@
 
 | 開始・確認日 | 確認したもの | 確認方法 | 何を確かめたか | 現在の結果 | 結果の詳細 | 証拠となる記録 |
 |---|---|---|---|---|---|---|
-| 2026-07-19 | Webファビコン・iPhone・iPadアプリアイコン更新 | 画像メタデータ、ICO内部構造、Asset Catalog対応の自動検査、大小画像の目視確認、Web本番build | 新しいSVG由来のICO 3サイズと、新しいPNG由来のApp Icon 18画像について、寸法、形式、sRGB、不透明、登録漏れ、小サイズでの識別性を確認する | 一部合格 | ICOは16・32・48pxのPNG圧縮RGBAを内包し、全画素のalpha=255とNext.js本番buildが合格。App Icon 18件と1024px正本は指定寸法・PNG・sRGB・不透明RGBで合格し、1024px・20px・16pxを目視して新しいSシンボルを識別できた。Xcode build、Simulator・実機ホーム画面、Macの生成スクリプト再実行は未確認 | [アプリアイコン更新記録](../.steering/20260718-update-ios-app-icon/tasklist.md) |
+| 2026-07-19 | Webファビコン・iPhone・iPadアプリアイコン更新 | 画像メタデータ、ICO内部構造、Asset Catalog対応の自動検査、大小画像の目視確認、Web本番build | `subbuddy_recraft_2.svg`由来のICO 3サイズとApp Icon 18画像について、寸法、形式、sRGB、不透明、登録漏れ、小サイズでの識別性を確認する | 一部合格 | ICOは16・32・48pxのPNG圧縮RGBAを内包し、全画素のalpha=255とNext.js本番buildが合格。App Icon 18件と1024px正本は指定寸法・PNG・sRGB・不透明RGBで合格し、256px・20px・16pxを目視して緑と濃色のSシンボルを識別できた。Xcode build、Simulator・実機ホーム画面、Macの生成スクリプト再実行は未確認 | [アプリアイコン更新記録](../.steering/20260718-update-ios-app-icon/tasklist.md) |
 | 2026-06-02 | Web版の最初の完成版 | プログラムの部品ごとの自動確認 | 入力間違いを防げるか、見直し判定の境目が正しいか、同じ利用記録を送り直しても重複しないか | 合格 | 44件すべて合格。書き方の検査、データ形式の検査、本番用アプリの組み立ても合格 | [初期実装の記録](../.steering/20260602-initial-implementation/tasklist.md) |
 | 2026-06-02 | Web版の最初の完成版 | 最初から最後までの画面操作確認（E2E） | トップ画面、契約の一覧・詳細、見直し結果、再計算、登録、削除 | 合格 | ブラウザを自動操作するPlaywrightで6件合格。本番用に組み立てたWeb版で確認 | [初期実装の記録](../.steering/20260602-initial-implementation/tasklist.md) |
 | 2026-06-02 | 作業計画表（WBS）の同期機能 | 部品ごとの自動確認 | 作業の追加・変更・削除を正しく見分け、同じ内容を繰り返し送っても不要な変更が起きないか | 合格 | 当時7件合格。2026-07-14にGoogleスプレッドシート用とGitHub用を合わせた14件を確認し、すべて合格 | [WBS同期の記録](../.steering/20260602-wbs-sync/tasklist.md) |

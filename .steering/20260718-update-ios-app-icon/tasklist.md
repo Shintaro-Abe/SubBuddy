@@ -26,7 +26,7 @@
 - ICO: 16・32・48pxの3画像、sRGB、不透明RGBで合格
 - `Contents.json`登録数: 18件
 - App Iconの寸法・PNG形式・sRGB・不透明: 18件すべて合格
-- 1024px版、最小20px版、16pxファビコン: 目視で新しいSシンボルを識別可能
+- `subbuddy_recraft_2.svg`由来の256px版、最小20px版、16pxファビコン: 目視で緑と濃色のSシンボルを識別可能
 - Web: Next.js本番ビルドで新しいICOのデコードとページ生成が合格
 - 未確認: Xcodeによるビルド、Simulator・実機のホーム画面表示
 - 生成スクリプト: 構文検査を実施。Macの`sips`による再生成実行は未確認

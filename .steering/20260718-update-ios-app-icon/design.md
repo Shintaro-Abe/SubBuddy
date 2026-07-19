@@ -2,9 +2,9 @@
 
 ## 実装アプローチ
 
-確定済みの`tmp/subbuddy_chatgpt.svg`から16・32・48pxの不透明PNGを生成し、3画像を内包する`apps/web/src/app/favicon.ico`へまとめる。SVGを入力にすることで、小サイズ化する前の輪郭を保持する。
+確定済みの`tmp/subbuddy_recraft_2.svg`から16・32・48pxの不透明PNGを生成し、3画像を内包する`apps/web/src/app/favicon.ico`へまとめる。SVGを入力にすることで、小サイズ化する前の輪郭を保持する。
 
-`tmp/ChatGPT Image 2026年7月19日 18_20_55.png`は1024pxの正本PNGへ縮小し、そこからApp Iconの各指定寸法へ縮小する。既存ファイル名と`Contents.json`を維持するため、Xcode設定の変更は不要。
+同じSVGを1024pxの正本PNGへ変換し、そこからApp Iconの各指定寸法へ縮小する。既存ファイル名と`Contents.json`を維持するため、Xcode設定の変更は不要。
 
 正本PNGを`apps/ios/scripts/assets/`へ置く。生成スクリプトはiOS開発環境であるMacの標準コマンド`sips`を使い、正本から一時ディレクトリへ全画像を生成できた場合だけAsset Catalogへ反映する。これにより途中失敗時の部分更新と、旧アイコンへの巻き戻りを防ぐ。
 
