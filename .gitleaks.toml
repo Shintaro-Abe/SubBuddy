@@ -91,6 +91,8 @@ tags = ["pii", "phone"]
     '''https?://''',
     # CSS/Slides 等で使う hex color は電話番号ではない
     '''#[0-9A-Fa-f]{6}''',
+    # Markdown 表に記載した SHA-256 チェックサムは電話番号ではない
+    '''\|\s*`[0-9A-Fa-f]{64}`\s*\|''',
     # メモリ metadata の UUID 断片は電話番号ではない
     '''originSessionId:''',
   ]

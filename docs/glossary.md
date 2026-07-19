@@ -45,7 +45,7 @@
 | 容量ゲート確認状態 | Capacity Gate Status | `status`（判定根拠内） | ダウングレード提案の確からしさ。`confirmed`（容量確認済みで安全に提案）／`needs_capacity_check`（未確認・鮮度切れで様子見）。 |
 | 重要度 | Importance | `importance` | ユーザーが付与する主観的な重要度。判定の補正係数に用いる。 |
 | 利用量センサー | Usage Sensor | — | 利用量を計測する側の総称。iPhone（Screen Time・位置情報）が担う。 |
-| 計測対象アプリ | Measured App | — | サブスクに対応する既存アプリ（Netflix・YouTube 等）。DeviceActivity で使用時間を測る対象。**SubBuddy 本体アプリとは別物**。1サブスク=1計測対象アプリで、対応付けは iOS 上のユーザー手動選択（`FamilyActivityToken` は不透明で bundleId を取れないため。ADR 0005）。 |
+| 計測対象アプリ | Measured App | — | サブスクに対応する既存アプリ（Netflix・YouTube 等）。DeviceActivity で使用時間を測る対象。**SubBuddy 本体アプリとは別物**。1サブスク=1計測対象アプリで、対応付けは iOS 上のユーザー手動選択（`FamilyActivityToken` は不透明で bundleId を取れないため。ADR 0005）。認可済みなら対応付け後に自動計測を開始する。 |
 | SubBuddy 本体アプリ | Host App | — | iPhone に1つ入れる SubBuddy 本体アプリ。計測対象アプリと区別する。 |
 | 主タブ | Primary Tab | `AppTab` | iPhone利用者向けUIの主要目的を分ける「ホーム」「契約」「見直し」。設定は主タブにせずホームから開く。 |
 | コネクタ / アダプタ | Connector / Adapter | `connectors/<source>` | 取得源ごとの入力を検証し、必要最小限の集計値へ変換する境界。現時点では汎用プラグイン機構を実装していない。 |
@@ -181,7 +181,7 @@
 |---|---|---|
 | ダッシュボード | Dashboard | サブスク一覧・支出・レコメンドを俯瞰する Web 画面。 |
 | サブスクカード | Subscription Card | 一覧で 1 サブスクを表すカード UI コンポーネント。 |
-| 計測対象選択 | Activity Picker | iPhoneで契約に対応するアプリを1つ選ぶ操作（FamilyActivityPicker。UC-09）。同じアプリを複数契約へ重複して紐付けない。 |
+| 計測対象選択 | Activity Picker | iPhoneで契約に対応するアプリを1つ選ぶ操作（FamilyActivityPicker。UC-09）。同じアプリを複数契約へ重複して紐付けない。選択後は自動計測し、手動開始・停止は設けない。対象変更・解除では確認後に対象契約の旧計測データを削除する。 |
 
 ---
 

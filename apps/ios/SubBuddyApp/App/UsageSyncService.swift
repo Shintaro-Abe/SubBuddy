@@ -3,6 +3,7 @@ import Foundation
 final class UsageSyncService {
     private let store = SharedStore()
     private let mappingStore = MappingStore()
+    private let mutationStore = MeasurementMutationStore()
     private let keychain = KeychainStore()
 
     struct UsageItem: Codable {
@@ -30,9 +31,11 @@ final class UsageSyncService {
         let today = AppConstants.localDateString()
         let records = store.readAll()
         guard !records.isEmpty else { return 0 }
+        let pendingSubscriptionIDs = mutationStore.pendingSubscriptionIDs()
 
         let mappedRecords = records.compactMap { record -> (UsageRecord, UsageItem)? in
-            guard let subscriptionId = mappingStore.subscriptionId(for: record.activityId) else {
+            guard let subscriptionId = mappingStore.subscriptionId(for: record.activityId),
+                  !pendingSubscriptionIDs.contains(subscriptionId) else {
                 return nil
             }
 

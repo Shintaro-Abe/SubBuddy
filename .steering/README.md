@@ -1,6 +1,6 @@
 # ステアリング索引
 
-> 最終更新：2026-07-15
+> 最終更新：2026-07-19
 
 `.steering/`は作業時点の要求・設計・判断・進捗を残す履歴である。現行の基本仕様は`docs/`、全体進捗は`wbs/wbs.yml`、テスト結果は`.audit/test-status.md`を正とする。同じ論点に複数の作業文書がある場合は、後続の承認済み文書を優先する。
 
@@ -10,6 +10,7 @@
 |---|---|---|
 | 外部TestFlightから一般公開までの全体計画 | `20260711-release-roadmap-rebaseline/` | 計画承認済み。認証以外の多数の実装・運用ゲートは未完了 |
 | Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/` | 実装、Web自動試験、Xcode・Render実機確認、main反映まで完了 |
+| Screen Time計測の自動開始・対象変更・解除 | `20260719-auto-screen-time-measurement-lifecycle/` | 承認済み。実装・Web自動試験済み、Mac・実機回帰待ち |
 | iOS計測・同期の現行実装履歴 | `20260707-testflight-ios-implementation/` | 開発用UIで主要処理を実装済み。利用者向け主製品UI、7日計測、Archive/codesignは未完了 |
 | Web版のデザイン基準 | `20260618-web-ui-implementation/` | 実装済みWeb UIをiPhoneのブランド正本として利用 |
 

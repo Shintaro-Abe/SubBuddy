@@ -4,6 +4,7 @@ enum AppConstants {
     static let appGroupID = "group.com.subbuddy.app"
     static let usageRecordFileName = "usage_records.json"
     static let subscriptionMappingFileName = "subscription_mappings.json"
+    static let measurementMutationFileName = "measurement_mutations.json"
     // 承認済み設計では、利用量の判定しきい値を15/30/60/120分に限定する。
     static let thresholdMinutes = [15, 30, 60, 120]
     static let defaultDeviceName = "iPhone"

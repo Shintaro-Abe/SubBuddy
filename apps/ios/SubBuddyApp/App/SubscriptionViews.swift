@@ -174,7 +174,11 @@ struct SubscriptionDetailView: View {
                         }
 
                         NavigationLink {
-                            MeasurementSetupView(subscription: subscription)
+                            MeasurementSetupView(
+                                store: store,
+                                subscription: subscription,
+                                validSubscriptionIDs: Set(store.subscriptions.map(\.id))
+                            )
                         } label: {
                             SurfaceCard {
                                 Label("利用状況を計測", systemImage: "hourglass")
@@ -495,12 +499,15 @@ struct SubscriptionFormView: View {
 }
 
 struct MeasurementSetupView: View {
+    @ObservedObject var store: ProductStore
     let subscription: Subscription
+    let validSubscriptionIDs: Set<String>
     @StateObject private var session = MeasurementSession()
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @State private var showsPicker = false
     @State private var draftSelection = FamilyActivitySelection()
     @State private var showsRemoveConfiguration = false
+    @State private var showsReplaceConfiguration = false
 
     var body: some View {
         Form {
@@ -519,14 +526,24 @@ struct MeasurementSetupView: View {
                     Text("許可しなくても、料金や更新日による見直しは利用できます。")
                         .font(.appFootnote)
                         .foregroundStyle(AppColor.secondaryText)
+                    if session.hasPendingMutation {
+                        Button("変更を再試行") {
+                            Task {
+                                await session.retryPendingMutation()
+                                await store.loadAll()
+                                draftSelection = session.selection
+                            }
+                        }
+                        .disabled(session.isChangingConfiguration)
+                    }
                 }
             } else {
                 Section("計測対象") {
-                    Button("アプリを1つ選ぶ") {
+                    Button(session.hasConfiguration ? "計測対象を変更" : "アプリを1つ選ぶ") {
                         draftSelection = session.selection
                         showsPicker = true
                     }
-                    .disabled(session.isMonitoring)
+                    .disabled(session.isChangingConfiguration || session.hasPendingMutation)
                     .familyActivityPicker(isPresented: $showsPicker, selection: $draftSelection)
                     if let applicationToken = session.selection.applicationTokens.first {
                         Label(applicationToken)
@@ -535,19 +552,24 @@ struct MeasurementSetupView: View {
                         .foregroundStyle(AppColor.secondaryText)
                 }
                 Section {
-                    if session.isMonitoring {
-                        Button("計測を停止", role: .destructive) { session.stopMonitoring() }
-                    } else {
-                        Button("この契約の計測を始める") { session.startMonitoring() }
-                            .disabled(!MeasurementSession.isSingleApplication(session.selection))
-                    }
                     Text(localizedStatus)
                         .font(.appFootnote)
                         .foregroundStyle(AppColor.secondaryText)
-                    if !session.isMonitoring && !session.selection.applicationTokens.isEmpty {
+                    if session.hasPendingMutation {
+                        Button("変更を再試行") {
+                            Task {
+                                await session.retryPendingMutation()
+                                await store.loadAll()
+                                draftSelection = session.selection
+                            }
+                        }
+                        .disabled(session.isChangingConfiguration)
+                    }
+                    if session.hasConfiguration {
                         Button("アプリとの紐付けを解除", role: .destructive) {
                             showsRemoveConfiguration = true
                         }
+                        .disabled(session.isChangingConfiguration || session.hasPendingMutation)
                     }
                 }
             }
@@ -561,8 +583,35 @@ struct MeasurementSetupView: View {
         }
         .onChange(of: showsPicker) { _, isPresented in
             guard !isPresented else { return }
-            session.select(draftSelection)
-            draftSelection = session.selection
+            guard MeasurementSession.isSingleApplication(draftSelection) else {
+                session.select(draftSelection)
+                draftSelection = session.selection
+                return
+            }
+            if session.hasConfiguration && !session.isCurrentSelection(draftSelection) {
+                showsReplaceConfiguration = true
+            } else if !session.hasConfiguration {
+                session.select(draftSelection)
+                draftSelection = session.selection
+            }
+        }
+        .confirmationDialog(
+            "計測対象を変更しますか？",
+            isPresented: $showsReplaceConfiguration,
+            titleVisibility: .visible
+        ) {
+            Button("過去の利用量を削除して変更", role: .destructive) {
+                Task {
+                    await session.replaceSelection(with: draftSelection)
+                    await store.loadAll()
+                    draftSelection = session.selection
+                }
+            }
+            Button("キャンセル", role: .cancel) {
+                draftSelection = session.selection
+            }
+        } message: {
+            Text("この契約の過去のScreen Time利用量と、それに基づく見直し結果を削除します。料金・更新日などの契約情報と、他の契約には影響しません。この操作は元に戻せません。")
         }
         .confirmationDialog(
             "計測するアプリとの紐付けを解除しますか？",
@@ -570,12 +619,15 @@ struct MeasurementSetupView: View {
             titleVisibility: .visible
         ) {
             Button("紐付けを解除", role: .destructive) {
-                session.removeConfiguration()
-                draftSelection = session.selection
+                Task {
+                    await session.removeConfiguration()
+                    await store.loadAll()
+                    draftSelection = session.selection
+                }
             }
             Button("キャンセル", role: .cancel) {}
         } message: {
-            Text("この契約の計測設定だけを削除します。クラウドへ同期済みの集計値は削除しません。")
+            Text("この契約の計測を終了し、過去のScreen Time利用量と、それに基づく見直し結果を削除します。料金・更新日などの契約情報と、他の契約には影響しません。この操作は元に戻せません。")
         }
     }
 
@@ -597,6 +649,7 @@ struct MeasurementSetupView: View {
         do { try await AuthorizationCenter.shared.requestAuthorization(for: .individual) }
         catch { }
         authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+        session.authorizationDidChange(validSubscriptionIDs: validSubscriptionIDs)
     }
 }
 

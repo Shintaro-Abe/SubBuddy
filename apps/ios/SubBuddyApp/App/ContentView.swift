@@ -3,6 +3,7 @@ import Foundation
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var authSession = AuthSession()
     @StateObject private var productStore = ProductStore()
     @AppStorage("has_seen_intro") private var hasSeenIntro = false
@@ -28,6 +29,11 @@ struct ContentView: View {
         }
         .onChange(of: productStore.requiresReauthentication) { _, requiresReauthentication in
             if requiresReauthentication { authSession.requireReauthentication() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, authSession.isSignedIn {
+                productStore.reconcileMeasurements()
+            }
         }
     }
 

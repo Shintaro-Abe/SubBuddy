@@ -283,6 +283,55 @@ final class ProductUITests: XCTestCase {
         ))
     }
 
+    func testMeasurementPolicyRequiresAuthorizationContractMappingAndNoMutation() {
+        XCTAssertTrue(MeasurementPolicy.shouldMonitor(
+            isAuthorized: true,
+            hasValidSubscription: true,
+            hasSingleApplication: true,
+            hasPendingMutation: false
+        ))
+        XCTAssertFalse(MeasurementPolicy.shouldMonitor(
+            isAuthorized: false,
+            hasValidSubscription: true,
+            hasSingleApplication: true,
+            hasPendingMutation: false
+        ))
+        XCTAssertFalse(MeasurementPolicy.shouldMonitor(
+            isAuthorized: true,
+            hasValidSubscription: false,
+            hasSingleApplication: true,
+            hasPendingMutation: false
+        ))
+        XCTAssertFalse(MeasurementPolicy.shouldMonitor(
+            isAuthorized: true,
+            hasValidSubscription: true,
+            hasSingleApplication: true,
+            hasPendingMutation: true
+        ))
+    }
+
+    func testMeasurementMutationStorePersistsAndRemovesPendingOperation() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("subbuddy-measurement-mutation-synthetic", isDirectory: true)
+        try? FileManager.default.removeItem(at: directory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = directory.appendingPathComponent("mutations.json")
+        let store = MeasurementMutationStore(fileURL: fileURL)
+        let mutation = MeasurementMutation(
+            subscriptionId: "synthetic-subscription",
+            oldActivityName: "sub_synthetic-subscription",
+            replacementSelection: Data([0x01, 0x02]),
+            operation: .replace
+        )
+
+        XCTAssertTrue(store.save(mutation))
+        XCTAssertEqual(store.mutation(for: "synthetic-subscription"), mutation)
+        XCTAssertEqual(store.pendingSubscriptionIDs(), ["synthetic-subscription"])
+        XCTAssertTrue(store.remove(subscriptionId: "synthetic-subscription"))
+        XCTAssertTrue(store.pendingSubscriptionIDs().isEmpty)
+    }
+
     @MainActor
     func testMeasurementLoadStopsOrphanedActivityWithoutSavedMapping() {
         let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-sub"])
@@ -317,45 +366,65 @@ final class ProductUITests: XCTestCase {
     }
 
     @MainActor
-    func testMeasurementStopTargetsOnlyCurrentSubscription() {
-        let scheduler = RecordingMonitoringScheduler(activeActivities: [
-            "sub_synthetic-current",
-            "sub_synthetic-other",
-        ])
-        let session = MeasurementSession(
-            scheduler: scheduler,
-            mappingStore: SyntheticMappingStore()
-        )
-        session.subscriptionId = "synthetic-current"
-
-        session.stopMonitoring()
-
-        XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-current"])
-        XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-other"))
-    }
-
-    @MainActor
-    func testRemovingMeasurementConfigurationKeepsOtherActivity() {
+    func testRemovingMeasurementConfigurationKeepsOtherActivity() async {
         let scheduler = RecordingMonitoringScheduler(activeActivities: [
             "sub_synthetic-current",
             "sub_synthetic-other",
         ])
         let mappings = SyntheticMappingStore()
         let usageStore = RecordingUsageStore()
+        let mutations = SyntheticMeasurementMutationStore()
+        let remote = RecordingMeasurementDataService()
         let session = MeasurementSession(
             scheduler: scheduler,
             mappingStore: mappings,
-            usageStore: usageStore
+            usageStore: usageStore,
+            mutationStore: mutations,
+            measurementDataService: remote
         )
         session.subscriptionId = "synthetic-current"
 
-        session.removeConfiguration()
+        await session.removeConfiguration()
 
         XCTAssertEqual(scheduler.stoppedActivities, ["sub_synthetic-current"])
         XCTAssertEqual(usageStore.removedActivityIDs, ["sub_synthetic-current"])
         XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-current"])
+        XCTAssertEqual(remote.deletedSubscriptionIDs, ["synthetic-current"])
+        XCTAssertTrue(mutations.pendingSubscriptionIDs().isEmpty)
         XCTAssertTrue(scheduler.activeActivities.contains("sub_synthetic-other"))
         XCTAssertTrue(session.selection.applicationTokens.isEmpty)
+    }
+
+    @MainActor
+    func testMeasurementRemovalFailureKeepsPendingMutationUntilRetry() async {
+        let scheduler = RecordingMonitoringScheduler(activeActivities: ["sub_synthetic-current"])
+        let mappings = SyntheticMappingStore()
+        let usageStore = RecordingUsageStore()
+        let mutations = SyntheticMeasurementMutationStore()
+        let remote = RecordingMeasurementDataService(shouldFail: true)
+        let session = MeasurementSession(
+            scheduler: scheduler,
+            mappingStore: mappings,
+            usageStore: usageStore,
+            mutationStore: mutations,
+            measurementDataService: remote
+        )
+        session.subscriptionId = "synthetic-current"
+
+        await session.removeConfiguration()
+
+        XCTAssertTrue(session.hasPendingMutation)
+        XCTAssertTrue(mutations.pendingSubscriptionIDs().contains("synthetic-current"))
+        XCTAssertTrue(usageStore.removedActivityIDs.isEmpty)
+        XCTAssertTrue(mappings.removedSubscriptionIDs.isEmpty)
+
+        remote.shouldFail = false
+        await session.retryPendingMutation()
+
+        XCTAssertFalse(session.hasPendingMutation)
+        XCTAssertEqual(remote.deletedSubscriptionIDs, ["synthetic-current"])
+        XCTAssertEqual(usageStore.removedActivityIDs, ["sub_synthetic-current"])
+        XCTAssertEqual(mappings.removedSubscriptionIDs, ["synthetic-current"])
     }
 
     func testOrphanedMeasurementCleanupKeepsExistingSubscription() {
@@ -533,6 +602,42 @@ private final class RecordingUsageStore: UsageRecordStoring {
     }
 }
 
+private final class SyntheticMeasurementMutationStore: MeasurementMutationStoring {
+    private var mutations: [String: MeasurementMutation] = [:]
+
+    func mutation(for subscriptionId: String) -> MeasurementMutation? {
+        mutations[subscriptionId]
+    }
+
+    func pendingSubscriptionIDs() -> Set<String> {
+        Set(mutations.keys)
+    }
+
+    func save(_ mutation: MeasurementMutation) -> Bool {
+        mutations[mutation.subscriptionId] = mutation
+        return true
+    }
+
+    func remove(subscriptionId: String) -> Bool {
+        mutations.removeValue(forKey: subscriptionId)
+        return true
+    }
+}
+
+private final class RecordingMeasurementDataService: MeasurementDataDeleting {
+    private(set) var deletedSubscriptionIDs: [String] = []
+    var shouldFail: Bool
+
+    init(shouldFail: Bool = false) {
+        self.shouldFail = shouldFail
+    }
+
+    func deleteMeasurementData(subscriptionId: String) async throws {
+        if shouldFail { throw APIError.invalidResponse }
+        deletedSubscriptionIDs.append(subscriptionId)
+    }
+}
+
 private final class RecordingMeasurementCleaner: MeasurementConfigurationCleaning {
     private(set) var removedSubscriptionIDs: [String] = []
 
@@ -541,11 +646,13 @@ private final class RecordingMeasurementCleaner: MeasurementConfigurationCleanin
     }
 
     func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>) {}
+    func reconcileConfigurations(validSubscriptionIDs: Set<String>) {}
 }
 
 private final class NoopMeasurementCleaner: MeasurementConfigurationCleaning {
     func removeConfiguration(subscriptionId: String) {}
     func removeOrphanedConfigurations(validSubscriptionIDs: Set<String>) {}
+    func reconcileConfigurations(validSubscriptionIDs: Set<String>) {}
 }
 
 private actor ExistingSubscriptionProductAPI: ProductAPIProviding {

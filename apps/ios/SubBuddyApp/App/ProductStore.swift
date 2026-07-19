@@ -60,7 +60,7 @@ final class ProductStore: ObservableObject {
 
         do {
             subscriptions = try await client.subscriptions()
-            measurementCleaner.removeOrphanedConfigurations(
+            measurementCleaner.reconcileConfigurations(
                 validSubscriptionIDs: Set(subscriptions.map(\.id))
             )
             lastUpdatedAt = Date()
@@ -91,7 +91,7 @@ final class ProductStore: ObservableObject {
             async let catalog = client.serviceCatalog()
 
             self.subscriptions = try await subscriptions
-            measurementCleaner.removeOrphanedConfigurations(
+            measurementCleaner.reconcileConfigurations(
                 validSubscriptionIDs: Set(self.subscriptions.map(\.id))
             )
             self.dashboard = try await dashboard
@@ -179,6 +179,12 @@ final class ProductStore: ObservableObject {
 
     func recommendation(for subscriptionId: String) -> Recommendation? {
         recommendations.first { $0.subscriptionId == subscriptionId }
+    }
+
+    func reconcileMeasurements() {
+        measurementCleaner.reconcileConfigurations(
+            validSubscriptionIDs: Set(subscriptions.map(\.id))
+        )
     }
 
     func clearSensitiveData() {
