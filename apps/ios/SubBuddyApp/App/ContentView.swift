@@ -22,7 +22,7 @@ struct ContentView: View {
             appContent
             #endif
         }
-        .tint(AppColor.accent)
+        .tint(AppColor.controlTint)
         .environment(\.font, .appBody)
         .background(AppColor.background.ignoresSafeArea())
         .onChange(of: authSession.isSignedIn) { _, isSignedIn in
@@ -108,7 +108,7 @@ struct IntroView: View {
                 }
 
                 Button("内容を確認して続ける", action: continueAction)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
                     .accessibilityHint("Appleサインインの画面へ進みます")
@@ -161,7 +161,7 @@ struct SignInView: View {
                 }
             }
             .signInWithAppleButtonStyle(.black)
-            .frame(minHeight: 52)
+            .appAppleSignInButtonSize()
             .disabled(authSession.isWorking || AppConstants.apiBaseURL == nil)
 
             if AppConstants.apiBaseURL == nil {
@@ -205,7 +205,7 @@ struct OnboardingFlowView: View {
                     Text("よく使うサービスを1件登録すると、月額と年額の目安をすぐ確認できます。すべてを一度に入力する必要はありません。")
                         .foregroundStyle(AppColor.secondaryText)
                     Button("最初の契約を登録") { path.append(.firstContract) }
-                        .buttonStyle(.borderedProminent)
+                        .appProminentButtonStyle()
                         .controlSize(.large)
                     Button("登録済みの契約を読み込む") {
                         loadExistingSubscriptions()
@@ -323,7 +323,7 @@ struct FirstValueView: View {
                     .font(.appSubheadline)
                     .foregroundStyle(AppColor.secondaryText)
                 Button("棚卸しを続ける", action: continueInventory)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
                     .controlSize(.large)
                 Button("今は1件で始める", action: skip)
                     .buttonStyle(.bordered)
@@ -385,7 +385,7 @@ struct InventoryContinuationView: View {
                 }
 
                 Button("棚卸しを終えて次へ", action: next)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
                     .controlSize(.large)
             }
             .padding(AppSpacing.large)
@@ -423,7 +423,7 @@ struct MeasurementExplanationView: View {
                 TrustPoint(icon: "chart.xyaxis.line", title: "集計値だけ", detail: "使った日と時間帯の目安だけを見直しに使います。詳しい操作履歴は取得しません。")
                 TrustPoint(icon: "hand.raised", title: "許可は任意", detail: "許可しなくても、料金、更新日、重複、プラン情報による見直しを利用できます。")
                 Button("ホームへ進み、契約から設定", action: configureLater)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
                     .controlSize(.large)
                 Button("今回は使わない", action: skip)
                     .buttonStyle(.bordered)
@@ -455,7 +455,7 @@ struct FirstReviewView: View {
                     }
                 }
                 Button("利用状況の説明へ", action: next)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
                     .controlSize(.large)
             }
             .padding(AppSpacing.large)

@@ -48,11 +48,8 @@ struct ReviewListView: View {
                             key: "review",
                             text: "解約を決める画面ではありません。分かっている事実、足りない情報、選択肢を確認する場所です。"
                         )
-                    }
-                    Section {
-                        Text("分かっている事実と分からない点を示します。続けるか見直すかは、ご自身で判断できます。")
-                            .font(.appSubheadline)
-                            .foregroundStyle(AppColor.secondaryText)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
 
                     Picker("表示", selection: $filter) {
@@ -569,7 +566,7 @@ private struct AccountDeletionView: View {
                         }
                     }
                     .signInWithAppleButtonStyle(.black)
-                    .frame(minHeight: 52)
+                    .appAppleSignInButtonSize()
                     .disabled(authSession.isWorking)
                     Text("削除の直前にAppleで本人確認します。")
                         .font(.appFootnote)

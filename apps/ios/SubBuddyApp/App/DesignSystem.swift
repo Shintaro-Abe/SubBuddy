@@ -27,6 +27,12 @@ enum AppColor {
             ? UIColor(red: 0.12, green: 0.24, blue: 0.15, alpha: 1)
             : UIColor(red: 0.278, green: 0.325, blue: 0.278, alpha: 1)
     })
+    static let controlTint = accentOnSurface
+    static let prominentButtonText = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.08, green: 0.10, blue: 0.08, alpha: 1)
+            : .white
+    })
     static let secondaryText = Color(uiColor: UIColor { traits in
         if traits.userInterfaceStyle == .dark {
             return traits.accessibilityContrast == .high
@@ -127,6 +133,17 @@ extension View {
         scrollContentBackground(.hidden)
             .background(AppColor.background)
     }
+
+    func appProminentButtonStyle() -> some View {
+        buttonStyle(.borderedProminent)
+            .foregroundStyle(AppColor.prominentButtonText)
+    }
+
+    func appAppleSignInButtonSize() -> some View {
+        frame(maxWidth: 320)
+            .frame(height: 44)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
 }
 
 struct SurfaceCard<Content: View>: View {
@@ -187,7 +204,7 @@ struct EmptyStateView: View {
                 .multilineTextAlignment(.center)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .buttonStyle(.borderedProminent)
+                    .appProminentButtonStyle()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

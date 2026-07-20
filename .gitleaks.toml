@@ -28,6 +28,7 @@ paths = [
   '''\.xcodeproj(/|$)''',
   '''(^|/)e2e/artifacts(/|$)''',
   '''(^|/)e2e/\.generated(/|$)''',
+  '''(^|/)slides/[^/]+/rendered/.*\.png$''',
   '''(^|/)secrets(/|$)''',
 ]
 

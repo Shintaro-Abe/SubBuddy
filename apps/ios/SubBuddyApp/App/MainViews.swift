@@ -46,18 +46,6 @@ struct HomeView: View {
     var navigateToTab: (MainTab) -> Void = { _ in }
     @State private var showsSettings = false
 
-    private var nextRecommendation: (Subscription, Recommendation)? {
-        let ordered = store.recommendations.sorted {
-            priority($0.decision) > priority($1.decision)
-        }
-        for recommendation in ordered {
-            if let subscription = store.subscription(id: recommendation.subscriptionId) {
-                return (subscription, recommendation)
-            }
-        }
-        return nil
-    }
-
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: AppSpacing.large) {
@@ -69,33 +57,7 @@ struct HomeView: View {
 
                 if let guidanceStep = store.guidanceProgress.nextStep {
                     guidanceCard(for: guidanceStep)
-                } else if let nextRecommendation {
-                    NavigationLink {
-                        ReviewDetailView(
-                            subscription: nextRecommendation.0,
-                            recommendation: nextRecommendation.1,
-                            store: store
-                        )
-                    } label: {
-                        ReviewCard {
-                            VStack(alignment: .leading, spacing: AppSpacing.small) {
-                                Text("次に確認すること")
-                                    .font(.appCaption)
-                                    .foregroundStyle(.white.opacity(0.78))
-                                Text(nextRecommendation.0.name)
-                                    .font(.appTitle2)
-                                Text(nextRecommendation.1.reason)
-                                    .font(.appSubheadline)
-                                    .lineLimit(3)
-                                Label("内容を確認", systemImage: "arrow.right")
-                                    .font(.appHeadline)
-                                    .padding(.top, AppSpacing.small)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("見直しの詳しい内容を開きます")
-                } else if !store.isLoading {
+                } else if store.recommendations.isEmpty && !store.isLoading {
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: AppSpacing.small) {
                             Text("次に確認すること").font(.appCaption).foregroundStyle(AppColor.secondaryText)
@@ -200,16 +162,6 @@ struct HomeView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func priority(_ decision: RecommendationDecision?) -> Int {
-        switch decision {
-        case .strongCancelCandidate: return 5
-        case .considerCancel: return 4
-        case .considerDowngrade: return 3
-        case .review: return 2
-        case .keep: return 1
-        case nil: return 0
-        }
-    }
 }
 
 private struct HomeRow: View {
@@ -357,9 +309,17 @@ struct SpendingView: View {
 struct FirstVisitExplanation: View {
     let key: String
     let text: String
-    @State private var isVisible = false
+    @State private var isVisible: Bool
 
     private var storageKey: String { "screen_intro_\(key)_v1" }
+
+    init(key: String, text: String) {
+        self.key = key
+        self.text = text
+        _isVisible = State(
+            initialValue: !UserDefaults.standard.bool(forKey: "screen_intro_\(key)_v1")
+        )
+    }
 
     var body: some View {
         Group {
@@ -382,10 +342,8 @@ struct FirstVisitExplanation: View {
             } else {
                 Button("この画面について") { isVisible = true }
                     .font(.appFootnote)
+                    .foregroundStyle(AppColor.accentOnSurface)
             }
-        }
-        .onAppear {
-            isVisible = !UserDefaults.standard.bool(forKey: storageKey)
         }
     }
 }

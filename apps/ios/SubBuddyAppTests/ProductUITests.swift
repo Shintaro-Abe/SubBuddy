@@ -27,6 +27,18 @@ final class ProductUITests: XCTestCase {
         XCTAssertFalse(progressed.isComplete)
     }
 
+    func testFirstReviewDetailCompletesReviewGuidanceStep() {
+        let beforeReview = GuidanceProgress.empty
+            .applying(.inventoryCompleted)
+            .applying(.spendingViewed)
+
+        let afterReview = beforeReview.applying(.reviewViewed)
+
+        XCTAssertTrue(afterReview.steps.review)
+        XCTAssertEqual(afterReview.completedCount, 3)
+        XCTAssertEqual(afterReview.nextStep, .measurement)
+    }
+
     @MainActor
     func testPendingGuidanceDoesNotRollBackWhenRetryFails() async {
         let suiteName = "guidance-progress-synthetic-test"
