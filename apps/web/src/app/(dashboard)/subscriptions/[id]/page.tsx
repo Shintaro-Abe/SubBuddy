@@ -11,6 +11,7 @@ import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton"
 import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
 import { CapacityInput } from "@/components/CapacityInput";
 import { parseMatchedPatterns } from "@/domain/scoring/matchedPatterns";
+import { GuidanceEventReporter } from "@/components/GuidanceEventReporter";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,10 @@ export default async function SubscriptionDetailPage({
 
   return (
     <div>
+      {rec && <GuidanceEventReporter event="review_viewed" />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="caption" style={{ margin: 0 }}>
-          サブスク一覧 ／ {s.name}
+          契約 ／ {s.name}
         </p>
         <div className="flex gap-2">
           <Link href={`/subscriptions/${s.id}/edit`} className="btn ghost">
@@ -118,7 +120,7 @@ export default async function SubscriptionDetailPage({
 
         <section className="panel">
           <p className="title" style={{ marginBottom: 8 }}>
-            レコメンド
+            見直し
           </p>
           {rec ? (
             <>

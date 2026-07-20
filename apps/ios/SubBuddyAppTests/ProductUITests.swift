@@ -4,6 +4,48 @@ import UIKit
 @testable import SubBuddyApp
 
 final class ProductUITests: XCTestCase {
+    func testGuidanceProgressAdvancesWithoutRequiringMeasurement() {
+        let progressed = GuidanceProgress.empty
+            .applying(.inventoryCompleted)
+            .applying(.spendingViewed)
+            .applying(.reviewViewed)
+            .applying(.measurementSkipped)
+
+        XCTAssertTrue(progressed.isComplete)
+        XCTAssertEqual(progressed.completedCount, 4)
+        XCTAssertNil(progressed.nextStep)
+        XCTAssertEqual(progressed.measurementChoice, "skipped")
+    }
+
+    func testGuidanceProgressShowsOnlyFirstIncompleteStep() {
+        let progressed = GuidanceProgress.empty
+            .applying(.inventoryCompleted)
+            .applying(.spendingViewed)
+
+        XCTAssertEqual(progressed.completedCount, 2)
+        XCTAssertEqual(progressed.nextStep, .review)
+        XCTAssertFalse(progressed.isComplete)
+    }
+
+    @MainActor
+    func testPendingGuidanceDoesNotRollBackWhenRetryFails() async {
+        let suiteName = "guidance-progress-synthetic-test"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = ProductStore(
+            client: SyntheticProductAPI(guidanceShouldFail: true),
+            measurementCleaner: NoopMeasurementCleaner(),
+            guidanceDefaults: defaults
+        )
+
+        await store.recordGuidanceEvent(.inventoryCompleted)
+        await store.refreshGuidanceProgress()
+
+        XCTAssertTrue(store.guidanceProgress.steps.inventory)
+        XCTAssertEqual(store.guidanceProgress.nextStep, .spending)
+    }
+
     func testSubscriptionDeletionExplainsMeasurementCleanupAndScope() {
         let message = SubscriptionDeletionCopy.confirmationMessage
 
@@ -873,6 +915,12 @@ private actor ExistingSubscriptionProductAPI: ProductAPIProviding {
 
 private actor SyntheticProductAPI: ProductAPIProviding {
     private var measurementDeletionIDs: [String] = []
+    private var guidance = GuidanceProgress.empty
+    private let guidanceShouldFail: Bool
+
+    init(guidanceShouldFail: Bool = false) {
+        self.guidanceShouldFail = guidanceShouldFail
+    }
 
     func dashboardSummary() async throws -> DashboardSummary {
         DashboardSummary(activeCount: 1, totalCount: 1, monthlyTotal: 1_000, yearlyTotal: 12_000, currency: "JPY")
@@ -903,6 +951,12 @@ private actor SyntheticProductAPI: ProductAPIProviding {
     func deletedMeasurementSubscriptionIDs() -> [String] { measurementDeletionIDs }
     func recomputeRecommendations() async throws {}
     func revokeSession(id: String) async throws {}
+    func guidanceProgress() async throws -> GuidanceProgress { guidance }
+    func recordGuidanceEvent(_ event: GuidanceEvent) async throws -> GuidanceProgress {
+        if guidanceShouldFail { throw SyntheticAPIError.unused }
+        guidance = guidance.applying(event)
+        return guidance
+    }
 }
 
 private enum SyntheticAPIError: Error {

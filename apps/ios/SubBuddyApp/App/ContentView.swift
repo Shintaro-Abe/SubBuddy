@@ -184,6 +184,7 @@ struct OnboardingFlowView: View {
     let complete: () -> Void
     @State private var path: [OnboardingStep] = []
     @State private var existingLoadMessage: String?
+    @State private var didRestoreProgress = false
 
     enum OnboardingStep: Hashable {
         case firstContract
@@ -234,17 +235,50 @@ struct OnboardingFlowView: View {
                     FirstValueView(store: store) {
                         path.append(.inventory)
                     } skip: {
-                        path.append(.measurement)
+                        Task {
+                            await store.recordGuidanceEvent(.inventoryCompleted)
+                            path.append(.review)
+                        }
                     }
                 case .inventory:
-                    InventoryContinuationView(store: store) { path.append(.measurement) }
-                case .measurement:
-                    MeasurementExplanationView {
-                        path.append(.review)
+                    InventoryContinuationView(store: store) {
+                        Task {
+                            await store.recordGuidanceEvent(.inventoryCompleted)
+                            path.append(.review)
+                        }
                     }
                 case .review:
-                    FirstReviewView(store: store, complete: complete)
+                    FirstReviewView(store: store) {
+                        path.append(.measurement)
+                    }
+                case .measurement:
+                    MeasurementExplanationView(configureLater: complete) {
+                        Task {
+                            await store.recordGuidanceEvent(.measurementSkipped)
+                            complete()
+                        }
+                    }
                 }
+            }
+        }
+        .task {
+            guard !didRestoreProgress else { return }
+            didRestoreProgress = true
+            await store.loadAll()
+            if store.guidanceProgress.isComplete {
+                complete()
+                return
+            }
+            guard !store.subscriptions.isEmpty else { return }
+            switch store.guidanceProgress.nextStep {
+            case .inventory, .spending:
+                path = [.result]
+            case .review:
+                path = [.review]
+            case .measurement:
+                path = [.measurement]
+            case nil:
+                complete()
             }
         }
     }
@@ -296,7 +330,10 @@ struct FirstValueView: View {
             }
             .padding(AppSpacing.large)
         }
-        .task { await store.loadAll() }
+        .task {
+            await store.loadAll()
+            await store.recordGuidanceEvent(.spendingViewed)
+        }
     }
 }
 
@@ -375,7 +412,8 @@ struct InventoryCategory: Identifiable {
 }
 
 struct MeasurementExplanationView: View {
-    let next: () -> Void
+    let configureLater: () -> Void
+    let skip: () -> Void
 
     var body: some View {
         ScrollView {
@@ -384,10 +422,10 @@ struct MeasurementExplanationView: View {
                     .font(.appDisplay)
                 TrustPoint(icon: "chart.xyaxis.line", title: "集計値だけ", detail: "使った日と時間帯の目安だけを見直しに使います。詳しい操作履歴は取得しません。")
                 TrustPoint(icon: "hand.raised", title: "許可は任意", detail: "許可しなくても、料金、更新日、重複、プラン情報による見直しを利用できます。")
-                Button("あとで契約ごとに設定", action: next)
+                Button("ホームへ進み、契約から設定", action: configureLater)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                Button("Screen Timeを使わず続ける", action: next)
+                Button("今回は使わない", action: skip)
                     .buttonStyle(.bordered)
             }
             .padding(AppSpacing.large)
@@ -397,7 +435,7 @@ struct MeasurementExplanationView: View {
 
 struct FirstReviewView: View {
     @ObservedObject var store: ProductStore
-    let complete: () -> Void
+    let next: () -> Void
 
     var body: some View {
         ScrollView {
@@ -416,7 +454,7 @@ struct FirstReviewView: View {
                         }
                     }
                 }
-                Button("ホームへ", action: complete)
+                Button("利用状況の説明へ", action: next)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
             }
@@ -425,6 +463,7 @@ struct FirstReviewView: View {
         .task {
             await store.loadAll()
             if store.recommendations.isEmpty { await store.recompute() }
+            await store.recordGuidanceEvent(.reviewViewed)
         }
     }
 }

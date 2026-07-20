@@ -44,6 +44,12 @@ struct ReviewListView: View {
             } else {
                 List {
                     Section {
+                        FirstVisitExplanation(
+                            key: "review",
+                            text: "解約を決める画面ではありません。分かっている事実、足りない情報、選択肢を確認する場所です。"
+                        )
+                    }
+                    Section {
                         Text("分かっている事実と分からない点を示します。続けるか見直すかは、ご自身で判断できます。")
                             .font(.appSubheadline)
                             .foregroundStyle(AppColor.secondaryText)
@@ -77,7 +83,11 @@ struct ReviewListView: View {
                     ForEach(filtered) { recommendation in
                         if let subscription = store.subscription(id: recommendation.subscriptionId) {
                             NavigationLink {
-                                ReviewDetailView(subscription: subscription, recommendation: recommendation)
+                                ReviewDetailView(
+                                    subscription: subscription,
+                                    recommendation: recommendation,
+                                    store: store
+                                )
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     StatusPill(
@@ -150,6 +160,7 @@ struct ReviewSummaryCard: View {
 struct ReviewDetailView: View {
     let subscription: Subscription
     let recommendation: Recommendation
+    var store: ProductStore? = nil
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -260,6 +271,7 @@ struct ReviewDetailView: View {
         .background(AppColor.background)
         .navigationTitle("見直し詳細")
         .navigationBarTitleDisplayMode(.inline)
+        .task { await store?.recordGuidanceEvent(.reviewViewed) }
     }
 
     private func safeURL(_ rawValue: String?) -> URL? {
@@ -299,6 +311,11 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
+                NavigationLink {
+                    GettingStartedView(store: store)
+                } label: {
+                    Label("使い方", systemImage: "list.number")
+                }
                 NavigationLink {
                     DataHandlingView()
                 } label: {
@@ -376,6 +393,45 @@ struct SettingsView: View {
                 Button("閉じる") { dismiss() }
             }
         }
+    }
+}
+
+private struct GettingStartedView: View {
+    @ObservedObject var store: ProductStore
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(Array(GuidanceStep.allCases.enumerated()), id: \.element) { index, step in
+                    HStack(alignment: .top, spacing: AppSpacing.medium) {
+                        Image(systemName: store.guidanceProgress.steps.isComplete(step) ? "checkmark.circle.fill" : "\(index + 1).circle")
+                            .foregroundStyle(AppColor.accent)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                            Text(step.title).font(.appHeadline)
+                            Text(step.detail)
+                                .font(.appSubheadline)
+                                .foregroundStyle(AppColor.secondaryText)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityValue(store.guidanceProgress.steps.isComplete(step) ? "完了" : "未完了")
+                }
+            } header: {
+                Text("はじめ方 \(store.guidanceProgress.completedCount)/\(store.guidanceProgress.totalCount)")
+            }
+
+            Section("利用状況の計測") {
+                Text("計測は任意です。使った日と時間帯の目安だけを見直しに使い、詳しい操作内容は送りません。設定しなくても料金や更新日から見直せます。")
+                if !store.guidanceProgress.steps.measurement {
+                    Button("今回は使わない") {
+                        Task { await store.recordGuidanceEvent(.measurementSkipped) }
+                    }
+                }
+            }
+        }
+        .appListBackground()
+        .navigationTitle("使い方")
     }
 }
 

@@ -14,6 +14,13 @@ protocol ProductAPIProviding: Sendable {
     func serviceCatalog() async throws -> [ServiceCatalogItem]
     func sessions() async throws -> [UserSession]
     func revokeSession(id: String) async throws
+    func guidanceProgress() async throws -> GuidanceProgress
+    func recordGuidanceEvent(_ event: GuidanceEvent) async throws -> GuidanceProgress
+}
+
+extension ProductAPIProviding {
+    func guidanceProgress() async throws -> GuidanceProgress { .empty }
+    func recordGuidanceEvent(_ event: GuidanceEvent) async throws -> GuidanceProgress { .empty }
 }
 
 extension APIClient {
@@ -110,6 +117,18 @@ extension APIClient {
         )
     }
 
+    func guidanceProgress() async throws -> GuidanceProgress {
+        try await sendAuthenticated(path: "/api/guidance-progress", method: "GET")
+    }
+
+    func recordGuidanceEvent(_ event: GuidanceEvent) async throws -> GuidanceProgress {
+        try await sendAuthenticated(
+            path: "/api/guidance-progress",
+            method: "PATCH",
+            body: GuidanceEventRequest(event: event)
+        )
+    }
+
     func deleteAccount(identityToken: String, nonce: String) async throws -> Bool {
         let response: AccountDeletionResponse = try await sendAuthenticated(
             path: "/api/account",
@@ -121,6 +140,116 @@ extension APIClient {
 }
 
 extension APIClient: ProductAPIProviding {}
+
+enum GuidanceStep: String, Codable, CaseIterable, Hashable, Sendable {
+    case inventory
+    case spending
+    case review
+    case measurement
+
+    var title: String {
+        switch self {
+        case .inventory: return "契約を棚卸しする"
+        case .spending: return "支出と更新日を見る"
+        case .review: return "見直す理由を見る"
+        case .measurement: return "必要なら利用状況を加える"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .inventory: return "契約中のサブスクを、思い出せる範囲から登録します。"
+        case .spending: return "登録した契約の月額・年額と更新日を確認します。"
+        case .review: return "分かっている事実、不足情報、選択肢を確認します。"
+        case .measurement: return "使わなくても料金や更新日から見直せます。"
+        }
+    }
+}
+
+enum GuidanceEvent: String, Codable, Equatable, Sendable {
+    case inventoryCompleted = "inventory_completed"
+    case spendingViewed = "spending_viewed"
+    case reviewViewed = "review_viewed"
+    case measurementConfigured = "measurement_configured"
+    case measurementSkipped = "measurement_skipped"
+    case measurementReset = "measurement_reset"
+}
+
+struct GuidanceEventRequest: Encodable, Sendable {
+    let event: GuidanceEvent
+}
+
+struct GuidanceProgress: Decodable, Equatable, Sendable {
+    struct Steps: Decodable, Equatable, Sendable {
+        let inventory: Bool
+        let spending: Bool
+        let review: Bool
+        let measurement: Bool
+
+        func isComplete(_ step: GuidanceStep) -> Bool {
+            switch step {
+            case .inventory: return inventory
+            case .spending: return spending
+            case .review: return review
+            case .measurement: return measurement
+            }
+        }
+    }
+
+    let steps: Steps
+    let completedCount: Int
+    let totalCount: Int
+    let nextStep: GuidanceStep?
+    let isComplete: Bool
+    let measurementChoice: String
+
+    static let empty = GuidanceProgress(
+        steps: Steps(inventory: false, spending: false, review: false, measurement: false),
+        completedCount: 0,
+        totalCount: 4,
+        nextStep: .inventory,
+        isComplete: false,
+        measurementChoice: "pending"
+    )
+
+    func applying(_ event: GuidanceEvent) -> GuidanceProgress {
+        var inventory = steps.inventory
+        var spending = steps.spending
+        var review = steps.review
+        var measurement = steps.measurement
+        var choice = measurementChoice
+        switch event {
+        case .inventoryCompleted: inventory = true
+        case .spendingViewed: spending = true
+        case .reviewViewed: review = true
+        case .measurementConfigured:
+            measurement = true
+            choice = "configured"
+        case .measurementSkipped:
+            measurement = true
+            choice = "skipped"
+        case .measurementReset:
+            measurement = false
+            choice = "pending"
+        }
+        let updated = Steps(
+            inventory: inventory,
+            spending: spending,
+            review: review,
+            measurement: measurement
+        )
+        let next = GuidanceStep.allCases.first { !updated.isComplete($0) }
+        let count = GuidanceStep.allCases.filter { updated.isComplete($0) }.count
+        return GuidanceProgress(
+            steps: updated,
+            completedCount: count,
+            totalCount: 4,
+            nextStep: next,
+            isComplete: count == 4,
+            measurementChoice: choice
+        )
+    }
+}
 
 struct DashboardSummary: Decodable, Equatable {
     let activeCount: Int

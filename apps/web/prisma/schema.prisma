@@ -56,6 +56,12 @@ enum AuthClientType {
   ios
 }
 
+enum GuidanceMeasurementChoice {
+  pending
+  configured
+  skipped
+}
+
 // ---- テーブル ----
 
 model User {
@@ -65,14 +71,30 @@ model User {
   lastSignedInAt   DateTime? @map("last_signed_in_at")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  subscriptions   Subscription[]
-  billingEvents   BillingEvent[]
-  usageSummaries  IosUsageDailySummary[]
-  recommendations RecommendationSnapshot[]
-  devices         Device[]
-  authSessions    AuthSession[]
+  subscriptions    Subscription[]
+  billingEvents    BillingEvent[]
+  usageSummaries   IosUsageDailySummary[]
+  recommendations  RecommendationSnapshot[]
+  devices          Device[]
+  authSessions     AuthSession[]
+  guidanceProgress UserGuidanceProgress?
 
   @@map("users")
+}
+
+model UserGuidanceProgress {
+  userId               String                    @id @map("user_id")
+  inventoryCompletedAt DateTime?                 @map("inventory_completed_at")
+  spendingViewedAt     DateTime?                 @map("spending_viewed_at")
+  reviewViewedAt       DateTime?                 @map("review_viewed_at")
+  measurementChoice    GuidanceMeasurementChoice @default(pending) @map("measurement_choice")
+  completedAt          DateTime?                 @map("completed_at")
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_guidance_progress")
 }
 
 model Device {

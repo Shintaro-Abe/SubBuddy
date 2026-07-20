@@ -4,6 +4,7 @@ import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { DECISION_DOT_CLASS, DECISION_LABEL, formatYen } from "@/lib/display";
 import { RecomputeButton } from "@/components/RecomputeButton";
+import { ScreenIntro } from "@/components/ScreenIntro";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,15 @@ export default async function RecommendationsPage() {
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <p className="display">レコメンド</p>
+        <p className="display">見直し</p>
         <RecomputeButton />
       </div>
       <p className="caption" style={{ marginTop: 8 }}>
         判定ごとに分けて表示。根拠をもとに、続けるか見直すかはご自身で判断できます。
       </p>
+      <ScreenIntro screen="review">
+        解約を決める画面ではありません。分かっている事実、足りない情報、選択肢を確認する場所です。
+      </ScreenIntro>
 
       {rows.length > 0 && groups.length === 0 && observing.length === 0 && (
         <p className="panel caption" style={{ marginTop: 24, padding: 16 }}>

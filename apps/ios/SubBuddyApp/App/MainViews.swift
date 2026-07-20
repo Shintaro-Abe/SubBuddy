@@ -14,7 +14,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selection) {
             NavigationStack {
-                HomeView(authSession: authSession, store: store)
+                HomeView(authSession: authSession, store: store) { selection = $0 }
             }
             .tabItem { Label("ホーム", systemImage: "house") }
             .tag(MainTab.home)
@@ -43,6 +43,7 @@ struct MainTabView: View {
 struct HomeView: View {
     @ObservedObject var authSession: AuthSession
     @ObservedObject var store: ProductStore
+    var navigateToTab: (MainTab) -> Void = { _ in }
     @State private var showsSettings = false
 
     private var nextRecommendation: (Subscription, Recommendation)? {
@@ -66,11 +67,14 @@ struct HomeView: View {
                     }
                 }
 
-                if let nextRecommendation {
+                if let guidanceStep = store.guidanceProgress.nextStep {
+                    guidanceCard(for: guidanceStep)
+                } else if let nextRecommendation {
                     NavigationLink {
                         ReviewDetailView(
                             subscription: nextRecommendation.0,
-                            recommendation: nextRecommendation.1
+                            recommendation: nextRecommendation.1,
+                            store: store
                         )
                     } label: {
                         ReviewCard {
@@ -128,7 +132,7 @@ struct HomeView: View {
                     NavigationLink {
                         UpcomingRenewalView(items: store.upcomingRenewals)
                     } label: {
-                        HomeRow(title: "更新が近い", detail: "\(store.upcomingRenewals.count)件", icon: "calendar")
+                        HomeRow(title: "更新間近", detail: "\(store.upcomingRenewals.count)件", icon: "calendar")
                     }
                     Divider()
                     NavigationLink {
@@ -162,6 +166,38 @@ struct HomeView: View {
                 SettingsView(authSession: authSession, store: store)
             }
         }
+    }
+
+    @ViewBuilder
+    private func guidanceCard(for step: GuidanceStep) -> some View {
+        ReviewCard {
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
+                Text("はじめ方 \(store.guidanceProgress.completedCount)/\(store.guidanceProgress.totalCount)")
+                    .font(.appCaption)
+                    .foregroundStyle(.white.opacity(0.78))
+                Text(step.title).font(.appTitle2)
+                Text(step.detail).font(.appSubheadline)
+                switch step {
+                case .inventory:
+                    Button("契約を確認") { navigateToTab(.subscriptions) }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                case .spending:
+                    NavigationLink("支出を見る") { SpendingView(store: store) }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                case .review:
+                    Button("見直しを見る") { navigateToTab(.review) }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                case .measurement:
+                    Button("設定方法を見る") { showsSettings = true }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private func priority(_ decision: RecommendationDecision?) -> Int {
@@ -203,7 +239,13 @@ struct UpcomingRenewalView: View {
     let items: [UpcomingRenewal]
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            FirstVisitExplanation(
+                key: "renewals",
+                text: "更新日を登録済みの契約だけを表示します。表示されない契約は、契約画面で更新日を確認できます。"
+            )
+            .padding(.horizontal, AppSpacing.medium)
+            .padding(.bottom, AppSpacing.small)
             if items.isEmpty {
                 EmptyStateView(
                     title: "14日以内の更新はありません",
@@ -231,7 +273,7 @@ struct UpcomingRenewalView: View {
             }
         }
         .appPageBackground()
-        .navigationTitle("更新が近い")
+        .navigationTitle("更新間近")
     }
 }
 
@@ -241,6 +283,10 @@ struct SpendingView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.large) {
+                FirstVisitExplanation(
+                    key: "spending",
+                    text: "登録済みで利用中の契約を、月額と年額の目安へ換算しています。未登録の契約は含まれません。"
+                )
                 SurfaceCard {
                     VStack(alignment: .leading, spacing: AppSpacing.small) {
                         Text("月額換算").font(.appCaption).foregroundStyle(AppColor.secondaryText)
@@ -304,5 +350,42 @@ struct SpendingView: View {
         .background(AppColor.background)
         .navigationTitle("支出の内訳")
         .refreshable { await store.loadAll() }
+        .task { await store.recordGuidanceEvent(.spendingViewed) }
+    }
+}
+
+struct FirstVisitExplanation: View {
+    let key: String
+    let text: String
+    @State private var isVisible = false
+
+    private var storageKey: String { "screen_intro_\(key)_v1" }
+
+    var body: some View {
+        Group {
+            if isVisible {
+                SurfaceCard {
+                    VStack(alignment: .leading, spacing: AppSpacing.small) {
+                        HStack {
+                            Text("この画面について").font(.appHeadline)
+                            Spacer()
+                            Button("閉じる") {
+                                UserDefaults.standard.set(true, forKey: storageKey)
+                                isVisible = false
+                            }
+                        }
+                        Text(text)
+                            .font(.appSubheadline)
+                            .foregroundStyle(AppColor.secondaryText)
+                    }
+                }
+            } else {
+                Button("この画面について") { isVisible = true }
+                    .font(.appFootnote)
+            }
+        }
+        .onAppear {
+            isVisible = !UserDefaults.standard.bool(forKey: storageKey)
+        }
     }
 }

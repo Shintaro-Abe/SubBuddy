@@ -2,6 +2,8 @@ import { requireServerUserId } from "@/lib/server-auth";
 import { listSubscriptions } from "@/repositories/subscriptions";
 import { aggregateSpending } from "@/domain/spending/aggregate";
 import { categoryLabel, formatYen } from "@/lib/display";
+import { GuidanceEventReporter } from "@/components/GuidanceEventReporter";
+import { ScreenIntro } from "@/components/ScreenIntro";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +29,15 @@ export default async function SpendingPage() {
 
   return (
     <>
+      <GuidanceEventReporter event="spending_viewed" />
       <p className="display">支出の内訳</p>
       <p className="caption" style={{ marginTop: 8 }}>
         継続中 <span className="num">{summary.activeCount}</span>{" "}
         件の支出を、合計・内訳・推移で見ています。
       </p>
+      <ScreenIntro screen="spending">
+        登録済みで継続中の契約を、月額と年額の目安へ換算しています。未登録の契約は含まれません。
+      </ScreenIntro>
 
       {/* 合計 */}
       <div className="grid2" style={{ marginTop: 24 }}>

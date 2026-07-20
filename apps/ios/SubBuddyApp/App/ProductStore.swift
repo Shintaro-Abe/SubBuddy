@@ -21,19 +21,24 @@ final class ProductStore: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var requiresReauthentication = false
     @Published private(set) var lastUpdatedAt: Date?
+    @Published private(set) var guidanceProgress: GuidanceProgress = .empty
 
     private var client: (any ProductAPIProviding)?
     private var clientBaseURL: URL?
     private let usesInjectedClient: Bool
     private let measurementCleaner: any MeasurementConfigurationCleaning
+    private let guidanceDefaults: UserDefaults
+    private static let pendingGuidanceEventsKey = "pending_guidance_events"
 
     init(
         client: (any ProductAPIProviding)? = nil,
         previewSnapshot: ProductPreviewSnapshot? = nil,
-        measurementCleaner: any MeasurementConfigurationCleaning = MeasurementConfigurationCleaner()
+        measurementCleaner: any MeasurementConfigurationCleaning = MeasurementConfigurationCleaner(),
+        guidanceDefaults: UserDefaults = .standard
     ) {
         self.client = client
         self.measurementCleaner = measurementCleaner
+        self.guidanceDefaults = guidanceDefaults
         usesInjectedClient = client != nil
         guard let previewSnapshot else { return }
         subscriptions = previewSnapshot.subscriptions
@@ -43,6 +48,7 @@ final class ProductStore: ObservableObject {
         spending = previewSnapshot.spending
         lastUpdatedAt = previewSnapshot.updatedAt
         errorMessage = previewSnapshot.errorMessage
+        guidanceProgress = previewSnapshot.guidanceProgress
     }
 
     var hasConfiguredAPI: Bool { AppConstants.apiBaseURL != nil }
@@ -64,6 +70,7 @@ final class ProductStore: ObservableObject {
                 validSubscriptionIDs: Set(subscriptions.map(\.id))
             )
             lastUpdatedAt = Date()
+            await loadGuidanceBestEffort(using: client)
             return subscriptions.isEmpty ? .empty : .populated
         } catch {
             handleSubscriptionLoadError(error)
@@ -100,6 +107,7 @@ final class ProductStore: ObservableObject {
             self.upcomingRenewals = try await upcoming
             self.catalog = try await catalog
             lastUpdatedAt = Date()
+            await loadGuidanceBestEffort(using: client)
         } catch {
             handle(error)
         }
@@ -173,6 +181,17 @@ final class ProductStore: ObservableObject {
         }
     }
 
+    func recordGuidanceEvent(_ event: GuidanceEvent) async {
+        guidanceProgress = guidanceProgress.applying(event)
+        enqueueGuidanceEvent(event)
+        await flushGuidanceEvents()
+    }
+
+    func refreshGuidanceProgress() async {
+        guard let client = configuredClient() else { return }
+        await loadGuidanceBestEffort(using: client)
+    }
+
     func subscription(id: String) -> Subscription? {
         subscriptions.first { $0.id == id }
     }
@@ -205,6 +224,8 @@ final class ProductStore: ObservableObject {
         lastUpdatedAt = nil
         errorMessage = nil
         requiresReauthentication = false
+        guidanceProgress = .empty
+        guidanceDefaults.removeObject(forKey: Self.pendingGuidanceEventsKey)
     }
 
     private func configuredClient() -> (any ProductAPIProviding)? {
@@ -215,6 +236,46 @@ final class ProductStore: ObservableObject {
         client = newClient
         clientBaseURL = baseURL
         return newClient
+    }
+
+    private func loadGuidanceBestEffort(using client: any ProductAPIProviding) async {
+        do {
+            let remoteProgress = try await client.guidanceProgress()
+            guidanceProgress = pendingGuidanceEvents().reduce(remoteProgress) {
+                $0.applying($1)
+            }
+            await flushGuidanceEvents(using: client)
+        } catch {
+            // 案内の取得失敗で、契約・支出・見直しの通常利用を止めない。
+        }
+    }
+
+    private func enqueueGuidanceEvent(_ event: GuidanceEvent) {
+        var pending = pendingGuidanceEvents()
+        if !pending.contains(event) { pending.append(event) }
+        guidanceDefaults.set(pending.map(\.rawValue), forKey: Self.pendingGuidanceEventsKey)
+    }
+
+    private func pendingGuidanceEvents() -> [GuidanceEvent] {
+        (guidanceDefaults.stringArray(forKey: Self.pendingGuidanceEventsKey) ?? [])
+            .compactMap(GuidanceEvent.init(rawValue:))
+    }
+
+    private func flushGuidanceEvents(using suppliedClient: (any ProductAPIProviding)? = nil) async {
+        guard let client = suppliedClient ?? configuredClient() else { return }
+        var remaining = pendingGuidanceEvents()
+        while let event = remaining.first {
+            do {
+                let remoteProgress = try await client.recordGuidanceEvent(event)
+                remaining.removeFirst()
+                guidanceProgress = remaining.reduce(remoteProgress) {
+                    $0.applying($1)
+                }
+                guidanceDefaults.set(remaining.map(\.rawValue), forKey: Self.pendingGuidanceEventsKey)
+            } catch {
+                return
+            }
+        }
     }
 
     private func handle(_ error: Error) {
@@ -262,4 +323,5 @@ struct ProductPreviewSnapshot {
     let spending: SpendingSummary?
     var updatedAt: Date? = Date()
     var errorMessage: String? = nil
+    var guidanceProgress: GuidanceProgress = .empty
 }

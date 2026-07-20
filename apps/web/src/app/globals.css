@@ -175,6 +175,10 @@ body {
   color: var(--sage);
   border: 1px solid #cdd6cc;
 }
+.btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
 .user {
   display: flex;
   align-items: center;

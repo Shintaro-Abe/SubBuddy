@@ -129,6 +129,7 @@ tags = ["openai", "oauth", "secret"]
   description = "Allowlist common non-token rt_ patterns"
   regexes = [
     '''(?i)rt_(?:timeout|error|success|limit|max|min|value|type|count|index)''',
+    '''rt_approval_messages''',
     '''rt_description''',
   ]
 

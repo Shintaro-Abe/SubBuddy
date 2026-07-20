@@ -9,10 +9,12 @@ import { usePathname } from "next/navigation";
  */
 const NAV = [
   { href: "/", label: "ダッシュボード" },
-  { href: "/subscriptions", label: "サブスク一覧" },
+  { href: "/subscriptions", label: "契約" },
   { href: "/spending", label: "支出の内訳" },
-  { href: "/recommendations", label: "レコメンド" },
+  { href: "/recommendations", label: "見直し" },
   { href: "/renewals", label: "更新間近" },
+  { href: "/getting-started", label: "使い方" },
+  { href: "/settings", label: "設定" },
 ];
 
 function isActive(pathname: string, href: string): boolean {

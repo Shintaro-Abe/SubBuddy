@@ -3,6 +3,7 @@ import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { daysUntil, formatDate, formatYen } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
+import { ScreenIntro } from "@/components/ScreenIntro";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export default async function RenewalsPage({
       <p className="caption" style={{ marginTop: 8 }}>
         更新日が近い契約を、更新前に見直せます。
       </p>
+      <ScreenIntro screen="renewals">
+        更新日を登録済みの契約だけを表示します。表示されない契約は、契約画面で更新日を確認できます。
+      </ScreenIntro>
 
       <div className="seg" style={{ margin: "18px 0 6px" }}>
         {DAY_OPTIONS.map((opt) => (

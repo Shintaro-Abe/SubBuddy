@@ -49,13 +49,34 @@ struct SubscriptionListView: View {
                 )
             } else {
                 List {
-                    Picker("表示", selection: $filter) {
-                        ForEach(SubscriptionFilter.allCases) { item in
-                            Text(item.rawValue).tag(item)
+                    if !store.guidanceProgress.steps.inventory {
+                        Section {
+                            Button("棚卸しを終える") {
+                                Task { await store.recordGuidanceEvent(.inventoryCompleted) }
+                            }
+                        } footer: {
+                            Text("思い出せる契約を登録したら、次の支出確認へ進めます。契約は後から追加できます。")
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .listRowBackground(Color.clear)
+                    Section {
+                        VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                            FirstVisitExplanation(
+                                key: "subscriptions",
+                                text: "ここに登録した契約だけが、支出集計と見直しの対象になります。思い出せる範囲から追加できます。"
+                            )
+                            .fixedSize(horizontal: false, vertical: true)
+
+                            Picker("表示", selection: $filter) {
+                                ForEach(SubscriptionFilter.allCases) { item in
+                                    Text(item.rawValue).tag(item)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                        .padding(.vertical, AppSpacing.xSmall)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
 
                     if filtered.isEmpty {
                         Text("条件に合う契約はありません。")
@@ -166,7 +187,11 @@ struct SubscriptionDetailView: View {
 
                         if let recommendation = store.recommendation(for: subscription.id) {
                             NavigationLink {
-                                ReviewDetailView(subscription: subscription, recommendation: recommendation)
+                                ReviewDetailView(
+                                    subscription: subscription,
+                                    recommendation: recommendation,
+                                    store: store
+                                )
                             } label: {
                                 ReviewSummaryCard(subscription: subscription, recommendation: recommendation)
                             }
@@ -594,6 +619,9 @@ struct MeasurementSetupView: View {
             session.load(subscriptionId: subscription.id)
             draftSelection = session.selection
             refreshAuthorizationState()
+            if session.hasConfiguration {
+                Task { await store.recordGuidanceEvent(.measurementConfigured) }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -611,6 +639,9 @@ struct MeasurementSetupView: View {
             } else if !session.hasConfiguration {
                 session.select(draftSelection)
                 draftSelection = session.selection
+                if session.hasConfiguration {
+                    Task { await store.recordGuidanceEvent(.measurementConfigured) }
+                }
             }
         }
         .confirmationDialog(
@@ -623,6 +654,9 @@ struct MeasurementSetupView: View {
                     await session.replaceSelection(with: draftSelection)
                     await store.loadAll()
                     draftSelection = session.selection
+                    if session.hasConfiguration {
+                        await store.recordGuidanceEvent(.measurementConfigured)
+                    }
                 }
             }
             Button("キャンセル", role: .cancel) {
@@ -641,6 +675,7 @@ struct MeasurementSetupView: View {
                     await session.removeConfiguration()
                     await store.loadAll()
                     draftSelection = session.selection
+                    await store.recordGuidanceEvent(.measurementReset)
                 }
             }
             Button("キャンセル", role: .cancel) {}

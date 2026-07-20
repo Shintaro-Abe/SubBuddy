@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { SubscriptionCard } from "@/components/SubscriptionCard";
+import { ScreenIntro } from "@/components/ScreenIntro";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function SubscriptionsPage() {
     <div>
       <div className="pagehead flex items-end justify-between gap-4">
         <div>
-          <p className="display">サブスク一覧</p>
+          <p className="display">契約</p>
           <p className="caption" style={{ marginTop: 8 }}>
             継続中 <span className="num">{rows.length}</span> 件
           </p>
@@ -21,6 +22,9 @@ export default async function SubscriptionsPage() {
           ＋ サブスクを登録
         </Link>
       </div>
+      <ScreenIntro screen="subscriptions">
+        ここに登録した契約だけが、支出集計と見直しの対象になります。思い出せる範囲から追加できます。
+      </ScreenIntro>
 
       {rows.length === 0 ? (
         <div className="panel" style={{ marginTop: 24 }}>

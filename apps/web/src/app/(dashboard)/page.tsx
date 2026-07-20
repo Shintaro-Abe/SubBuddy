@@ -4,6 +4,8 @@ import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 import { daysUntil, formatYen } from "@/lib/display";
 import { RecomputeButton } from "@/components/RecomputeButton";
+import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
+import { getResolvedGuidanceProgress } from "@/services/guidance-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,11 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 export default async function DashboardPage() {
-  const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
+  const userId = await requireServerUserId();
+  const [rows, guidance] = await Promise.all([
+    getSubscriptionsWithLatestRecommendation(userId),
+    getResolvedGuidanceProgress(userId),
+  ]);
   const active = rows.filter((r) => r.subscription.status === "active");
 
   let monthlyTotal = 0;
@@ -78,7 +84,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap gap-6">
           <Link href="/subscriptions" className="text-[var(--sage)] hover:underline">
-            サブスク一覧へ →
+            契約へ →
           </Link>
           <Link href="/recommendations" className="text-[var(--sage)] hover:underline">
             判定の根拠を見る →
@@ -110,6 +116,8 @@ export default async function DashboardPage() {
             </p>
           </div>
         )}
+
+        <GettingStartedChecklist progress={guidance} subscriptionCount={rows.length} compact />
       </section>
     </div>
   );
