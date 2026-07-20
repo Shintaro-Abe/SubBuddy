@@ -146,7 +146,8 @@ aliases:
   - 同期は`POST /api/usage/daily`を使う。local modeは`USAGE_SYNC_TOKEN`、cloud-testflight / productionは登録端末のデバイス同期トークンで認証する。根拠：`apps/web/src/lib/usage-auth.ts`。
   - 保存は`subscription_id × usage_date`を一意キーにした冪等upsertで、再送時は利用バケットと概算時間の最大値へ収束する。認証済みユーザーの所有権確認と保存は同一transactionで行う。根拠：`apps/web/src/repositories/usage.ts`。
 - 計測の意味（E2E が運ぶデータの性質。誤解しやすい）：
-  - DeviceActivity は**前面利用時間**を閾値（15 / 30 / 60 / 120 分）で測り、バケット（`m15_plus`..`m120_plus`、上限 120 分）化する。根拠：`MonitorScheduler.swift`（`SpikeConstants.thresholdMinutes`）／ `apps/web/src/lib/usage-bucket.ts`。
+  - DeviceActivity は**前面利用時間**を閾値（15 / 30 / 60 / 120 分）で測る。iOS/APIのwire表現は`15m_plus`..`120m_plus`、DB内部表現は`m15_plus`..`m120_plus`。根拠：`AppConstants.thresholdMinutes`／`MonitorScheduler.swift`／`apps/web/src/lib/usage-bucket.ts`。
+  - 2026-07-20時点では、認可済みで契約にアプリを対応付けると自動計測し、起動・Appleサインイン完了・フォアグラウンド復帰時に日別集計を自動同期する。`今すぐ同期`は確認・復旧用。詳細は`2026-07-20_screen-time-auto-measurement-sync-current-state.md`。
   - **ロック中の背景音声・別端末での視聴・他アプリへ切り替え中は計測外**。利用量は「前面で見ていた時間」の下限近似でしかない。
   - Shortcuts 起動シグナルは「前面で開いた事実」だけを表す（`used=true / bucket=none / source=ios_shortcut`）。時間量ではない。
 - セキュリティ運用上の注意：`SubBuddySpike/Shared/Constants.swift` には実トークン・実 IP・実サブスク ID が書かれうる（gitignore 対象であるべきファイル）。**実値をコミットしない**。本文の値はすべて例示・プレースホルダ。

@@ -167,7 +167,11 @@ final class MeasurementSession: ObservableObject {
             AuthorizationCenter.shared.authorizationStatus == .approved
         },
         isStoredSelectionValid: @escaping (FamilyActivitySelection) -> Bool = {
-            MeasurementSession.isSingleApplication($0)
+            MeasurementSession.isSingleApplication(
+                applicationCount: $0.applicationTokens.count,
+                categoryCount: $0.categoryTokens.count,
+                webDomainCount: $0.webDomainTokens.count
+            )
         }
     ) {
         self.scheduler = scheduler
@@ -473,9 +477,11 @@ final class MeasurementSession: ObservableObject {
 
         do {
             let count = try await syncService.syncAll()
+            UsageSyncStatus.recordSuccess(at: Date())
             refreshRecords()
             statusMessage = "\(count)件を同期しました"
         } catch {
+            UsageSyncStatus.recordFailure(at: Date())
             statusMessage = "同期できませんでした。通信を確認して、もう一度お試しください"
         }
     }

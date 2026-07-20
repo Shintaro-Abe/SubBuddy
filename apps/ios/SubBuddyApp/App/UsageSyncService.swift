@@ -1,6 +1,71 @@
+import Combine
 import Foundation
 
-final class UsageSyncService {
+protocol UsageSyncing {
+    func syncAll() async throws -> Int
+}
+
+enum UsageAutomaticSyncOutcome: Equatable {
+    case skippedSignedOut
+    case skippedInProgress
+    case succeeded(Int)
+    case failed
+}
+
+enum UsageSyncStatus {
+    static let lastSuccessAtKey = "usage_sync_last_success_at"
+    static let lastAttemptAtKey = "usage_sync_last_attempt_at"
+    static let lastFailedKey = "usage_sync_last_failed"
+
+    static func recordSuccess(at date: Date, defaults: UserDefaults = .standard) {
+        defaults.set(date.timeIntervalSince1970, forKey: lastSuccessAtKey)
+        defaults.set(date.timeIntervalSince1970, forKey: lastAttemptAtKey)
+        defaults.set(false, forKey: lastFailedKey)
+    }
+
+    static func recordFailure(at date: Date, defaults: UserDefaults = .standard) {
+        defaults.set(date.timeIntervalSince1970, forKey: lastAttemptAtKey)
+        defaults.set(true, forKey: lastFailedKey)
+    }
+}
+
+@MainActor
+final class UsageAutoSyncCoordinator: ObservableObject {
+    @Published private(set) var isSyncing = false
+
+    private let syncService: any UsageSyncing
+    private let defaults: UserDefaults
+    private let now: () -> Date
+
+    init(
+        syncService: any UsageSyncing = UsageSyncService(),
+        defaults: UserDefaults = .standard,
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.syncService = syncService
+        self.defaults = defaults
+        self.now = now
+    }
+
+    func syncIfEligible(isSignedIn: Bool) async -> UsageAutomaticSyncOutcome {
+        guard isSignedIn else { return .skippedSignedOut }
+        guard !isSyncing else { return .skippedInProgress }
+
+        isSyncing = true
+        defer { isSyncing = false }
+
+        do {
+            let count = try await syncService.syncAll()
+            UsageSyncStatus.recordSuccess(at: now(), defaults: defaults)
+            return .succeeded(count)
+        } catch {
+            UsageSyncStatus.recordFailure(at: now(), defaults: defaults)
+            return .failed
+        }
+    }
+}
+
+final class UsageSyncService: UsageSyncing {
     private let store = SharedStore()
     private let mappingStore = MappingStore()
     private let mutationStore = MeasurementMutationStore()
@@ -33,7 +98,29 @@ final class UsageSyncService {
         guard !records.isEmpty else { return 0 }
         let pendingSubscriptionIDs = mutationStore.pendingSubscriptionIDs()
 
-        let mappedRecords = records.compactMap { record -> (UsageRecord, UsageItem)? in
+        let mappedRecords = Self.mappedRecords(
+            records: records,
+            mappingStore: mappingStore,
+            pendingSubscriptionIDs: pendingSubscriptionIDs
+        )
+        let items = mappedRecords.map { $0.1 }
+
+        guard !items.isEmpty else { return 0 }
+
+        try await send(BatchPayload(items: items), apiBaseURL: apiBaseURL, deviceSyncToken: deviceSyncToken)
+
+        let acknowledgedPastRecords = mappedRecords.map { $0.0 }.filter { $0.date < today }
+        store.removeAcknowledged(acknowledgedPastRecords)
+
+        return items.count
+    }
+
+    static func mappedRecords(
+        records: [UsageRecord],
+        mappingStore: any SubscriptionMappingStoring,
+        pendingSubscriptionIDs: Set<String>
+    ) -> [(UsageRecord, UsageItem)] {
+        records.compactMap { record -> (UsageRecord, UsageItem)? in
             guard let subscriptionId = mappingStore.subscriptionId(for: record.activityId),
                   !pendingSubscriptionIDs.contains(subscriptionId) else {
                 return nil
@@ -52,16 +139,6 @@ final class UsageSyncService {
                 )
             )
         }
-        let items = mappedRecords.map { $0.1 }
-
-        guard !items.isEmpty else { return 0 }
-
-        try await send(BatchPayload(items: items), apiBaseURL: apiBaseURL, deviceSyncToken: deviceSyncToken)
-
-        let acknowledgedPastRecords = mappedRecords.map { $0.0 }.filter { $0.date < today }
-        store.removeAcknowledged(acknowledgedPastRecords)
-
-        return items.count
     }
 
     private func send(_ payload: BatchPayload, apiBaseURL: URL, deviceSyncToken: String) async throws {

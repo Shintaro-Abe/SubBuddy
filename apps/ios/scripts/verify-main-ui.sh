@@ -28,7 +28,7 @@ run_xcodebuild() {
   set -e
   if [[ $status -ne 0 ]]; then
     echo "ビルドまたはテストのエラー:" >&2
-    grep -nE '(^|[[:space:]])error:' "$log_file" >&2 || true
+    grep -nE '(^|[[:space:]])error:|Testing failed:|failed to launch|preflight checks|request was denied' "$log_file" >&2 || true
     echo "完全なログ: $log_file" >&2
     exit "$status"
   fi
@@ -42,8 +42,12 @@ run_xcodebuild \
     CODE_SIGNING_ALLOWED=NO \
     build
 
+simulator_id=""
 if [[ -n "${SUBBUDDY_IOS_TEST_DESTINATION:-}" ]]; then
   destination="$SUBBUDDY_IOS_TEST_DESTINATION"
+  if [[ "$destination" =~ id=([^,]+) ]]; then
+    simulator_id="${BASH_REMATCH[1]}"
+  fi
 else
   available_destinations="$(
     xcodebuild \
@@ -85,9 +89,21 @@ else
 fi
 
 echo "テスト先: $destination"
+if [[ -n "$simulator_id" ]]; then
+  echo "Simulatorの起動完了を待っています。"
+  xcrun simctl boot "$simulator_id" >/dev/null 2>&1 || true
+  xcrun simctl bootstatus "$simulator_id" -b
+
+  echo "古いSubBuddyだけをSimulatorから削除して入れ直します。"
+  xcrun simctl terminate "$simulator_id" com.subbuddy.app >/dev/null 2>&1 || true
+  xcrun simctl uninstall "$simulator_id" com.subbuddy.app >/dev/null 2>&1 || true
+fi
+
 run_xcodebuild \
     -project SubBuddy.xcodeproj \
     -scheme SubBuddyApp \
     -destination "$destination" \
-    CODE_SIGNING_ALLOWED=NO \
-    test
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_REQUIRED=YES \
+    CODE_SIGN_IDENTITY=- \
+    clean test

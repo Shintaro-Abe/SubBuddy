@@ -16,7 +16,7 @@
 
 ### 2. 状態照合を冪等にする
 
-`MeasurementReconciler`を設け、アプリ起動、フォアグラウンド復帰、認可完了、契約一覧更新、対象変更・解除完了後に実行する。
+`MeasurementSession.reconcileCurrentConfiguration()`が`MeasurementPolicy`で期待状態を判定し、アプリ起動、フォアグラウンド復帰、認可完了、契約一覧更新、対象変更・解除完了後に照合する。
 
 - 監視すべき契約が未監視なら開始する。
 - 監視すべきでない契約が監視中なら、その契約の監視だけを停止する。
@@ -30,7 +30,7 @@
 
 1. 新対象が1アプリであり、別契約と重複しないことを確認する。解除では新対象を持たない。
 2. 削除範囲を表示し、利用者の確定を得る。
-3. `measurementMutation`を`pendingCleanup`として保存し、その契約の同期を保留する。
+3. `measurementMutation`へ操作種別、旧Activity ID、変更時の新しい選択データを保存し、その契約の同期を保留する。
 4. 旧対象の監視を停止する。
 5. 認証・所有権を確認する計測データ削除APIを冪等に呼び、同期済み日別集計と見直しスナップショットを削除する。
 6. 端末内の旧対応表、未送信集計、集計値を対象Activity IDに限定して削除する。
@@ -57,11 +57,11 @@
 |---|---|---|
 | `apps/ios/SubBuddyApp/App/MeasurementSession.swift` | 手動開始・停止前提を除き、選択・変更・解除と導出状態へ再構成 | AC-1〜AC-9 |
 | `apps/ios/SubBuddyApp/App/MonitorScheduler.swift` | 契約単位の冪等な開始・停止を状態照合から利用 | AC-1, AC-2, AC-8, AC-9 |
-| `apps/ios/SubBuddyApp/App/MappingStore.swift` | 対応表と中断可能な`measurementMutation`を保存 | AC-5, AC-6, AC-9 |
+| `apps/ios/SubBuddyApp/App/MappingStore.swift` / `Shared/MeasurementMutationStore.swift` | 対応表と中断可能な`measurementMutation`をそれぞれ保存 | AC-5, AC-6, AC-9 |
 | `apps/ios/SubBuddyApp/App/SubscriptionViews.swift` | 開始・停止ボタンを対象選択・変更・解除と確認表示へ置換 | AC-3〜AC-8 |
 | iOSの同期処理 | 処理中契約の旧集計を送らず、完了後に通常同期へ戻す | AC-5, AC-6, AC-9 |
 | `apps/web/src/app/api/subscriptions/[id]/usage/route.ts` | 所有権検証付きの冪等な計測データ削除APIを追加 | AC-5, AC-6, AC-10, AC-11 |
-| `apps/web/src/repositories/usage.ts` | 対象契約の集計値と見直し結果をトランザクション削除 | AC-5, AC-6, AC-10, AC-11 |
+| `apps/web/src/repositories/measurement-data.ts` | 対象契約の集計値と見直し結果をトランザクション削除 | AC-5, AC-6, AC-10, AC-11 |
 | iOS・Webテスト | 状態遷移、削除範囲、認可、再試行、テナント境界を合成データで検証 | AC-1〜AC-12 |
 | `docs/product-requirements.md` / `docs/functional-design.md` / `docs/glossary.md` | 計測開始・変更・解除・削除の製品仕様と用語を同期 | AC-3〜AC-8, AC-11 |
 
@@ -77,11 +77,10 @@ struct MeasurementMutation: Codable {
     let oldActivityName: String
     let replacementSelection: Data?
     let operation: Operation // replace / unlink
-    let phase: Phase // pendingCleanup / remoteDeleted / localDeleted
 }
 ```
 
-実装時は既存のApp Group排他制御を利用し、保存形式のバージョンと不正値の安全な破棄を定義する。
+処理は削除APIの冪等性を利用して先頭から安全に再試行する。完了するまでmutationを残し、同期処理はその契約を除外する。
 
 ### サーバー
 

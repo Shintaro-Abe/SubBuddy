@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-17（iPhone主製品UI、認証セッション、iOS検証境界を反映）
+> 最終更新：2026-07-20（Screen Time計測しきい値と自動同期境界を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -60,16 +60,16 @@ flowchart TB
 
 ## 3. テクノロジースタック
 
-### 3.1 Mac 側（Web / API / DB / Worker）
+### 3.1 Web / API / DB / Worker側
 
 | 領域 | 採用技術 | 採用理由 |
 |---|---|---|
 | 言語 | TypeScript | 型安全。Web/API/ドメインを単一言語で統一 |
 | Web フレームワーク | Next.js（App Router） | Web ダッシュボードと Route Handlers API を 1 アプリで提供。ローカル単体起動が容易 |
 | UI | React + Tailwind CSS | 共通デザインシステムで統一感（要求 14・機能設計 6.1） |
-| API | Next.js Route Handlers | 別サーバー不要。`/api/*` をローカル提供（機能設計 10） |
+| API | Next.js Route Handlers | Webと同じサービスで`/api/*`を提供（機能設計 10） |
 | ORM | Prisma | スキーマ駆動・マイグレーション・型生成。リポジトリ層を薄く保つ |
-| DB | PostgreSQL | ローカル常設。集計・履歴・将来拡張に耐える |
+| DB | PostgreSQL | local modeはローカル、cloud-testflight modeはRenderのマネージドDB。集計・履歴・将来拡張に耐える |
 | ジョブ/Worker | MVP: アプリ内処理 / フェーズ2: BullMQ + Redis | MVP は同期計算で十分。将来の定期実行・分離に備える |
 | バリデーション | Zod | API 入力・フォーム入力のスキーマ検証。型と単一ソース化 |
 | テスト | Vitest（単体）/ Playwright（E2E 任意） | スコアリング等のドメインロジックを単体テスト中心で担保 |
@@ -84,10 +84,10 @@ flowchart TB
 | 言語 / UI | Swift / SwiftUI | iOS アプリ本体 |
 | 利用量計測 | FamilyControls / DeviceActivity / ManagedSettings | Screen Time のしきい値イベント取得（要 entitlement） |
 | 対象選択 | FamilyActivityPicker | 1契約につき1つの計測対象アプリを選択（UC-09）。同じアプリの契約間重複は端末内で拒否 |
-| 集計イベント | DeviceActivityMonitor Extension | しきい値（1m/5m/15m/30m/60m/120m）超過イベントを受信し日別集計 |
+| 集計イベント | DeviceActivityMonitor Extension | 現行しきい値（15分/30分/60分/120分）超過イベントを受信し日別集計。1分/5分はAPI互換用の共有enumにのみ残す |
 | 秘密情報の保存 | Keychain（ThisDeviceOnly） | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID |
 | 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |
-| 同期 | URLSession（HTTPS） | SubBuddy API へ**集計値のみ**送信 |
+| 同期 | URLSession（HTTPS） | 本体アプリの起動・サインイン完了・フォアグラウンド復帰時にSubBuddy APIへ**集計値のみ**自動送信。失敗時は端末内保持して再試行 |
 
 > iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤でのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 

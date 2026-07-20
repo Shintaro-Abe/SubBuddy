@@ -6,6 +6,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var authSession = AuthSession()
     @StateObject private var productStore = ProductStore()
+    @StateObject private var usageAutoSync = UsageAutoSyncCoordinator()
     @AppStorage("has_seen_intro") private var hasSeenIntro = false
     @AppStorage("onboarding_completed") private var onboardingCompleted = false
 
@@ -25,7 +26,11 @@ struct ContentView: View {
         .environment(\.font, .appBody)
         .background(AppColor.background.ignoresSafeArea())
         .onChange(of: authSession.isSignedIn) { _, isSignedIn in
-            if !isSignedIn { productStore.clearSensitiveData() }
+            if !isSignedIn {
+                productStore.clearSensitiveData()
+            } else {
+                Task { _ = await usageAutoSync.syncIfEligible(isSignedIn: true) }
+            }
         }
         .onChange(of: productStore.requiresReauthentication) { _, requiresReauthentication in
             if requiresReauthentication { authSession.requireReauthentication() }
@@ -33,7 +38,11 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, authSession.isSignedIn {
                 productStore.reconcileMeasurements()
+                Task { _ = await usageAutoSync.syncIfEligible(isSignedIn: true) }
             }
+        }
+        .task {
+            _ = await usageAutoSync.syncIfEligible(isSignedIn: authSession.isSignedIn)
         }
     }
 

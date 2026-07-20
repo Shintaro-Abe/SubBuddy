@@ -555,6 +555,137 @@ final class ProductUITests: XCTestCase {
         let deletedSubscriptionIDs = await api.deletedMeasurementSubscriptionIDs()
         XCTAssertEqual(deletedSubscriptionIDs, ["synthetic-sub"])
     }
+
+    @MainActor
+    func testAutomaticUsageSyncSkipsSignedOutSession() async {
+        let service = RecordingUsageSyncService(outcome: .success(1))
+        let defaults = makeSyntheticSyncDefaults()
+        let coordinator = UsageAutoSyncCoordinator(syncService: service, defaults: defaults)
+
+        let outcome = await coordinator.syncIfEligible(isSignedIn: false)
+        let callCount = await service.numberOfCalls()
+
+        XCTAssertEqual(outcome, .skippedSignedOut)
+        XCTAssertEqual(callCount, 0)
+        XCTAssertEqual(defaults.double(forKey: UsageSyncStatus.lastAttemptAtKey), 0)
+    }
+
+    @MainActor
+    func testAutomaticUsageSyncRecordsSuccessfulAttempt() async {
+        let service = RecordingUsageSyncService(outcome: .success(2))
+        let defaults = makeSyntheticSyncDefaults()
+        defaults.set(true, forKey: UsageSyncStatus.lastFailedKey)
+        let fixedDate = Date(timeIntervalSince1970: 4_102_444_800)
+        let coordinator = UsageAutoSyncCoordinator(
+            syncService: service,
+            defaults: defaults,
+            now: { fixedDate }
+        )
+
+        let outcome = await coordinator.syncIfEligible(isSignedIn: true)
+        let callCount = await service.numberOfCalls()
+
+        XCTAssertEqual(outcome, .succeeded(2))
+        XCTAssertEqual(callCount, 1)
+        XCTAssertEqual(
+            defaults.double(forKey: UsageSyncStatus.lastSuccessAtKey),
+            fixedDate.timeIntervalSince1970
+        )
+        XCTAssertFalse(defaults.bool(forKey: UsageSyncStatus.lastFailedKey))
+    }
+
+    @MainActor
+    func testAutomaticUsageSyncKeepsRetryableFailureState() async {
+        let service = RecordingUsageSyncService(outcome: .failure)
+        let defaults = makeSyntheticSyncDefaults()
+        let fixedDate = Date(timeIntervalSince1970: 4_102_444_801)
+        let coordinator = UsageAutoSyncCoordinator(
+            syncService: service,
+            defaults: defaults,
+            now: { fixedDate }
+        )
+
+        let outcome = await coordinator.syncIfEligible(isSignedIn: true)
+
+        XCTAssertEqual(outcome, .failed)
+        XCTAssertEqual(defaults.double(forKey: UsageSyncStatus.lastSuccessAtKey), 0)
+        XCTAssertEqual(
+            defaults.double(forKey: UsageSyncStatus.lastAttemptAtKey),
+            fixedDate.timeIntervalSince1970
+        )
+        XCTAssertTrue(defaults.bool(forKey: UsageSyncStatus.lastFailedKey))
+    }
+
+    @MainActor
+    func testAutomaticUsageSyncSuppressesConcurrentAttempt() async {
+        let service = RecordingUsageSyncService(outcome: .success(1), delayNanoseconds: 50_000_000)
+        let coordinator = UsageAutoSyncCoordinator(
+            syncService: service,
+            defaults: makeSyntheticSyncDefaults()
+        )
+
+        let firstTask = Task { @MainActor in
+            await coordinator.syncIfEligible(isSignedIn: true)
+        }
+        while !coordinator.isSyncing { await Task.yield() }
+        let second = await coordinator.syncIfEligible(isSignedIn: true)
+        let firstOutcome = await firstTask.value
+        let callCount = await service.numberOfCalls()
+
+        XCTAssertEqual(second, .skippedInProgress)
+        XCTAssertEqual(firstOutcome, .succeeded(1))
+        XCTAssertEqual(callCount, 1)
+    }
+
+    func testUsageSyncExcludesPendingMeasurementMutation() {
+        let mappings = SyntheticMappingStore(mappings: [
+            SubscriptionMapping(
+                subscriptionId: "synthetic-safe",
+                activityName: "sub_synthetic-safe",
+                selection: Data()
+            ),
+            SubscriptionMapping(
+                subscriptionId: "synthetic-pending",
+                activityName: "sub_synthetic-pending",
+                selection: Data()
+            ),
+        ])
+        let records = [
+            UsageRecord(
+                activityId: "sub_synthetic-safe",
+                eventId: "synthetic_safe_15m",
+                date: "2099-01-01",
+                bucket: .m15Plus,
+                generatedAt: Date(timeIntervalSince1970: 0),
+                sequence: 1
+            ),
+            UsageRecord(
+                activityId: "sub_synthetic-pending",
+                eventId: "synthetic_pending_30m",
+                date: "2099-01-01",
+                bucket: .m30Plus,
+                generatedAt: Date(timeIntervalSince1970: 0),
+                sequence: 1
+            ),
+        ]
+
+        let mapped = UsageSyncService.mappedRecords(
+            records: records,
+            mappingStore: mappings,
+            pendingSubscriptionIDs: ["synthetic-pending"]
+        )
+
+        XCTAssertEqual(mapped.map { $0.1.subscriptionId }, ["synthetic-safe"])
+        XCTAssertEqual(mapped.map { $0.1.date }, ["2099-01-01"])
+        XCTAssertEqual(mapped.map { $0.1.usageBucket }, ["15m_plus"])
+    }
+
+    private func makeSyntheticSyncDefaults() -> UserDefaults {
+        let suiteName = "SubBuddy.ProductUITests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
 }
 
 private final class RecordingMonitoringScheduler: MonitoringScheduling {
@@ -776,4 +907,35 @@ private actor SyntheticProductAPI: ProductAPIProviding {
 
 private enum SyntheticAPIError: Error {
     case unused
+}
+
+private actor RecordingUsageSyncService: UsageSyncing {
+    enum Outcome {
+        case success(Int)
+        case failure
+    }
+
+    private let outcome: Outcome
+    private let delayNanoseconds: UInt64
+    private var calls = 0
+
+    init(outcome: Outcome, delayNanoseconds: UInt64 = 0) {
+        self.outcome = outcome
+        self.delayNanoseconds = delayNanoseconds
+    }
+
+    func syncAll() async throws -> Int {
+        calls += 1
+        if delayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: delayNanoseconds)
+        }
+        switch outcome {
+        case .success(let count):
+            return count
+        case .failure:
+            throw SyntheticAPIError.unused
+        }
+    }
+
+    func numberOfCalls() -> Int { calls }
 }

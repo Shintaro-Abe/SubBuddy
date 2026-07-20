@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-17（iPhone利用者向けUI、認証、iOS検証状態を反映）
+> 最終更新：2026-07-20（Screen Time自動計測・自動同期・契約別集計を反映）
 > 関連：`product-requirements.md`（要求）、`architecture.md`（技術仕様）、`glossary.md`（用語）
 
 ---
@@ -102,7 +102,7 @@ flowchart LR
 ### 4.1 各機能の責務（MVP 主要機能）
 
 - **F-04 利用量自動取得**：iOS 側が OS の Screen Time を計測し、`used / usage_bucket / 推定時間レンジ` を
-  **日別・サブスク単位の集計値**として生成し、API へ同期。Mac 側は `ios_usage_daily_summaries` に保存する。
+  **日別・サブスク単位の集計値**として生成し、API へ同期。実行モードに対応するPostgreSQLの`ios_usage_daily_summaries`に保存する。
   詳細ログ・全アプリ一覧は送らない。同期は冪等（同一 `subscription_id × usage_date` は upsert）。
 - **F-06 レコメンドエンジン**：Worker（または API 内処理）が、subscriptions・billing_events・
   ios_usage_daily_summaries を入力に `decision` と判定根拠 `matchedPatterns`（当てはまったパターンの一覧）を算出し、
@@ -302,6 +302,8 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 `none / 1m_plus / 5m_plus / 15m_plus / 30m_plus / 60m_plus / 120m_plus`。
 `source` は `ios_device_activity` / `ios_shortcut` / `manual_synthetic` 等。`subscription_id × usage_date` を一意キーとして upsert。
 
+`usage_bucket`はAPIのwire表現（＝通信上の値）。現行のDeviceActivityが生成するのは`15m_plus / 30m_plus / 60m_plus / 120m_plus`で、`1m_plus / 5m_plus`は既存入力との互換用に残す。PostgreSQLではPrisma enumの内部表現`m15_plus`等として表示される。
+
 #### devices（登録済み iPhone デバイス）
 
 クラウド配布版で、ユーザーに紐づく iPhone デバイスを表す。`token_hash` はデバイス同期トークンのハッシュであり、平文トークンは保存しない。
@@ -446,26 +448,30 @@ flowchart LR
 - **例外**：必須未入力/不正値はエラーで保存しない。対象外 Apple サービスは候補に出さず注意表示。
 - **事後条件**：subscriptions に1件追加、以降のモニタリング・スコアリング対象になる。
 
-#### UC-04 利用量を自動同期する（iPhone → Mac）
+#### UC-04 利用量を自動同期する（iPhone → SubBuddy API）
 
 - **アクター**：iPhone（iOSアプリ）
 - **事前条件**：Family Controls の authorization 済み、計測対象が選択済み（UC-09）。クラウド配布版では Apple サインイン後にデバイス登録済み。
 - **基本フロー**：
   1. iOS が Screen Time のしきい値イベントを集計
   2. 日別・サブスク単位で `used / usage_bucket / 推定時間レンジ` を生成
-  3. HTTPS で API（usage 同期）へ集計値バッチを送信
-  4. API が同期トークンから `user_id` と `device_id` を解決
-  5. API が `subscription_id` の所有者を確認
-  6. API が `subscription_id × usage_date` で upsert 保存
-- **制約**：送信は集計値のみ（詳細ログ・全アプリ一覧は送らない）。request body の `userId` は受け付けない。
+  3. 本体アプリの起動、Appleサインイン完了、フォアグラウンド復帰時に、サインイン状態と同期中状態を確認
+  4. 計測対象変更・解除の保留中ではない契約だけを同期対象にする
+  5. HTTPS で API（usage 同期）へ集計値バッチを送信
+  6. API が同期トークンから `user_id` と `device_id` を解決
+  7. API が `subscription_id` の所有者を確認
+  8. API が `subscription_id × usage_date` で upsert 保存
+  9. 成功日時を端末内へ記録。失敗時は未送信集計を保持し、次回起動・復帰または手動操作で再試行
+- **例外**：サインアウト中は送信しない。同時に別の自動同期が動いている場合は追加実行しない。通信・認証・サーバーエラーでは集計を削除しない。
+- **制約**：送信は集計値のみ（詳細ログ・全アプリ一覧は送らない）。request body の `userId` は受け付けない。iOSが実行時刻を保証しないため、アプリ未起動中の即時同期は保証しない。
 - **事後条件**：`ios_usage_daily_summaries` 更新、スコアリングの入力になる。
 
 #### UC-05 スコアリング・レコメンド生成
 
-- **トリガー**：利用量同期後／サブスク更新後／定期実行（更新日接近）
+- **トリガー**：iPhoneの`見直し`画面またはWebの明示的な再計算操作。計測対象の変更・解除APIは旧利用量と旧スナップショットを削除した後、利用量なしで再計算する。通常の利用量同期だけでは自動再計算しない。
 - **基本フロー**：入力（subscriptions・billing_events・usage）→ ルール適用 → `cancel_score`・`decision`・`reason` →
   `recommendation_snapshots` に履歴保存。
-- **事後条件**：最新レコメンドが Web に表示可能になる。
+- **事後条件**：最新レコメンドがiPhoneとWebに表示可能になる。同期直後に新しい集計を反映したい場合は再計算操作が必要。
 
 #### UC-07 解約導線を開く
 
@@ -719,7 +725,7 @@ flowchart TB
   Launch[起動シグナル<br/>Shortcuts 由来の機能を吸収]
   Agg[オンデバイス集計<br/>日別・バケット化]
   Store[ローカル保存<br/>App Groupファイル]
-  Sync[SubBuddy API へ集計値同期]
+  Sync[本体アプリ起動・サインイン・復帰時に<br/>SubBuddy APIへ集計値自動同期]
 
   Auth --> Pick --> Mon --> Agg --> Store --> Sync
   Launch --> Agg
@@ -730,7 +736,7 @@ flowchart TB
 - Screen Time認可済みで有効な契約にアプリを対応付けた時点から自動的に監視を開始する。手動の開始・停止状態は持たず、認可・契約・対応付けと実際の監視登録を、起動・フォアグラウンド復帰・認可変更・契約一覧更新時に照合する。
 - Shortcuts 由来の起動シグナルは iPhone アプリの機能として吸収し、外部ショートカット設定を v1 の主経路にしない。既存の `ios_shortcut` ソース値は互換のため残す。
 - 集計はオンデバイスで行い、SubBuddy API へは集計値のみ送信。詳細 Screen Time データは端末内に留める。
-- DeviceActivityMonitor Extension は通信しない。しきい値到達時に App Group へ `activityName × usage_date × usage_bucket` を upsert し、本体アプリがフォアグラウンドで同期する。
+- DeviceActivityMonitor Extension は通信しない。しきい値到達時に App Group へ `activityName × usage_date × usage_bucket` を upsert し、本体アプリが起動・サインイン完了・フォアグラウンド復帰時に自動同期する。同期中の重複要求は抑止し、失敗時は未送信集計を削除せず次の自動同期で再試行する。設定の`今すぐ同期`は障害時・確認時の手動再試行として残す。iOSが実行時刻を保証しないため、アプリ未起動中の即時同期は約束しない。
 - 計測対象変更または紐付け解除では、削除範囲を確認後、対象契約の監視を停止し、端末内の対応表・未送信利用記録、同期済み日別集計、旧利用量に基づく見直し結果を削除する。変更時は削除完了後に新対象の監視を自動開始する。処理中は対象契約の同期を保留し、App Groupに再試行状態を残して旧・新データの混在を防ぐ。
 - Screen Time認可の取消だけでは対応表と過去集計を削除しない。再認可後、既存の対応付けから自動的に監視を再開する。
 - 契約削除では、対象契約の監視、計測対象対応表、端末内の未送信利用記録をまとめて削除する。契約一覧の再読込時には、対応表を失った孤立記録も整理し、別契約の記録は残す。

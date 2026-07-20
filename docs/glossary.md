@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-17（確認優先度、iPhone主タブ、認証セッション、集計値最小化を反映）
+> 最終更新：2026-07-20（Screen Time自動計測・自動同期・日別集計の識別境界を反映）
 > 関連：`product-requirements.md`、`functional-design.md`、`architecture.md`、`repository-structure.md`、`development-guidelines.md`
 
 ---
@@ -51,6 +51,8 @@
 | コネクタ / アダプタ | Connector / Adapter | `connectors/<source>` | 取得源ごとの入力を検証し、必要最小限の集計値へ変換する境界。現時点では汎用プラグイン機構を実装していない。 |
 | 取り込み | Ingestion | `ingestion` | 外部シグナルを検証・最小化・正規化して永続化する処理。Screen Timeは詳細ログや全アプリ一覧を保存せず、日別集計値だけを扱う。 |
 | 正規化 | Normalize | `normalize` | 外部入力を検証し、サーバーが扱う共通の集計形式へ変換すること。不要な原本・詳細ログは保持しない。 |
+| 自動利用量同期 | Automatic Usage Sync | `UsageAutoSyncCoordinator` | 本体アプリの起動、Appleサインイン完了、フォアグラウンド復帰時に、端末内の日別集計をAPIへ送る処理。同時実行を抑止し、失敗した集計は削除せず次回に再試行する。`今すぐ同期`は確認・復旧用。 |
+| 日別利用量サマリ | Daily Usage Summary | `ios_usage_daily_summaries` | Screen Time由来の契約別・日別集計。所有者は`user_id`、契約は`subscription_id`で識別し、`subscription_id × usage_date`を一意に保存する。同じ日を再送した場合は最大の利用段階を残す。 |
 
 ---
 
@@ -190,6 +192,8 @@
 - **利用量取得源（`usage_source`）と コネクタ名**：軸は `time/capacity/visit`、コネクタ名は取得源（`screen-time`/`icloud`/`gym-visit`/`billing-email`）。**別物**として命名する。
 - **来館（`visit`）と アプリ滞在（`time`）**：ジムは「アプリを開いた時間」ではなく「来館」で測る。混同しない。
 - **集計値と原本**：Screen Timeの判定は集計値で行い、詳細ログ・全アプリ一覧・選択トークン等の原本をサーバーへ送らない。将来の取得源もデータ最小化を個別に設計する。
+- **APIの利用段階とDB内部表現**：通信では`15m_plus`等を使い、PostgreSQLのPrisma enumは`m15_plus`等で表示する。現行DeviceActivityのしきい値は15分/30分/60分/120分。1分/5分は互換用で、現行iOSは生成しない。
+- **利用量同期と見直し再計算**：自動同期は日別集計をDBへ保存する処理。現行では通常同期後の見直し再計算は自動でなく、iPhoneまたはWebの再計算操作が必要。
 - **レコメンド（提案）と 自動実行**：SubBuddy は提案まで。解約等の実行はしない。
 
 ## 10. リリース・運用用語

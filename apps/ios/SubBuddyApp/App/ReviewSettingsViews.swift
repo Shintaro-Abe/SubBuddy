@@ -421,22 +421,47 @@ private struct ScreenTimeSettingsView: View {
 
 private struct SyncSettingsView: View {
     @StateObject private var session = MeasurementSession()
+    @AppStorage(UsageSyncStatus.lastSuccessAtKey) private var lastSuccessAt = 0.0
+    @AppStorage(UsageSyncStatus.lastAttemptAtKey) private var lastAttemptAt = 0.0
+    @AppStorage(UsageSyncStatus.lastFailedKey) private var lastFailed = false
+
     var body: some View {
         List {
             Section {
+                LabeledContent("自動同期", value: "オン")
+                LabeledContent("最終同期確認", value: formattedLastSuccess)
                 LabeledContent("端末内の未送信記録", value: "\(session.recordCount)件")
                 Button(session.isSyncing ? "同期しています…" : "今すぐ同期") {
                     Task { await session.syncRecords() }
                 }
                 .disabled(session.isSyncing)
-                Text(session.recordCount == 0 ? "通常は自動で同期します。" : session.statusMessage)
+                Text(syncDescription)
                     .font(.appFootnote)
-                    .foregroundStyle(AppColor.secondaryText)
+                    .foregroundStyle(lastFailed ? AppColor.caution : AppColor.secondaryText)
             }
         }
         .appListBackground()
         .navigationTitle("同期")
         .onAppear { session.refreshRecords() }
+        .onChange(of: lastSuccessAt) { _, _ in session.refreshRecords() }
+    }
+
+    private var formattedLastSuccess: String {
+        guard lastSuccessAt > 0 else { return "まだありません" }
+        return Date(timeIntervalSince1970: lastSuccessAt).formatted(
+            date: .abbreviated,
+            time: .shortened
+        )
+    }
+
+    private var syncDescription: String {
+        if lastFailed, lastAttemptAt > 0 {
+            return "前回は同期できませんでした。未送信記録を保持し、次回の起動・復帰時に自動で再試行します。必要な場合は今すぐ同期できます。"
+        }
+        if session.recordCount > 0 {
+            return "起動・サインイン完了・アプリ復帰時に自動同期します。当日分は後の利用時間更新に備えて端末内に残る場合があります。"
+        }
+        return "利用集計は起動・サインイン完了・アプリ復帰時に自動同期します。今すぐ同期は確認・復旧用です。"
     }
 }
 
