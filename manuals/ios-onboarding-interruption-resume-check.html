@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iPhone初回導線の中断・再開実機確認手順</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>iPhone初回導線の中断・再開実機確認手順</h1>
+<h2>目的</h2>
+<p>iPhoneの初回導線を途中で終了しても、未保存の入力を契約として登録せず、保存済みの合成契約から安全に再開できることを確認する。空状態、通信失敗、再試行、二重登録防止、初回完了状態の保持も確認する。</p>
+<p>現行仕様では、未保存フォームの途中内容は端末へ保存しない。保存済み契約と案内進捗がある場合、アプリ再起動後は完了済みの手順を飛ばし、<code>最初の全体像</code>、<code>最初の見直し</code>、利用状況の説明のうち次に必要な画面へ自動で再開する。契約0件のときだけ<code>まず1件だけ登録しましょう</code>を表示する。</p>
+<h2>前提</h2>
+<ul><li><a href="./ios-render-e2e-testflight-prep.md" target="_blank" rel="noopener">iPhone利用者向けUIのRender実機確認手順</a>が合格している。</li><li><a href="./ios-contract-crud-real-device-check.md" target="_blank" rel="noopener">iPhone契約CRUD・iCloud+容量の実機確認手順</a>が合格している。</li><li>iPhoneとWeb版で同じテスト用Appleアカウントへサインインできる。</li><li>テスト用アカウントの契約が0件である。</li><li>iPhoneでWi-Fiまたはモバイル通信を一時的にオフ・オンできる。</li><li>Renderへ確認対象の<code>main</code>がデプロイされている。</li></ul>
+<div class="callout warn"><p>実在の契約、金額、Appleアカウント情報を使わない。契約が残っている場合は、合成確認用だと確実に判断できるものだけを削除する。判断できない契約には触れない。</p></div>
+<hr>
+<h2>1. テスト監査台帳を実施中にする</h2>
+<p>○ 実機確認を始めたことを正本へ記録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>を開く。</li><li>「iPhone初回導線の中断・再開」の行を追加する。</li><li>開始日、対象、確認内容を記入し、現在の結果を<code>実施中</code>にする。</li></ol>
+<div class="callout warn"><p>契約名、金額、Appleアカウント、識別子、スクリーンショットを台帳へ記録しない。</p></div>
+<div class="callout ok"><p>対象の行が<code>実施中</code>になっている。</p></div>
+<hr>
+<h2>2. 契約0件を確認する</h2>
+<p>○ 固定した条件で初回導線を確認できる状態にする。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Web版の契約一覧を開く。</li><li>契約が0件であることを確認する。</li><li>iPhoneの<code>契約</code>タブを下へ引いて更新する。</li><li>iPhoneでも契約が0件であることを確認する。</li></ol>
+<div class="callout warn"><p>0件にできない場合は、既存契約を無断で削除せず確認を中止する。</p></div>
+<div class="callout ok"><p>Web版とiPhoneの契約がどちらも0件になっている。</p></div>
+<hr>
+<h2>3. 初回導線を開始する</h2>
+<p>○ 認証を終了してからアプリを再インストールし、初回完了状態を安全にリセットする。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>ホーム</code>右上から<code>設定</code>を開く。</li><li><code>このiPhoneからサインアウト</code>を押す。</li><li>Appleサインイン画面へ戻ることを確認する。</li><li>iPhoneのホーム画面でSubBuddyを長押しする。</li><li><code>アプリを削除</code>を選び、確認画面でも<code>アプリを削除</code>を選ぶ。</li><li>MacでXcodeのSubBuddyプロジェクトを開く。</li><li>接続した同じiPhoneを実行先に選ぶ。</li><li>Xcode左上の実行ボタンを押し、SubBuddyを再インストールする。</li><li>iPhoneで<code>内容を確認して続ける</code>を押す。</li><li>同じテスト用Appleアカウントでサインインする。</li><li><code>まず1件だけ登録しましょう</code>が表示されることを確認する。</li></ol>
+<div class="callout warn"><p>サインアウトだけでは初回完了状態はリセットされない。必ずサインアウトしてからアプリを削除する。削除・再インストールはこの手順3だけで行い、手順6以降の中断確認では行わない。</p></div>
+<div class="callout ok"><p>再インストール後に説明画面、Appleサインイン、初回導線の順で進み、<code>まず1件だけ登録しましょう</code>が表示される。</p></div>
+<hr>
+<h2>4. 契約0件の案内を確認する</h2>
+<p>○ 0件を通信失敗と混同しないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>通信が有効な状態で<code>登録済みの契約を読み込む</code>を押す。</li><li>読込中の表示が消えるまで待つ。</li><li><code>このAppleアカウントに登録済みの契約は見つかりませんでした</code>という案内が表示されることを確認する。</li><li>契約登録画面へ自動で移動しないことを確認する。</li></ol>
+<div class="callout ok"><p>契約0件が案内され、通信エラーや契約登録画面への誤遷移がない。</p></div>
+<hr>
+<h2>5. 通信失敗と再試行を確認する</h2>
+<p>○ 入力を失わずに通信を再試行できることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneのコントロールセンターまたは<code>設定</code>で、Wi-Fiとモバイル通信を一時的にオフにする。</li><li>SubBuddyへ戻る。</li><li><code>登録済みの契約を読み込む</code>を押す。</li><li>通信できない旨と<code>もう一度試す</code>が表示されることを確認する。</li><li>Wi-Fiまたはモバイル通信を元に戻す。</li><li>通信が復旧したことをSafariなどで確認する。</li><li>SubBuddyへ戻り、<code>もう一度試す</code>を押す。</li><li>契約0件の案内へ戻ることを確認する。</li></ol>
+<div class="callout warn"><p>機内モードを使う場合は、確認後に必ず元へ戻す。エラー参照コードやネットワーク情報を証跡へ転記しない。</p></div>
+<div class="callout ok"><p>通信失敗を0件として扱わず、復旧後の再試行で正しい0件案内を表示する。</p></div>
+<hr>
+<h2>6. 未保存フォームで中断する</h2>
+<p>○ 保存前の入力が契約として登録されないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>最初の契約を登録</code>を押す。</li><li>次の合成値を入力する。</li></ol>
+<table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成初回・未保存</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>other</code></td></tr><tr><td>日本円の請求額</td><td><code>1200</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr></tbody></table>
+<ol class="gui"><li><code>保存</code>を押さない。</li><li>iPhoneのAppスイッチャーを開く。</li><li>SubBuddyを上へスワイプして完全に終了する。</li><li>SubBuddyをもう一度起動する。</li></ol>
+<div class="callout ok"><p><code>まず1件だけ登録しましょう</code>へ戻り、未保存フォームの途中画面を表示しない。</p></div>
+<hr>
+<h2>7. 未保存契約が作られていないことを確認する</h2>
+<p>○ 中断時の入力がAPIへ送られていないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>登録済みの契約を読み込む</code>を押す。</li><li>契約0件の案内が表示されることを確認する。</li><li>Web版の契約一覧を再読込する。</li><li>Web版も0件で、<code>合成初回・未保存</code>が存在しないことを確認する。</li></ol>
+<div class="callout ok"><p>iPhoneとWeb版のどちらにも未保存契約が作られていない。</p></div>
+<hr>
+<h2>8. 合成契約を保存して中断する</h2>
+<p>○ 保存後の契約を再起動後に読み込めることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>最初の契約を登録</code>を押す。</li><li>次の合成値を入力する。</li></ol>
+<table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成初回・保存済み</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>other</code></td></tr><tr><td>日本円の請求額</td><td><code>1200</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>更新日を登録</td><td>オン</td></tr><tr><td>次回更新日</td><td>実施日の30日後</td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr><tr><td>重要度</td><td><code>3 / 5</code></td></tr></tbody></table>
+<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li><code>最初の全体像</code>に進み、年間支出が<code>14,400円</code>であることを確認する。</li><li>AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>保存済み契約が自動で読み込まれ、<code>最初の全体像</code>へ戻ることを確認する。</li></ol>
+<div class="callout ok"><p>保存後に中断してもサインイン状態を保ち、保存済み進捗から安全に再開できる。</p></div>
+<hr>
+<h2>9. 保存済み契約から再開する</h2>
+<p>○ 保存済み契約を重複させずに初回導線を再開する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>最初の全体像</code>が自動表示されることを確認する。</li><li>年間支出が<code>14,400円</code>のままであることを確認する。</li><li>Web版の契約一覧を再読込する。</li><li><code>合成初回・保存済み</code>が1件だけであることを確認する。</li><li><code>棚卸しを続ける</code>を押す。</li><li><code>登録済み</code>に対象が1件だけ表示されることを確認する。</li></ol>
+<div class="callout ok"><p>保存済み契約1件から再開し、二重登録や金額の重複がない。</p></div>
+<hr>
+<h2>10. 棚卸し画面で再び中断する</h2>
+<p>○ 後半で中断しても保存済み契約を失わないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>棚卸し画面を表示したまま、AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>保存済み契約と未完了進捗から<code>最初の全体像</code>が自動表示されることを確認する。</li><li>年間支出が<code>14,400円</code>であることを確認する。</li><li><code>今は1件で始める</code>を押す。</li></ol>
+<div class="callout ok"><p>後半で中断しても保存済み契約を読み直し、初回導線を続けられる。</p></div>
+<hr>
+<h2>11. 初回導線を完了する</h2>
+<p>○ 見直し価値を確認してから、Screen Timeを使わずホームまで進めることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>最初の見直し</code>が表示されることを確認する。</li><li><code>利用状況の説明へ</code>を押す。</li><li><code>利用状況を加えると判断材料が育ちます</code>が表示されることを確認する。</li><li><code>今回は使わない</code>を押す。</li><li>ホーム、契約、見直しの3タブが表示されることを確認する。</li><li>ホームの年間支出が<code>14,400円</code>、利用中が1件であることを確認する。</li></ol>
+<div class="callout ok"><p>Screen Time未許可でも初回導線を完了し、主要3タブを利用できる。</p></div>
+<hr>
+<h2>12. 完了状態が再起動後も残ることを確認する</h2>
+<p>○ 初回導線を繰り返し表示しないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>初回導線ではなくホームが表示されることを確認する。</li><li>契約タブに<code>合成初回・保存済み</code>が1件だけ表示されることを確認する。</li><li>初回導線で4段階を完了したため、ホームに<code>はじめ方 n/4</code>の案内カードが残っていないことを確認する。</li></ol>
+<div class="callout ok"><p>初回完了状態が保持され、再起動後にホームへ戻る。</p></div>
+<hr>
+<h2>13. 完了後の使い方と画面説明を確認する</h2>
+<p>○ 初回導線を終えた後も、必要な説明へ戻れ、案内が通常画面を圧迫しないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>ホーム右上の<code>設定</code>を開く。</li><li><code>使い方</code>を開き、棚卸し、支出・更新日、見直し、利用状況の4項目が確認済みになっていることを確認する。</li><li><code>見直し</code>タブを開く。</li><li>説明が閉じている場合は<code>この画面について</code>を押し、説明だけが表示されて再表示ボタンと二重にならないことを確認する。</li><li>説明内の<code>閉じる</code>を押し、説明が消えて<code>この画面について</code>だけが表示されることを確認する。</li><li><code>契約</code>と<code>支出の内訳</code>でも同じ開閉関係になることを確認する。</li></ol>
+<div class="callout ok"><p>使い方を後から確認でき、説明と再表示ボタンが同時に表示されず、ホームに完了済み案内カードが残らない。</p></div>
+<hr>
+<h2>14. 合成契約を削除する</h2>
+<p>○ 確認用データを残さず終了する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>契約</code>タブを開く。</li><li><code>合成初回・保存済み</code>の詳細を開く。</li><li><code>この契約を削除</code>を押す。</li><li>確認文を読み、<code>契約を削除</code>を押す。</li><li>iPhoneの契約一覧が0件になったことを確認する。</li><li>Web版を再読込し、契約一覧が0件になったことを確認する。</li><li>iPhoneホームを更新し、年間支出0円、利用中0件になることを確認する。</li></ol>
+<div class="callout warn"><p>名前が完全に一致する合成契約だけを削除する。</p></div>
+<div class="callout ok"><p>合成確認用契約がiPhoneとWeb版の両方に残っていない。</p></div>
+<hr>
+<h2>15. テスト監査台帳を更新する</h2>
+<p>○ 合否と残った未確認範囲だけを記録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>の「iPhone初回導線の中断・再開」の行を開く。</li><li>すべて成功した場合は<code>合格</code>へ変更する。</li><li>一部だけ確認できた場合は<code>一部合格</code>とし、未確認の画面・条件だけを書く。</li><li>失敗した場合は<code>不合格</code>または<code>もう一度確認が必要</code>とし、安全なエラー表示と操作名だけを書く。</li><li>生ログ、契約内容、アカウント情報、識別子、スクリーンショットは記録しない。</li></ol>
+<div class="callout ok"><p>結果、確認範囲、残った未確認範囲だけが台帳に記録されている。</p></div>
+<hr>
+<h2>16. 完了条件</h2>
+<ul><li>[ ] 契約0件を通信失敗と区別できる。</li><li>[ ] 通信失敗後、復旧して再試行できる。</li><li>[ ] 未保存フォームで終了しても契約を作らない。</li><li>[ ] 保存後の中断で契約を失わない。</li><li>[ ] 再起動後、保存済み契約を読み込んで再開できる。</li><li>[ ] 契約・年間支出が二重にならない。</li><li>[ ] 棚卸し画面で中断しても再開できる。</li><li>[ ] Screen Time未許可で初回導線を完了できる。</li><li>[ ] 完了後の再起動でホームを表示する。</li><li>[ ] 完了後はホームの案内カードが消え、設定の<code>使い方</code>から4項目を確認できる。</li><li>[ ] 主要画面で説明と<code>この画面について</code>が排他的に表示される。</li><li>[ ] 合成契約を削除し、開始前の0件へ戻した。</li><li>[ ] テスト監査台帳へPII・秘密情報・実データを記録していない。</li></ul>
+<div class="callout ok"><p>すべて合格したら、<code>.steering/20260716-ios-main-ui/tasklist.md</code>のT-4とT-11、WBSの<code>REL-0.3.2</code>と<code>REL-0.3.7</code>へ結果を反映できる。</p></div>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

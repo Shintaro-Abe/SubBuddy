@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-20（Screen Time計測しきい値と自動同期境界を反映）
+> 最終更新：2026-07-21（案内進捗、Web設定、iPhone共通操作色の現行実装を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -46,6 +46,7 @@ flowchart TB
   end
 
   IOS --> FC --> LStore
+  IOS -->|認証・契約・支出・見直し HTTPS| Next
   LStore -->|集計値のみ HTTPS| Next
   Next --> Prisma --> PG
   WorkerProc --> Prisma
@@ -72,7 +73,7 @@ flowchart TB
 | DB | PostgreSQL | local modeはローカル、cloud-testflight modeはRenderのマネージドDB。集計・履歴・将来拡張に耐える |
 | ジョブ/Worker | MVP: アプリ内処理 / フェーズ2: BullMQ + Redis | MVP は同期計算で十分。将来の定期実行・分離に備える |
 | バリデーション | Zod | API 入力・フォーム入力のスキーマ検証。型と単一ソース化 |
-| テスト | Vitest（単体）/ Playwright（E2E 任意） | スコアリング等のドメインロジックを単体テスト中心で担保 |
+| テスト | Vitest（単体）/ Playwright（E2E） | ドメインロジックを単体テスト中心で担保し、主要Web導線をE2Eで確認 |
 | Lint / Format | ESLint + Prettier | `development-guidelines.md` の規約を機械的に強制 |
 
 > バージョンの具体値（Node / Next / Postgres 等）は `repository-structure.md` または `package.json` / `.tool-versions` を一次情報とし、本書では固定しない（陳腐化防止）。
@@ -88,6 +89,7 @@ flowchart TB
 | 秘密情報の保存 | Keychain（ThisDeviceOnly） | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID |
 | 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |
 | 同期 | URLSession（HTTPS） | 本体アプリの起動・サインイン完了・フォアグラウンド復帰時にSubBuddy APIへ**集計値のみ**自動送信。失敗時は端末内保持して再試行 |
+| UIデザイン | SwiftUI標準操作 + `AppColor` / 共通View modifier | Webのブランド基準をiPhone向け動的色へ対応付け、ライト・ダーク・高コントラスト、Dynamic Type、VoiceOverを維持 |
 
 > iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤でのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 
@@ -179,7 +181,7 @@ flowchart LR
 ## 5. データ層・永続化
 
 - **ORM**：Prisma。スキーマ（`schema.prisma`）を単一ソースとし、マイグレーションで DB を管理。
-- **テーブル**：`users / devices / auth_sessions / subscriptions / billing_events / ios_usage_daily_summaries / recommendation_snapshots / service_catalog / service_plans / service_alternatives`（定義は `functional-design.md` 5）。
+- **テーブル**：`users / user_guidance_progress / devices / auth_sessions / subscriptions / billing_events / ios_usage_daily_summaries / recommendation_snapshots / service_catalog / service_plans / service_alternatives`（定義は `functional-design.md` 5）。
 - **冪等同期**：`ios_usage_daily_summaries` は `(subscription_id, usage_date)` を一意キーに upsert（機能設計 4.1 / 10.1）。
 - **履歴保持**：`recommendation_snapshots` はスコアリング結果を追記（履歴）として保存し、判定の推移を追える。
 - **金額の扱い**：金額は**整数（最小通貨単位）**で保持し浮動小数の誤差を避ける。通貨は既定 JPY。
@@ -342,6 +344,7 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 | 保守性 | しきい値調整・ルール変更容易 | 設定外出し（本書 6）・履歴保存 |
 | 信頼性 | 同期の冪等性・データ整合 | upsert・一意制約・マイグレーション管理 |
 | 統一性（UI） | デザイン統一 | Tailwind CSS 共通デザインシステム |
+| 統一性（iPhone UI） | 画面モード別の可読性と操作領域 | SwiftUI動的色、共通ボタンスタイル、Dynamic Type、VoiceOver、44pt以上の主要操作領域 |
 | 品質 | 変更後の検証 | Lint・型チェック・テストを必須（`development-guidelines.md`） |
 
 ---

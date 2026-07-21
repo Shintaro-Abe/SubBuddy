@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-17（iPhone UI構成、テスト監査台帳、認証境界を反映）
+> 最終更新：2026-07-21（iPhone共通操作スタイルと文書現行性検査を反映）
 > 関連：`architecture.md`（技術仕様）、`repository-structure.md`（構成）、`functional-design.md`（機能設計）、`glossary.md`（用語）
 
 ---
@@ -81,6 +81,7 @@
 
 - Webは**Tailwind CSSを共通デザインシステムとして使用**し、色・余白・タイポをユーティリティクラスへ揃える（要求14）。任意の生CSS・インラインスタイルは原則使わない。
 - iPhoneはWeb版の色・余白・情報の強弱・中立トーンをSwiftUI用デザイントークンへ対応付ける。SwiftUI標準操作、Dynamic Type、VoiceOverを優先し、WebのCSSや配置をそのまま移植しない。
+- iPhoneの通常操作色、塗りつぶしボタン文字色、Apple公式ボタン寸法は`DesignSystem.swift`の共通定義を使う。ダークモードで固定アクセント色を直接指定せず、削除・警告・状態・グラフ等の意味色とは分離する。
 - 書体はWeb版を正本とし、iPhoneの本文・見出しは`Zen Kaku Gothic New`、大見出しは`Shippori Mincho`、金額・主要数値は`BIZ UDPGothic`へ対応付ける。`Font.custom(..., relativeTo:)`でDynamic Typeを維持し、フォントファイルとOFLライセンスは`SubBuddyApp/Resources/`で一緒に管理する。
 - 繰り返すパターンは**コンポーネント化**して再利用（`src/components/`）。クラス文字列の重複を避ける。
 - レスポンシブはモバイル優先（必要に応じてブレークポイント）。
@@ -137,6 +138,8 @@
 - 作業は `.steering/[YYYYMMDD]-[タイトル]/` に requirements → design → tasklist の順で起こし、レビューパックでまとめて承認を得る（`AGENTS.md`）。
 - 仕様の正本は`docs/`、現在の進捗は`wbs/wbs.yml`と対象作業の`tasklist.md`、テスト結果は`.audit/test-status.md`とする。日付付き`.steering/`と`obsidian/`は履歴であり、後続文書が上書きした前提は現行仕様として使わない。
 - 古いステアリング本文は当時の判断記録として保持する。現行方針との違いは`.steering/README.md`または文書冒頭の状態注記で明示し、過去の承認内容を無言で書き換えない。
+- 文書を現行実装へ同期するときは、実装コード・DBスキーマ、`.audit/test-status.md`、後続の承認済みステアリングの順に照合する。「実装済み」「対象環境で検証済み」「配布可能」を混同しない。
+- `manuals/`はMarkdownを正本とし、内容を変更したら`procedure-guide`の変換器で対応HTMLを再生成する。HTMLだけを手編集しない。
 
 ---
 

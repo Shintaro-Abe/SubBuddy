@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iPhone UIの視覚・アクセシビリティ・性能確認手順</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>iPhone UIの視覚・アクセシビリティ・性能確認手順</h1>
+<h2>目的</h2>
+<p>利用者向けiPhone UIを、画面サイズ、表示設定、VoiceOver、動きの軽減、案内の開閉、共通操作色、Apple公式ボタン寸法、合成200契約の条件で確認する。</p>
+<p>対象は<code>.steering/20260716-ios-main-ui/tasklist.md</code>の<code>T-13</code>〜<code>T-15</code>。実在の契約・金額・Apple識別子・利用実績は使わない。</p>
+<h2>合格基準</h2>
+<table><thead><tr><th>確認</th><th>合格条件</th></tr></thead><tbody><tr><td>標準・大画面</td><td>文字切れ、重なり、画面外へ出て操作できない項目がない</td></tr><tr><td>ライト・ダーク・コントラスト</td><td>情報が読め、状態を色だけで区別しない</td></tr><tr><td>最大Dynamic Type</td><td>横スクロールを要求せず、主要操作を完了できる</td></tr><tr><td>VoiceOver</td><td>初回、ホーム、契約、見直し、設定の順序とラベルが理解できる</td></tr><tr><td>画面説明</td><td>説明と<code>この画面について</code>が同時表示されず、<code>閉じる</code>をダークモードでも読める</td></tr><tr><td>Appleサインイン</td><td>公式ボタンが高さ44pt・最大幅320ptで中央にあり、横幅を占有しすぎない</td></tr><tr><td>44ポイント操作領域</td><td>主要ボタンと行を安定して選べる</td></tr><tr><td>動きの軽減</td><td>有効時も情報や完了状態を失わない</td></tr><tr><td>合成200契約</td><td>初期表示2秒以内、タップ・検索入力の視覚応答100ミリ秒以内を目標にする</td></tr></tbody></table>
+<div class="callout warn"><p>Simulatorだけで実機合格にしない。VoiceOver、操作領域、動きの軽減は実機でも確認する。</p></div>
+<hr>
+<h2>1. テスト監査台帳を開始する</h2>
+<p>○ 品質確認の開始を正本へ記録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>へ「iPhone UI視覚・アクセシビリティ・性能確認」を追加する。</li><li>状態を<code>実施中</code>にする。</li><li>実データやスクリーンショットを記録しないことを確認する。</li></ol>
+<div class="callout ok"><p>開始日、対象、確認内容、状態<code>実施中</code>が記録されている。</p></div>
+<hr>
+<h2>2. buildと単体テストを確認する</h2>
+<p>○ 品質確認に使うコードがコンパイルできることを確認する。</p>
+<p>□ 操作</p>
+<p>リポジトリ直下で実行する。</p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>apps/ios/scripts/verify-main-ui.sh</code></pre></div>
+<div class="callout ok"><p><code>BUILD SUCCEEDED</code>と<code>TEST SUCCEEDED</code>が表示され、22件以上のテストが失敗0件で完了する。</p></div>
+<hr>
+<h2>3. Xcodeで合成Previewを開く</h2>
+<p>○ 実在データを読み込まず、主要状態を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcodeで<code>apps/ios/SubBuddy.xcodeproj</code>を開く。</li><li><code>PreviewFixtures.swift</code>を開く。</li><li>Canvasを表示する。</li><li><code>ホーム・通常</code>、<code>ホーム・空</code>、<code>ホーム・通信失敗</code>を順に開く。</li><li><code>契約詳細・最大文字</code>、<code>見直し詳細</code>、<code>契約一覧・合成200件</code>を順に開く。</li></ol>
+<div class="callout ok"><p>通常、空、失敗、最大文字、200件の各状態が合成データだけで表示される。</p></div>
+<hr>
+<h2>4. 標準・大画面を確認する</h2>
+<p>○ 画面幅による切れ・重なりを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>標準画面はiPhone 17 Pro相当を選ぶ。</li><li>大画面はiPhone 17 Pro Max相当を選ぶ。</li><li>各端末でホーム、契約一覧・詳細・編集、支出、見直し一覧・詳細、設定を確認する。</li><li>長い日本語の契約名でも、削除・保存・戻る操作が画面外へ出ないことを確認する。</li></ol>
+<div class="callout ok"><p>2画面区分で、切れ・重なり・操作不能がない。</p></div>
+<hr>
+<h2>5. ライト・ダーク・高コントラストを確認する</h2>
+<p>○ 色と背景が変わっても情報を読めることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Simulatorまたは実機をライト表示にする。</li><li>ホーム、契約、見直し、設定を確認する。</li><li>ダーク表示へ切り替え、同じ画面を確認する。</li><li><code>設定</code> → <code>アクセシビリティ</code> → <code>画面表示とテキストサイズ</code> → <code>コントラストを上げる</code>を有効にする。</li><li>警告、エラー、選択状態が文字・アイコン・形でも区別できることを確認する。</li><li>本文と見出しがWeb版と同じゴシック体、大見出しが明朝体、金額が読みやすい等幅寄りの数値書体で表示されることを確認する。</li><li><code>支出の内訳</code>で<code>この画面について</code>を開き、<code>閉じる</code>が背景へ沈まず読めることを確認する。</li><li><code>見直し</code>で説明を閉じて再表示し、説明と再表示ボタンが同時に見えないことを確認する。</li></ol>
+<div class="callout ok"><p>文字と操作が読め、色だけに依存した状態表示がない。</p></div>
+<hr>
+<h2>5-1. Appleサインインボタンの寸法を確認する</h2>
+<p>○ 小さいiPhoneでも公式ログインボタンが画面を占有しすぎず、押しやすさを維持することを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>テスト用状態でAppleサインイン画面を表示する。</li><li>ボタンが画面中央にあり、横幅が最大320pt、高さが44ptであることをXcodeのView Debuggerまたは画面計測で確認する。</li><li>最大Dynamic Typeでもボタンと説明文が重ならないことを確認する。</li><li>退会前のApple再認証画面でも同じ寸法になることを確認する。</li></ol>
+<div class="callout warn"><p>実在のAppleアカウント情報や認証画面のスクリーンショットを証跡へ残さない。</p></div>
+<div class="callout ok"><p>2か所のApple公式ボタンが共通寸法で中央表示され、主要操作領域44ptを維持する。</p></div>
+<hr>
+<h2>6. 最大Dynamic Typeを確認する</h2>
+<p>○ 最大文字サイズでも主要操作を完了できることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>設定</code> → <code>アクセシビリティ</code> → <code>画面表示とテキストサイズ</code> → <code>さらに大きな文字</code>を開く。</li><li><code>さらに大きな文字</code>を有効にし、スライダーを最大にする。</li><li>ホームから契約一覧を開く。</li><li>契約詳細から編集を開き、各項目と<code>保存</code>を確認する。</li><li>見直し詳細と設定を開く。</li><li>横スクロール、文字の重なり、押せない操作がないことを確認する。</li></ol>
+<div class="callout ok"><p>最大文字でも、ホーム、契約、見直し、設定の主要操作を完了できる。</p></div>
+<hr>
+<h2>7. VoiceOverを確認する</h2>
+<p>○ 画面を見なくても主要情報と操作を理解できることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>実機の<code>設定</code> → <code>アクセシビリティ</code> → <code>VoiceOver</code>を有効にする。</li><li>初回説明を先頭から読み、続行ボタンまで移動する。</li><li>ホームで年間支出、未完了時だけ表示される次の確認項目、更新、支出、設定の順序を確認する。</li><li>契約一覧から合成契約の詳細を開き、編集と削除のラベルを確認する。</li><li>見直し詳細で、事実、根拠、分からないこと、選択肢、公式導線の順序を確認する。</li><li>設定でデータ、同期、端末とセッション、サインアウトを確認する。</li><li>同じ文言の重複読上げ、ラベルのないボタン、意味のない内部ID読上げがないことを確認する。</li></ol>
+<div class="callout warn"><p>Appleアカウントや実在契約を読上げた録音・動画を残さない。</p></div>
+<div class="callout ok"><p>VoiceOverで主要導線を順番どおり完了できる。</p></div>
+<hr>
+<h2>8. 操作領域をAccessibility Inspectorで確認する</h2>
+<p>○ 小さすぎる操作対象とラベル不足を検出する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcodeの<code>Xcode</code> → <code>Open Developer Tool</code> → <code>Accessibility Inspector</code>を開く。</li><li>対象に実行中のSimulatorまたはiPhoneを選ぶ。</li><li><code>Audit</code>を実行する。</li><li>Hit Area、Description、Contrastの指摘を確認する。</li><li>ホーム、契約、支出、見直し、設定、Appleサインインで重大な指摘が0件であることを確認する。</li></ol>
+<div class="callout ok"><p>44ポイント未満の主要操作領域、ラベルなし操作、重大なコントラスト問題が0件である。</p></div>
+<hr>
+<h2>9. 動きの軽減を確認する</h2>
+<p>○ アニメーションを減らしても状態変化を理解できることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>実機の<code>設定</code> → <code>アクセシビリティ</code> → <code>動作</code> → <code>視差効果を減らす</code>を有効にする。</li><li>タブ移動、画面遷移、保存、再読込、エラーからの再試行を行う。</li><li>動きが減っても、読込中・完了・失敗を区別できることを確認する。</li></ol>
+<div class="callout ok"><p>動きの軽減を有効にしても、情報や操作完了状態が失われない。</p></div>
+<hr>
+<h2>10. 合成200契約モードを起動する</h2>
+<p>○ クラウドへ大量登録せず、一覧の安定性を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcodeで<code>Product</code> → <code>Scheme</code> → <code>Edit Scheme...</code>を開く。</li><li><code>Run</code> → <code>Arguments</code>を開く。</li><li><code>Arguments Passed On Launch</code>へ<code>-subbuddy-quality-200</code>を追加して有効にする。</li><li>DebugビルドでSimulatorまたは実機へ起動する。</li><li>ホームの件数が200件であることを確認する。</li><li><code>契約</code>タブを開き、先頭から末尾までスクロールする。</li><li>検索へ<code>合成契約 200</code>を入力し、対象1件へ絞られることを確認する。</li><li>確認後、起動引数を無効にする。</li></ol>
+<div class="callout warn"><p>この起動引数はDebugビルド専用で、クラウドへの保存・同期を行わない。Releaseの確認には使わない。</p></div>
+<div class="callout ok"><p>合成200件でクラッシュ、行の飛び、重複、検索誤動作がない。</p></div>
+<hr>
+<h2>11. 200契約の性能を測る</h2>
+<p>○ 初期表示と操作応答の目標を確認する。</p>
+<p>□ 操作</p>
+<h3>11-1. ProfileをDebug構成にする</h3>
+<p>○ 合成200契約モードをInstrumentsでも有効にする。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcodeで<code>Product</code> → <code>Scheme</code> → <code>Edit Scheme...</code>を開く。</li><li>左側の<code>Profile</code>を選ぶ。</li><li><code>Info</code>の<code>Build Configuration</code>を一時的に<code>Debug</code>へ変更する。</li><li><code>Arguments</code>を開く。</li><li><code>Arguments Passed On Launch</code>の<code>＋</code>を押す。</li><li><code>-subbuddy-quality-200</code>を追加し、左側のチェックを有効にする。</li><li><code>Close</code>を押す。</li></ol>
+<div class="callout warn"><p><code>Run</code>側の起動引数は<code>Profile</code>へ自動では引き継がれない。Profileは通常Release構成のため、この設定をしないと合成200契約モードにならない。</p></div>
+<div class="callout ok"><p>Profileで起動したホームに<code>200件</code>と表示される。</p></div>
+<h3>11-2. Time ProfilerでCPU処理を確認する</h3>
+<p>○ 起動・一覧表示・検索でCPUを長く使う処理を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcode上部で<code>SubBuddyApp</code>と確認用のSimulatorまたは実機を選ぶ。</li><li><code>Product</code> → <code>Profile</code>を選ぶ。ショートカットは<code>⌘I</code>。</li><li>Instrumentsのテンプレート選択画面で<code>Time Profiler</code>を検索する。</li><li><code>Time Profiler</code>を選び、<code>Choose</code>を押す。</li><li>上部の対象が確認用端末の<code>SubBuddyApp</code>であることを確認する。</li><li>左上の赤い録画ボタンを押す。アプリが自動で起動する。</li><li>ホームに<code>200件</code>と表示されるまで待つ。</li><li><code>契約</code>タブを開く。</li><li>一覧を先頭から末尾まで1回スクロールする。</li><li>検索欄へ<code>合成契約 200</code>と入力する。</li><li>検索結果を開き、契約詳細が表示されたら戻る。</li><li>Instrumentsへ戻り、左上の停止ボタンを押す。</li><li>タイムライン上で調べたい時間帯をドラッグして選択する。</li><li>下部の<code>Call Tree</code>を開き、<code>Weight</code>または実行時間が大きい順に確認する。</li><li>必要な場合は<code>Hide System Libraries</code>を有効にし、SubBuddyAppの処理を絞り込む。</li></ol>
+<div class="callout warn"><p>Time Profilerは、どの処理がCPU時間を使ったかを調べる道具であり、タップから表示までの時間を自動判定する試験ではない。明確な待ち時間があった場合に、その区間と重いSubBuddyAppの処理を確認する。</p></div>
+<div class="callout ok"><p>起動から200件表示までがおおむね2秒以内で、タブ・検索・詳細表示に知覚できる停止がない。停止がある場合は、操作名、時間、最も重いSubBuddyAppの処理だけを記録する。</p></div>
+<h3>11-3. Animation Hitchesでスクロールの引っ掛かりを確認する</h3>
+<p>○ 画面更新が間に合わず、スクロールや画面遷移が引っ掛かる箇所を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Time Profilerの記録画面を閉じる。保存確認が出た場合、調査を続けない記録は<code>Don't Save</code>を選ぶ。</li><li>Xcodeへ戻り、もう一度<code>Product</code> → <code>Profile</code>を選ぶ。</li><li>テンプレート選択画面で<code>Animation Hitches</code>を検索する。</li><li><code>Animation Hitches</code>を選び、<code>Choose</code>を押す。</li><li>左上の赤い録画ボタンを押す。</li><li>ホームに<code>200件</code>と表示されたら<code>契約</code>タブを開く。</li><li>一覧をゆっくり1往復し、次に速く1往復する。</li><li>検索欄へ<code>合成契約 200</code>と入力し、結果を開いて戻る。</li><li>Instrumentsへ戻り、停止ボタンを押す。</li><li>タイムラインの<code>Hitches</code>トラックに警告マーカーがないか確認する。</li><li>マーカーがある場合は選択し、発生した操作と<code>Hitch Duration</code>を確認する。</li></ol>
+<div class="callout note"><p>Hitch rateが表示される場合、Appleの目安では<code>10 ms/s以下</code>は良好、<code>25 ms/s以下</code>は警告、<code>50 ms/s以下</code>は重大、それを超える場合は早急な確認対象となる。画面にHitch rateがない場合は、警告マーカーの件数と最長時間を確認すればよい。<a href="https://developer.apple.com/documentation/xcode/understanding-hitches-in-your-app" target="_blank" rel="noopener">Apple公式: Understanding hitches in your app</a></p></div>
+<div class="callout ok"><p>目で分かる引っ掛かりと繰り返し発生する警告マーカーがない。Hitch rateが表示される場合は10 ms/s以下である。超えた場合は、操作名、表示された指標、最長のHitch Durationだけを記録する。</p></div>
+<h3>11-4. 計測設定を元へ戻す</h3>
+<p>○ 通常のProfile設定へ戻す。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Xcodeで<code>Product</code> → <code>Scheme</code> → <code>Edit Scheme...</code>を開く。</li><li><code>Profile</code> → <code>Arguments</code>で<code>-subbuddy-quality-200</code>のチェックを外す。</li><li><code>Profile</code> → <code>Info</code>の<code>Build Configuration</code>を<code>Release</code>へ戻す。</li><li><code>Close</code>を押す。</li></ol>
+<div class="callout warn"><p>Instrumentsの<code>.trace</code>には画面上の文字や実行状況が含まれる場合がある。リポジトリへコミットせず、必要な場合もMac内だけに保存する。</p></div>
+<div class="callout ok"><p>ProfileがReleaseへ戻り、合成200契約の起動引数が無効になっている。</p></div>
+<hr>
+<h2>12. 結果を記録する</h2>
+<p>○ 監査台帳とステアリングへ結果を反映する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>の開始行へ、画面区分、表示設定、VoiceOver、操作領域、動きの軽減、200契約性能の合否を追記する。</li><li><code>.steering/20260716-ios-main-ui/tasklist.md</code>の<code>T-13</code>〜<code>T-15</code>を結果に合わせて更新する。</li><li>未確認の条件は未確認と明記する。</li><li>実在データ、認証情報、機微なスクリーンショットを記録しない。</li></ol>
+<div class="callout ok"><p>合否、測定値、未確認範囲だけが記録されている。</p></div>
+<hr>
+<h2>13. 完了条件</h2>
+<ul><li>[ ] 標準・大画面で主要画面を確認した。</li><li>[ ] ライト・ダーク・高コントラストを確認した。</li><li>[ ] 最大Dynamic Typeで主要操作を完了した。</li><li>[ ] VoiceOverで主要導線を完了した。</li><li>[ ] 44ポイント操作領域とアクセシビリティ監査が合格した。</li><li>[ ] 動きの軽減を有効にして主要操作を確認した。</li><li>[ ] 合成200契約の安定性と性能を確認した。</li><li>[ ] 証跡にPII・秘密情報・実データがない。</li></ul>
+<div class="callout ok"><p>すべて合格したら<code>T-13</code>〜<code>T-15</code>を完了にし、WBSの<code>REL-0.3.7</code>へ反映する。</p></div>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>
