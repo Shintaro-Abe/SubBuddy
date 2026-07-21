@@ -100,7 +100,7 @@ export function CapacityInput({
         で「使用済み」の数値を入れると、下位プランで足りるかを判定します。
       </p>
 
-      <div className="rowitem">
+      <div className="rowitem detail-row">
         <span className="caption" style={{ margin: 0 }}>
           現在のプラン
         </span>
@@ -109,7 +109,7 @@ export function CapacityInput({
         </span>
       </div>
 
-      <div className="rowitem">
+      <div className="rowitem detail-row">
         <label className="caption" style={{ margin: 0 }} htmlFor="usedGb">
           使用容量（GB）
         </label>

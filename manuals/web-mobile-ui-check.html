@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iPhoneでWeb版SubBuddyを確認する手順</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>iPhoneでWeb版SubBuddyを確認する手順</h1>
+<div class="callout note"><p>iPhoneのSafariとChromeで、画面のはみ出し、操作のしやすさ、文字拡大、VoiceOverを確認します。所要時間は1機種・2ブラウザで約30分です。</p></div>
+<h2>前提</h2>
+<ul><li>確認対象のiPhone</li><li>SafariとChrome</li><li>開発用または検証用のSubBuddyのURL</li><li>契約名や金額には合成データ（＝実在しないテスト用データ）だけを使う</li></ul>
+<div class="callout warn"><p>実際の契約、支出、メールアドレス、資格情報は入力・撮影・記録しないでください。</p></div>
+<h2>確認する画面</h2>
+<table><thead><tr><th>種類</th><th>画面</th></tr></thead><tbody><tr><td>主要画面</td><td>ホーム、契約、見直し</td></tr><tr><td>補助画面</td><td>支出の内訳、更新予定、はじめての方へ、設定</td></tr><tr><td>入力・詳細</td><td>契約追加、契約詳細、契約編集、サインイン</td></tr></tbody></table>
+<h2>手順</h2>
+<h3>ステップ1：Safariで縦向きを確認する</h3>
+<p>主要画面と補助画面が、横スクロールなしで使えることを確認します。</p>
+<ol class="gui"><li>iPhoneを縦向きにする。</li><li>Safariで検証用のSubBuddyを開く。</li><li>画面下の「ホーム」「契約」「見直し」を順に押す。</li><li>右上の「その他」を押す。</li><li>「支出の内訳」「更新予定」「はじめての方へ」「設定」を順に開く。</li><li>各画面を一番下までスクロールする。</li></ol>
+<div class="callout ok"><p>確認：本文が左右で切れず、横スクロールが発生しない。下部ナビゲーションが本文を隠さない。</p></div>
+<h3>ステップ2：契約の詳細・追加・編集を確認する</h3>
+<p>狭い画面でも入力と保存がしやすいことを確認します。</p>
+<ol class="gui"><li>「契約」を開く。</li><li>既存の合成データを1件開く。</li><li>詳細を一番下まで読み、「削除」が末尾の「その他の操作」にあることを確認する。</li><li>「編集」を押す。</li><li>文字入力時にiPhoneが自動で拡大しないことを確認する。</li><li>「戻る」で契約一覧へ戻る。</li><li>右上の「＋追加」を押す。</li><li>合成データだけを入力し、保存ボタンまでスクロールする。</li></ol>
+<div class="callout ok"><p>確認：追加・編集画面では下部ナビゲーションが表示されない。入力欄は1列で、保存ボタンを押しやすい。</p></div>
+<h3>ステップ3：画面説明の表示を確認する</h3>
+<p>説明と「この画面について」ボタンが同時に重ならないことを確認します。</p>
+<ol class="gui"><li>「見直し」を開く。</li><li>説明が表示されている場合は「閉じる」を押す。</li><li>「この画面について」ボタンだけが表示されることを確認する。</li><li>そのボタンを押す。</li><li>説明だけが表示されることを確認する。</li></ol>
+<div class="callout ok"><p>確認：説明と説明を開くボタンは、常にどちらか一方だけが表示される。</p></div>
+<h3>ステップ4：横向きを確認する</h3>
+<p>高さが短い状態でも移動とスクロールができることを確認します。</p>
+<ol class="gui"><li>「見直し」を開いたままiPhoneを横向きにする。</li><li>一番下までスクロールする。</li><li>「ホーム」「契約」「見直し」を順に押す。</li><li>縦向きへ戻す。</li></ol>
+<div class="callout ok"><p>確認：横向きでも横スクロールが発生せず、下部ナビゲーションが本文を隠さない。</p></div>
+<h3>ステップ5：Safariで200%表示を確認する</h3>
+<p>文字を大きくしても、主要操作が使えることを確認します。</p>
+<ol class="gui"><li>Safariのアドレスバーにあるページメニューを開く。</li><li>ページの表示倍率を200%にする。</li><li>ホーム、契約、見直し、その他メニューを順に開く。</li><li>契約追加画面を開き、入力欄と保存ボタンを確認する。</li><li>確認後、表示倍率を100%へ戻す。</li></ol>
+<div class="callout ok"><p>確認：文字やボタンが重ならず、横スクロールなしで主要操作を完了できる。</p></div>
+<h3>ステップ6：VoiceOverで主要操作を確認する</h3>
+<p>画面を見なくても、操作の名前と順序が分かることを確認します。</p>
+<ol class="gui"><li>iPhoneの「設定」→「アクセシビリティ」→「VoiceOver」を開く。</li><li>VoiceOverをオンにする。</li><li>Safariへ戻る。</li><li>右へスワイプし、「ホーム」「契約」「見直し」「その他」を順に読み上げることを確認する。</li><li>「その他」を開き、各リンクと「閉じる」が読み上げられることを確認する。</li><li>契約追加画面で、入力欄の名前と保存ボタンが読み上げられることを確認する。</li><li>確認後、VoiceOverをオフにする。</li></ol>
+<div class="callout warn"><p>VoiceOverがオンの間は、選択は1回タップ、実行は2回タップです。</p></div>
+<div class="callout ok"><p>確認：操作の名前が意味のある日本語で読み上げられ、読み上げ順が画面の並びと一致する。</p></div>
+<h3>ステップ7：Chromeでも再確認する</h3>
+<p>ブラウザ差でレイアウトや操作が変わらないことを確認します。</p>
+<ol class="gui"><li>Chromeで同じ検証用URLを開く。</li><li>ステップ1からステップ4を繰り返す。</li><li>Safariとの違いがあれば、画面名、向き、操作、発生結果を記録する。</li></ol>
+<div class="callout ok"><p>確認：SafariとChromeの両方で、画面のはみ出しや操作不能がない。</p></div>
+<h2>複数のiPhoneで確認する場合</h2>
+<p>画面幅の異なる次の3群から、利用できる端末を最低1台ずつ選びます。</p>
+<ul><li>小さい画面：iPhone SE相当</li><li>標準画面：6.1インチのiPhone相当</li><li>大きい画面：PlusまたはPro Max相当</li></ul>
+<p>機種ごとの専用レイアウトはありません。同じレスポンシブUI（＝画面幅に応じて自然に組み替わる表示）を確認します。</p>
+<h2>困ったとき</h2>
+<ul><li>表示が古い場合：SafariまたはChromeでページを再読み込みする。</li><li>下部ナビゲーションが見えない場合：契約追加・編集画面では仕様どおり非表示。閲覧画面で再確認する。</li><li>実データが表示された場合：スクリーンショットを撮らず、確認を止めて開発担当者へ連絡する。</li></ul>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 interface Props {
@@ -18,6 +18,22 @@ export function ShortcutsQrCode({
   apiBaseUrl = typeof window !== "undefined" ? window.location.origin : "",
 }: Props) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    closeRef.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      trigger?.focus();
+    };
+  }, [open]);
 
   const qrData = JSON.stringify({
     url: `${apiBaseUrl}/api/usage/daily`,
@@ -28,13 +44,13 @@ export function ShortcutsQrCode({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="btn ghost">
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="btn ghost">
         利用記録を自動化する
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="panel w-full max-w-sm shadow-xl">
+        <div className="modal-shell fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="modal-panel panel w-full max-w-sm shadow-xl" role="dialog" aria-modal="true">
             <p className="title" style={{ marginBottom: 8 }}>
               {subscriptionName} の利用記録を自動化
             </p>
@@ -54,6 +70,7 @@ export function ShortcutsQrCode({
               <QRCodeSVG value={qrData} size={200} />
             </div>
             <button
+              ref={closeRef}
               type="button"
               onClick={() => setOpen(false)}
               className="btn block"

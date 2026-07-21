@@ -731,8 +731,9 @@ tasks:
     level: 1
     phase: "実装"
     name: "Web UI フォローアップ（レビュー指摘・細部詰め）"
-    progress: 0
-    status: "未着手"
+    progress: 40
+    status: "進行中"
+    actualStart: "2026-07-21"
     predecessors: ["UI-1"]
   - id: "UI-2.1"
     parent: "UI-2"
@@ -753,8 +754,10 @@ tasks:
     level: 2
     phase: "実装"
     name: "登録フォームの重要度/初回トグルを button 要素へ（アクセシビリティ）"
-    progress: 0
-    status: "未着手"
+    progress: 100
+    status: "完了"
+    actualStart: "2026-07-21"
+    actualEnd: "2026-07-21"
   - id: "UI-2.4"
     parent: "UI-2"
     level: 2
@@ -766,9 +769,12 @@ tasks:
     parent: "UI-2"
     level: 2
     phase: "実装"
-    name: "他画面の細部詰め・モバイル下部タブ"
-    progress: 0
-    status: "未着手"
+    name: "全画面のレスポンシブ対応・モバイル下部ナビ・その他メニュー"
+    progress: 100
+    status: "完了"
+    actualStart: "2026-07-21"
+    actualEnd: "2026-07-21"
+    note: "320〜430px、横向き、200%相当、PC回帰を合成データのPlaywright E2Eで確認。Safari・Chrome実機とVoiceOverは手順書に従う手動確認待ち"
 
   # ═════════════════════════════════════════════════════════════
   # 旧 TestFlight スプリント（日付付き実装計画・参照レーン）

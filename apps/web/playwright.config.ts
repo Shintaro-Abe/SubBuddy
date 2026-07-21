@@ -30,7 +30,12 @@ export default defineConfig({
   webServer: {
     command: `npm run start`,
     url: `http://127.0.0.1:${PORT}`,
-    env: { PORT: String(PORT) },
+    env: {
+      PORT: String(PORT),
+      // E2E は合成データを使うローカル構成で固定する。
+      // 呼び出し元の環境変数に影響されず、安全な認証設定で起動するため明示する。
+      SUBBUDDY_MODE: "local",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

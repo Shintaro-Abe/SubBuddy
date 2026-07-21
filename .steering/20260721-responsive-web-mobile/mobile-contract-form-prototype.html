@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SubBuddy iPhone向けWeb — 契約追加フォーム試作</title>
+  <style>
+    :root {
+      --paper:#f6f4ee;--ink:#26231f;--muted:#48443c;--faint:#6f6a5c;
+      --hair:#ded9ce;--card:#fdfcf9;--sage:#475347;--sage-soft:#e7ebe2;
+      --error:#93463b;--shadow:0 18px 55px rgba(46,50,43,.14);
+      color-scheme:light;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:#dedbd3}
+    body{color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI",sans-serif;line-height:1.6;letter-spacing:.02em}
+    button,input,select{font:inherit}
+    .phone{width:min(100%,390px);min-height:100svh;margin:0 auto;background:var(--paper);box-shadow:var(--shadow)}
+    .topbar{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;min-height:58px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid rgba(222,217,206,.9);background:rgba(246,244,238,.95);backdrop-filter:blur(14px)}
+    .back{display:grid;width:44px;height:44px;padding:0;place-items:center;border:0;border-radius:50%;color:var(--sage);background:transparent;cursor:pointer}
+    .back svg{width:24px;height:24px}
+    .top-title{text-align:center;font-size:14px;font-weight:700}
+    main{padding:22px 16px calc(34px + env(safe-area-inset-bottom))}
+    .eyebrow{margin:0 0 4px;color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.08em}
+    h1{margin:0;font-family:"Yu Mincho","Hiragino Mincho ProN",serif;font-size:clamp(29px,8.2vw,34px);line-height:1.35;letter-spacing:0}
+    .lead{margin:8px 0 0;color:var(--muted);font-size:14px}
+    .panel{margin-top:22px;padding:20px 16px;border:1px solid var(--hair);border-radius:16px;background:var(--card);box-shadow:0 6px 24px rgba(95,107,94,.045)}
+    .field{margin-bottom:22px}.field:last-child{margin-bottom:0}
+    label,.field-title{display:block;margin:0 0 7px;color:var(--muted);font-size:13px;font-weight:700}
+    .required{margin-left:5px;color:var(--error);font-size:11px}
+    .input{display:block;width:100%;min-height:48px;padding:11px 13px;border:1px solid #cfc9bc;border-radius:10px;color:var(--ink);background:#fff;font-size:16px;outline:none}
+    .input:focus{border-color:var(--sage);box-shadow:0 0 0 3px rgba(71,83,71,.13)}
+    .input::placeholder{color:#8b8578}
+    .help{margin:6px 0 0;color:var(--faint);font-size:12px}
+    .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .choice{min-height:46px;padding:9px 10px;border:1px solid #cfc9bc;border-radius:10px;color:var(--muted);background:#fff;font-size:14px;font-weight:650;cursor:pointer}
+    .choice.active{border-color:var(--sage);color:var(--ink);background:var(--sage-soft)}
+    .importance{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+    .importance .choice{min-width:0;padding:8px 2px}
+    .usage{display:grid;gap:8px}
+    .usage .choice{min-height:48px;padding:11px 12px;text-align:left;line-height:1.45}
+    .actions{margin-top:24px}
+    .save{display:flex;width:100%;min-height:50px;align-items:center;justify-content:center;border:0;border-radius:11px;color:#fff;background:var(--sage);font-size:15px;font-weight:750;cursor:pointer}
+    .cancel{display:flex;width:100%;min-height:44px;margin-top:8px;align-items:center;justify-content:center;border:0;color:var(--sage);background:transparent;font-size:14px;font-weight:700;cursor:pointer}
+    .note{display:none;max-width:390px;margin:18px auto 0;color:#4d4a43;font-size:13px;text-align:center}
+    @media(max-width:340px){main{padding-right:13px;padding-left:13px}.panel{padding-right:13px;padding-left:13px}.usage .choice{font-size:13px}}
+    @media(min-width:600px){body{padding:28px 0 44px}.phone{min-height:844px;border-radius:34px;overflow:hidden}.note{display:block}}
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <button class="back" type="button" aria-label="契約画面へ戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
+      <span class="top-title">契約</span>
+      <span aria-hidden="true"></span>
+    </header>
+    <main>
+      <p class="eyebrow">新しい契約</p>
+      <h1>契約を追加</h1>
+      <p class="lead">分かる項目だけ入力できます。あとから変更できます。</p>
+
+      <form class="panel">
+        <div class="field">
+          <label for="service">サービス名<span class="required">必須</span></label>
+          <input class="input" id="service" type="search" placeholder="サービス名を検索">
+          <p class="help">候補から選ぶと、カテゴリなどが自動で入ります。</p>
+        </div>
+
+        <div class="field">
+          <label for="amount">金額<span class="required">必須</span></label>
+          <input class="input" id="amount" type="number" inputmode="numeric" placeholder="例：1200">
+        </div>
+
+        <fieldset class="field" style="padding:0;border:0">
+          <legend class="field-title">課金周期<span class="required">必須</span></legend>
+          <div class="seg">
+            <button class="choice active" type="button" aria-pressed="true">月額</button>
+            <button class="choice" type="button" aria-pressed="false">年額</button>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="renewal">次回更新日</label>
+          <input class="input" id="renewal" type="date">
+          <p class="help">未入力でも保存できます。</p>
+        </div>
+
+        <fieldset class="field" style="padding:0;border:0">
+          <legend class="field-title">なくなったら困る度合い</legend>
+          <div class="importance" aria-label="重要度">
+            <button class="choice" type="button">1</button>
+            <button class="choice" type="button">2</button>
+            <button class="choice active" type="button">3</button>
+            <button class="choice" type="button">4</button>
+            <button class="choice" type="button">5</button>
+          </div>
+          <p class="help">見直しの参考に使います。</p>
+        </fieldset>
+
+        <fieldset class="field" style="padding:0;border:0">
+          <legend class="field-title">主な利用方法</legend>
+          <div class="usage">
+            <button class="choice active" type="button">iPhoneアプリで使う</button>
+            <button class="choice" type="button">音楽など、画面を閉じても使う</button>
+            <button class="choice" type="button">PC・テレビ・Webで使う</button>
+            <button class="choice" type="button">保管・同期などで使う</button>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button class="save" type="submit">この内容で保存</button>
+          <button class="cancel" type="button">キャンセル</button>
+        </div>
+      </form>
+    </main>
+  </div>
+  <p class="note">入力画面では下部ナビゲーションを隠し、誤操作とキーボード競合を避けます。</p>
+</body>
+</html>

@@ -24,6 +24,7 @@
 | [ios-spending-renewal-real-device-check.md](./ios-spending-renewal-real-device-check.md) | iPhoneとWeb版の支出・カテゴリ・6か月推移・14日以内更新の数値照合 | `.steering/20260716-ios-main-ui/` |
 | [ios-onboarding-interruption-resume-check.md](./ios-onboarding-interruption-resume-check.md) | iPhone初回導線の空・通信失敗・中断・保存済み進捗からの自動再開・完了後案内 | `.steering/20260716-ios-main-ui/`、`.steering/20260720-first-use-guidance/` |
 | [ios-ui-quality-check.md](./ios-ui-quality-check.md) | iPhone UIの画面サイズ、表示設定、VoiceOver、操作領域、案内の排他表示、操作色、Appleボタン寸法、合成200契約性能 | `.steering/20260716-ios-main-ui/`、`.steering/20260720-fix-ios-controls-dark-mode/` |
+| [web-mobile-ui-check.md](./web-mobile-ui-check.md) | iPhoneのSafari・ChromeでWeb版の縦横表示、200%表示、VoiceOver、入力画面を確認する | `.steering/20260721-responsive-web-mobile/` |
 | [ios-screen-time-measurement-sync-real-device-check.md](./ios-screen-time-measurement-sync-real-device-check.md) | iPhone Screen Timeの1日計測、アプリ復帰時の自動同期、通信失敗後の自動再送、見直し反映、同日再送、契約削除時の後片付け | `.steering/20260716-ios-main-ui/`、`.steering/20260719-auto-usage-sync/` |
 | [ios-screen-time-auto-measurement-regression-check.md](./ios-screen-time-auto-measurement-regression-check.md) | Swift Actor隔離・Simulator起動前検査の修復確認と、Screen Time自動開始・変更・解除・認可復帰・通信失敗の回帰確認 | `.steering/20260719-auto-screen-time-measurement-lifecycle/`、`.steering/20260719-auto-usage-sync/` |
 | [render-screen-time-usage-db-query.md](./render-screen-time-usage-db-query.md) | Render Web ServiceのShellからScreen Time同期の到達日時と日別集計値を安全に確認する | `.steering/20260719-auto-usage-sync/` |

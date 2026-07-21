@@ -11,15 +11,16 @@ export default async function SubscriptionsPage() {
 
   return (
     <div>
-      <div className="pagehead flex items-end justify-between gap-4">
+      <div className="pagehead subscriptions-pagehead flex items-end justify-between gap-4">
         <div>
           <p className="display">契約</p>
           <p className="caption" style={{ marginTop: 8 }}>
             継続中 <span className="num">{rows.length}</span> 件
           </p>
         </div>
-        <Link href="/subscriptions/new" className="btn">
-          ＋ サブスクを登録
+        <Link href="/subscriptions/new" className="btn subscription-add-button">
+          <span className="desktop-only">＋ サブスクを登録</span>
+          <span className="mobile-only">＋ 追加</span>
         </Link>
       </div>
       <ScreenIntro screen="subscriptions">
@@ -28,10 +29,13 @@ export default async function SubscriptionsPage() {
 
       {rows.length === 0 ? (
         <div className="panel" style={{ marginTop: 24 }}>
-          <p className="body">まだ登録しているサブスクはありません。</p>
+          <p className="body">まだ登録している契約はありません。</p>
           <p className="caption" style={{ marginTop: 8 }}>
-            「＋ サブスクを登録」から最初の契約を追加してみましょう。
+            思い出せるものから、最初の契約を追加してみましょう。
           </p>
+          <Link href="/subscriptions/new" className="btn mobile-block" style={{ marginTop: 16 }}>
+            最初の契約を追加
+          </Link>
         </div>
       ) : (
         <div className="cards" style={{ marginTop: 24 }}>

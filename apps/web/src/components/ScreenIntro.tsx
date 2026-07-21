@@ -28,7 +28,7 @@ export function ScreenIntro({
 
   return visible ? (
     <aside className="panel mt-4" aria-label="この画面について">
-      <div className="flex items-start justify-between gap-4">
+      <div className="screen-intro-content flex items-start justify-between gap-4">
         <div>
           <p className="title text-base">この画面について</p>
           <div className="body mt-1">{children}</div>

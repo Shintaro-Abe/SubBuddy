@@ -29,7 +29,7 @@ export default async function RecommendationsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
+      <div className="recommendations-pagehead flex items-center justify-between gap-4">
         <p className="display">見直し</p>
         <RecomputeButton />
       </div>
@@ -59,12 +59,12 @@ export default async function RecommendationsPage() {
               {g.items.length} 件
             </span>
           </div>
-          <div className="panel" style={{ padding: "4px 16px" }}>
+          <div className="panel mobile-card-list" style={{ padding: "4px 16px" }}>
             {g.items.map(({ subscription: s, recommendation: rec }) => (
               <Link key={s.id} href={`/subscriptions/${s.id}`} className="rowitem">
                 <div className="min-w-0">
-                  <div className="truncate font-medium">{s.name}</div>
-                  <div className="caption" style={{ margin: "2px 0 0" }}>
+                  <div className="review-card-name font-medium">{s.name}</div>
+                  <div className="caption mobile-line-clamp" style={{ margin: "2px 0 0" }}>
                     {rec!.reason}
                   </div>
                 </div>
@@ -88,11 +88,11 @@ export default async function RecommendationsPage() {
               {observing.length} 件
             </span>
           </div>
-          <div className="panel" style={{ padding: "4px 16px" }}>
+          <div className="panel mobile-card-list" style={{ padding: "4px 16px" }}>
             {observing.map(({ subscription: s, recommendation: rec }) => (
               <Link key={s.id} href={`/subscriptions/${s.id}`} className="rowitem">
                 <div className="min-w-0">
-                  <div className="truncate font-medium">{s.name}</div>
+                  <div className="review-card-name font-medium">{s.name}</div>
                   <div className="caption" style={{ margin: "2px 0 0" }}>
                     確定まであと <span className="num">{rec!.daysUntilReady}</span> 日
                   </div>

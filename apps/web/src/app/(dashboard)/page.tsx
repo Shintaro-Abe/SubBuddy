@@ -45,7 +45,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <section className="pagehead flex items-start justify-between gap-4">
+      <section className="pagehead dashboard-pagehead flex items-start justify-between gap-4">
         <div>
           <p className="display">
             今月の支出は <span className="num">{formatYen(monthlyTotal)}</span> です。
@@ -56,26 +56,6 @@ export default async function DashboardPage() {
           </p>
         </div>
         <RecomputeButton />
-      </section>
-
-      <section className="section">
-        <div className="sechead">
-          <h2 className="title">概況</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="月額合計（継続中）"
-            value={formatYen(monthlyTotal)}
-            sub={`${active.length} 件`}
-          />
-          <StatCard label="年額合計（継続中）" value={formatYen(yearlyTotal)} />
-          <StatCard
-            label="見直し候補"
-            value={`${strongCancel} 件`}
-            sub={observing > 0 ? `観測中 ${observing} 件` : undefined}
-          />
-          <StatCard label="更新間近（14日以内）" value={`${renewalsSoon} 件`} />
-        </div>
       </section>
 
       <section className="section">
@@ -118,6 +98,26 @@ export default async function DashboardPage() {
         )}
 
         <GettingStartedChecklist progress={guidance} subscriptionCount={rows.length} compact />
+      </section>
+
+      <section className="section">
+        <div className="sechead">
+          <h2 className="title">詳しい概況</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="月額合計（継続中）"
+            value={formatYen(monthlyTotal)}
+            sub={`${active.length} 件`}
+          />
+          <StatCard label="年額合計（継続中）" value={formatYen(yearlyTotal)} />
+          <StatCard
+            label="見直し候補"
+            value={`${strongCancel} 件`}
+            sub={observing > 0 ? `観測中 ${observing} 件` : undefined}
+          />
+          <StatCard label="更新間近（14日以内）" value={`${renewalsSoon} 件`} />
+        </div>
       </section>
     </div>
   );

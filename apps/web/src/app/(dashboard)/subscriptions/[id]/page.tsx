@@ -25,7 +25,7 @@ function Row({
   amount?: boolean;
 }) {
   return (
-    <div className="rowitem">
+    <div className="rowitem detail-row">
       <span className="caption" style={{ margin: 0 }}>
         {label}
       </span>
@@ -73,7 +73,6 @@ export default async function SubscriptionDetailPage({
           <Link href={`/subscriptions/${s.id}/edit`} className="btn ghost">
             編集
           </Link>
-          <DeleteSubscriptionButton id={s.id} />
         </div>
       </div>
 
@@ -200,6 +199,18 @@ export default async function SubscriptionDetailPage({
           />
         )}
       </div>
+
+      <section className="section panel" aria-labelledby="other-actions-heading">
+        <h2 className="title" id="other-actions-heading">
+          その他の操作
+        </h2>
+        <p className="caption" style={{ marginTop: 6 }}>
+          契約を削除すると、関連する利用履歴と見直し結果も削除されます。
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <DeleteSubscriptionButton id={s.id} />
+        </div>
+      </section>
 
       <div className="foot">
         <span>SubBuddy</span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SidebarNav } from "@/components/SidebarNav";
+import { MobileNavigation } from "@/components/MobileNavigation";
 
 /**
  * ダッシュボード共通シェル（サイドバー）。全画面で共通の左ナビを提供する。
@@ -18,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ＋ サブスクを登録
         </Link>
       </aside>
+      <MobileNavigation />
       <main className="main">{children}</main>
     </div>
   );

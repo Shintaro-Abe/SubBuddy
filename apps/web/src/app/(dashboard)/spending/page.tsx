@@ -40,7 +40,7 @@ export default async function SpendingPage() {
       </ScreenIntro>
 
       {/* 合計 */}
-      <div className="grid2" style={{ marginTop: 24 }}>
+      <div className="grid2 spending-summary" style={{ marginTop: 24 }}>
         <div className="panel">
           <div className="caption">月額合計（継続中）</div>
           <div className="num" style={{ fontSize: 30, marginTop: 4 }}>
@@ -67,7 +67,7 @@ export default async function SpendingPage() {
             </p>
           ) : (
             <>
-              <div className="bars">
+              <div className="bars desktop-only">
                 {summary.monthlyTrend.map((m, i) => (
                   <div key={m.month} className={i === lastTrendIndex ? "bar cur" : "bar"}>
                     <span className="num caption" style={{ marginBottom: 6 }}>
@@ -81,6 +81,22 @@ export default async function SpendingPage() {
                   </div>
                 ))}
               </div>
+              <ol className="mobile-trend-list mobile-only">
+                {summary.monthlyTrend.map((m, i) => (
+                  <li
+                    key={m.month}
+                    className={`mobile-trend-row${i === lastTrendIndex ? " current" : ""}`}
+                  >
+                    <span className="month">{Number(m.month.slice(5))}月</span>
+                    <span className="mini-track" aria-hidden="true">
+                      <span
+                        style={{ width: `${Math.round((m.monthly / maxTrend) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="num amount">{formatYen(m.monthly)}</span>
+                  </li>
+                ))}
+              </ol>
               <p className="caption" style={{ marginTop: 12 }}>
                 各月末までに登録済みの継続中契約の月額合計。登録が増えるほど積み上がります。
               </p>

@@ -29,6 +29,8 @@ paths = [
   '''(^|/)e2e/artifacts(/|$)''',
   '''(^|/)e2e/\.generated(/|$)''',
   '''(^|/)slides/[^/]+/rendered/.*\.png$''',
+  # 合成データだけで生成したレスポンシブUI試作画像。バイナリ列の電話番号誤検知を避ける。
+  '''^\.steering/20260721-responsive-web-mobile/mobile-contract-form-(320|390)\.png$''',
   '''(^|/)secrets(/|$)''',
 ]
 

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SubBuddy iPhone向けWeb — 支出の内訳 試作</title>
+  <style>
+    :root {
+      --paper: #f6f4ee;
+      --ink: #26231f;
+      --muted: #48443c;
+      --faint: #6f6a5c;
+      --hair: #ded9ce;
+      --card: #fdfcf9;
+      --sage: #475347;
+      --sage-soft: #e7ebe2;
+      --track: #e9e5db;
+      --shadow: 0 18px 55px rgba(46, 50, 43, .14);
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: #dedbd3; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #dedbd3;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      line-height: 1.6;
+      letter-spacing: .02em;
+    }
+
+    button, a { font: inherit; }
+
+    .phone {
+      position: relative;
+      width: min(100%, 390px);
+      min-height: 100svh;
+      margin: 0 auto;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 56px;
+      padding: calc(10px + env(safe-area-inset-top)) 18px 10px;
+      border-bottom: 1px solid rgba(222, 217, 206, .85);
+      background: rgba(246, 244, 238, .94);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid var(--hair);
+      border-radius: 50%;
+      color: var(--sage);
+      background: var(--card);
+      cursor: pointer;
+    }
+
+    main {
+      padding: 24px 16px calc(96px + env(safe-area-inset-bottom));
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(29px, 8.2vw, 34px);
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--hair);
+      border-radius: 15px;
+      background: var(--card);
+      box-shadow: 0 6px 24px rgba(95, 107, 94, .045);
+    }
+
+    .label {
+      margin: 0;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .money {
+      margin: 6px 0 0;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(20px, 6vw, 25px);
+      font-weight: 750;
+      letter-spacing: -.025em;
+      white-space: nowrap;
+    }
+
+    section { margin-top: 30px; }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 11px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--faint);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .trend-list {
+      margin: 0;
+      padding: 4px 16px;
+      list-style: none;
+    }
+
+    .trend-row {
+      display: grid;
+      grid-template-columns: 34px minmax(58px, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 50px;
+      border-bottom: 1px solid var(--hair);
+    }
+
+    .trend-row:last-child { border-bottom: 0; }
+
+    .trend-row.current {
+      margin: 4px -8px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--sage-soft);
+    }
+
+    .month {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mini-track {
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--track);
+    }
+
+    .mini-track span {
+      display: block;
+      width: var(--value);
+      height: 100%;
+      border-radius: inherit;
+      background: #8d998a;
+    }
+
+    .current .mini-track span { background: var(--sage); }
+
+    .amount {
+      min-width: 78px;
+      text-align: right;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .category-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .category-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    .category-value {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .category-track {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--track);
+    }
+
+    .category-track span {
+      display: block;
+      width: var(--value);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--sage);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      z-index: 10;
+      right: max(0px, calc((100vw - 390px) / 2));
+      bottom: 0;
+      left: max(0px, calc((100vw - 390px) / 2));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(222, 217, 206, .95);
+      background: rgba(253, 252, 249, .96);
+      backdrop-filter: blur(16px);
+    }
+
+    .nav-item {
+      display: grid;
+      min-height: 50px;
+      padding: 5px 4px;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+      border-radius: 10px;
+      color: var(--faint);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .nav-item svg { width: 20px; height: 20px; }
+
+    .nav-item.active {
+      color: var(--sage);
+      background: var(--sage-soft);
+    }
+
+    .prototype-note {
+      display: none;
+      max-width: 390px;
+      margin: 18px auto 0;
+      color: #4d4a43;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 340px) {
+      .summary { grid-template-columns: 1fr; }
+      .money { font-size: 24px; }
+      .trend-row { grid-template-columns: 30px minmax(44px, 1fr) auto; gap: 8px; }
+    }
+
+    @media (min-width: 600px) {
+      body { padding: 28px 0 44px; }
+      .phone { min-height: 844px; border-radius: 34px; }
+      .prototype-note { display: block; }
+      .bottom-nav {
+        right: calc((100vw - 390px) / 2);
+        left: calc((100vw - 390px) / 2);
+        bottom: 28px;
+        border-radius: 0 0 34px 34px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <span class="brand">SubBuddy</span>
+      <button class="icon-button" type="button" aria-label="その他のメニューを開く">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none"></circle>
+          <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle>
+          <circle cx="18" cy="12" r="1.4" fill="currentColor" stroke="none"></circle>
+        </svg>
+      </button>
+    </header>
+
+    <main>
+      <p class="eyebrow">支出</p>
+      <h1>支出の内訳</h1>
+      <p class="lead">継続中3件の支出を、合計・内訳・推移で確認できます。</p>
+
+      <div class="summary" aria-label="支出の概要">
+        <article class="card">
+          <p class="label">月額合計</p>
+          <p class="money">¥8,980</p>
+        </article>
+        <article class="card">
+          <p class="label">年額見込み</p>
+          <p class="money">¥107,760</p>
+        </article>
+      </div>
+
+      <section aria-labelledby="trend-title">
+        <div class="section-head">
+          <h2 id="trend-title">月ごとの推移</h2>
+          <p class="hint">過去6か月</p>
+        </div>
+        <ol class="card trend-list">
+          <li class="trend-row">
+            <span class="month">2月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 67%"></span></span>
+            <span class="amount">¥5,980</span>
+          </li>
+          <li class="trend-row">
+            <span class="month">3月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 67%"></span></span>
+            <span class="amount">¥5,980</span>
+          </li>
+          <li class="trend-row">
+            <span class="month">4月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 78%"></span></span>
+            <span class="amount">¥6,980</span>
+          </li>
+          <li class="trend-row">
+            <span class="month">5月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 89%"></span></span>
+            <span class="amount">¥7,980</span>
+          </li>
+          <li class="trend-row">
+            <span class="month">6月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 89%"></span></span>
+            <span class="amount">¥7,980</span>
+          </li>
+          <li class="trend-row current">
+            <span class="month">7月</span>
+            <span class="mini-track" aria-hidden="true"><span style="--value: 100%"></span></span>
+            <span class="amount">¥8,980</span>
+          </li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="category-title">
+        <div class="section-head">
+          <h2 id="category-title">カテゴリ別内訳</h2>
+        </div>
+        <div class="card category-list">
+          <div>
+            <div class="category-head">
+              <span>動画配信</span>
+              <span class="category-value">¥4,980・55%</span>
+            </div>
+            <div class="category-track" aria-hidden="true"><span style="--value: 55%"></span></div>
+          </div>
+          <div>
+            <div class="category-head">
+              <span>音楽</span>
+              <span class="category-value">¥2,000・22%</span>
+            </div>
+            <div class="category-track" aria-hidden="true"><span style="--value: 22%"></span></div>
+          </div>
+          <div>
+            <div class="category-head">
+              <span>クラウド</span>
+              <span class="category-value">¥2,000・22%</span>
+            </div>
+            <div class="category-track" aria-hidden="true"><span style="--value: 22%"></span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主な画面">
+      <a class="nav-item active" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V21h13V9.5"></path></svg>
+        <span>ホーム</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M8 11h8M8 15h5"></path></svg>
+        <span>契約</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V9M10 18V5M16 18v-7M22 18V3"></path></svg>
+        <span>見直し</span>
+      </a>
+    </nav>
+  </div>
+
+  <p class="prototype-note">iPhoneでは画面いっぱい、PCでは390pxの確認用フレームで表示されます。</p>
+</body>
+</html>

@@ -110,8 +110,12 @@ export function SubscriptionForm({
     }
   }
 
+  function issueMessage(path: keyof SubscriptionFormValues): string | null {
+    return issues.find((issue) => issue.path === path)?.message ?? null;
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="panel" style={{ marginTop: 24 }}>
+    <form onSubmit={handleSubmit} className="panel subscription-form" style={{ marginTop: 24 }}>
       {error && (
         <div className="field">
           <p className="help" role="alert" style={{ marginTop: 0 }}>
@@ -160,6 +164,11 @@ export function SubscriptionForm({
             maxLength={200}
           />
         )}
+        {issueMessage("name") && (
+          <p className="help field-error" role="alert">
+            {issueMessage("name")}
+          </p>
+        )}
         <div className="help">カタログから選ぶと、カテゴリや利用の性質が自動で入ります。</div>
       </div>
 
@@ -178,6 +187,11 @@ export function SubscriptionForm({
           readOnly={catalogMatched}
           placeholder="video_streaming / music / ai_tool など"
         />
+        {issueMessage("category") && (
+          <p className="help field-error" role="alert">
+            {issueMessage("category")}
+          </p>
+        )}
         {catalogMatched && <p className="help">カタログから自動設定されました</p>}
       </div>
 
@@ -199,6 +213,11 @@ export function SubscriptionForm({
               </option>
             ))}
           </select>
+          {issueMessage("usageType") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("usageType")}
+            </p>
+          )}
         </div>
       )}
 
@@ -217,6 +236,11 @@ export function SubscriptionForm({
             onChange={(e) => set("amount", Number(e.target.value))}
             required
           />
+          {issueMessage("amount") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("amount")}
+            </p>
+          )}
         </div>
         <div className="field">
           <label htmlFor="billingCycle" className="label">
@@ -231,6 +255,11 @@ export function SubscriptionForm({
             <option value="monthly">月額</option>
             <option value="yearly">年額</option>
           </select>
+          {issueMessage("billingCycle") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("billingCycle")}
+            </p>
+          )}
         </div>
       </div>
 
@@ -246,6 +275,11 @@ export function SubscriptionForm({
             value={values.nextRenewalDate ?? ""}
             onChange={(e) => set("nextRenewalDate", e.target.value)}
           />
+          {issueMessage("nextRenewalDate") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("nextRenewalDate")}
+            </p>
+          )}
         </div>
         <div className="field">
           <label htmlFor="importance" className="label">
@@ -253,24 +287,22 @@ export function SubscriptionForm({
           </label>
           <div className="seg" role="group" aria-label="重要度">
             {[1, 2, 3, 4, 5].map((n) => (
-              <span
+              <button
+                type="button"
                 key={n}
                 className={`opt${values.importance === n ? " sel" : ""}`}
-                role="button"
-                tabIndex={0}
                 aria-pressed={values.importance === n}
                 onClick={() => set("importance", n)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    set("importance", n);
-                  }
-                }}
               >
                 {n}
-              </span>
+              </button>
             ))}
           </div>
+          {issueMessage("importance") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("importance")}
+            </p>
+          )}
           <div className="help">「なくなったら困る度合い」。判定の参考にします。</div>
         </div>
       </div>
@@ -281,39 +313,30 @@ export function SubscriptionForm({
           <label className="label">このサブスクがなくなったら困りますか？</label>
           <div className="seg" role="group" aria-label="このサブスクがなくなったら困りますか？">
             {VALUE_ANSWER_OPTIONS.map((opt) => (
-              <span
+              <button
+                type="button"
                 key={opt.value}
                 className={`opt${values.initialValueAnswer === opt.value ? " sel" : ""}`}
-                role="button"
-                tabIndex={0}
                 aria-pressed={values.initialValueAnswer === opt.value}
                 onClick={() => set("initialValueAnswer", opt.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    set("initialValueAnswer", opt.value);
-                  }
-                }}
               >
                 {opt.label}
-              </span>
+              </button>
             ))}
-            <span
+            <button
+              type="button"
               className="opt"
-              role="button"
-              tabIndex={0}
               onClick={() => set("initialValueAnswer", undefined)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  set("initialValueAnswer", undefined);
-                }
-              }}
               style={{ color: "var(--faint)" }}
             >
               スキップ
-            </span>
+            </button>
           </div>
+          {issueMessage("initialValueAnswer") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("initialValueAnswer")}
+            </p>
+          )}
         </div>
       )}
 
@@ -329,6 +352,11 @@ export function SubscriptionForm({
           onChange={(e) => set("cancellationUrl", e.target.value)}
           placeholder="https://…"
         />
+        {issueMessage("cancellationUrl") && (
+          <p className="help field-error" role="alert">
+            {issueMessage("cancellationUrl")}
+          </p>
+        )}
       </div>
 
       <div className="field">
@@ -343,6 +371,11 @@ export function SubscriptionForm({
           onChange={(e) => set("notes", e.target.value)}
           maxLength={2000}
         />
+        {issueMessage("notes") && (
+          <p className="help field-error" role="alert">
+            {issueMessage("notes")}
+          </p>
+        )}
       </div>
 
       {id && (
@@ -360,10 +393,15 @@ export function SubscriptionForm({
             <option value="paused">一時停止</option>
             <option value="canceled">解約済み</option>
           </select>
+          {issueMessage("status") && (
+            <p className="help field-error" role="alert">
+              {issueMessage("status")}
+            </p>
+          )}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+      <div className="form-actions" style={{ display: "flex", gap: 12, marginTop: 8 }}>
         <button type="submit" disabled={saving} className="btn">
           {saving ? "保存中…" : "保存"}
         </button>

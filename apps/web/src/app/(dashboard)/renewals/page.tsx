@@ -56,7 +56,7 @@ export default async function RenewalsPage({
           </p>
         </div>
       ) : (
-        <div className="panel" style={{ padding: "6px 18px", marginTop: 10 }}>
+        <div className="panel mobile-card-list" style={{ padding: "6px 18px", marginTop: 10 }}>
           {upcoming.map(({ subscription: s, recommendation: rec, daysUntil }) => (
             <Link
               key={s.id}
