@@ -33,7 +33,7 @@ export function RecomputeButton() {
       disabled={busy}
       className="btn ghost disabled:opacity-50"
     >
-      {busy ? "再計算中…" : "判定を再計算"}
+      {busy ? "再計算中…" : "見直し材料を再計算"}
     </button>
   );
 }

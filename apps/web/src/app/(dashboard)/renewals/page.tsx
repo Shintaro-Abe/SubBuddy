@@ -57,7 +57,7 @@ export default async function RenewalsPage({
         </div>
       ) : (
         <div className="panel mobile-card-list" style={{ padding: "6px 18px", marginTop: 10 }}>
-          {upcoming.map(({ subscription: s, recommendation: rec, daysUntil }) => (
+          {upcoming.map(({ subscription: s, recommendation: rec, reviewBlocked, daysUntil }) => (
             <Link
               key={s.id}
               href={`/subscriptions/${s.id}`}
@@ -70,7 +70,7 @@ export default async function RenewalsPage({
                     <span className="body" style={{ fontWeight: 700 }}>
                       {s.name}
                     </span>
-                    <DecisionBadge recommendation={rec} />
+                    <DecisionBadge recommendation={rec} blocked={reviewBlocked} />
                   </div>
                   <div className="caption" style={{ margin: "2px 0 0" }}>
                     {formatDate(s.nextRenewalDate)} 更新・

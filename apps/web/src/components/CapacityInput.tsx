@@ -73,8 +73,6 @@ export function CapacityInput({
         }),
       });
       if (!res.ok) throw new Error("save failed");
-      // 使用容量が変わると判定（安全に下げられるか）も変わるので再計算する。
-      await authenticatedFetch("/api/recommendations/recompute", { method: "POST" });
       startTransition(() => router.refresh());
     } catch {
       setError("保存に失敗しました。時間をおいて試してください");
@@ -154,7 +152,7 @@ export function CapacityInput({
 
       <div className="flex items-center gap-3" style={{ marginTop: 12, flexWrap: "wrap" }}>
         <button type="button" onClick={handleSave} disabled={busy} className="btn">
-          {busy ? "保存中…" : "保存して判定する"}
+          {busy ? "保存中…" : "保存して見直す"}
         </button>
         {checkedAt && (
           <span className="caption" style={{ margin: 0 }}>

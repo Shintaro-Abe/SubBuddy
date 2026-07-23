@@ -11,6 +11,7 @@ import {
 import { authenticateRequest, authorizeStateChange } from "@/lib/auth";
 import { subscriptionCreateSchema } from "@/schemas/subscription";
 import { createSubscription, listSubscriptions } from "@/repositories/subscriptions";
+import { refreshRecommendationAfterMutation } from "@/services/recompute";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
     if (!parsed.success) return fromZodError(parsed.error);
 
     const sub = await createSubscription(auth.actor.userId, parsed.data);
+    await refreshRecommendationAfterMutation(auth.actor.userId, sub.id);
     return created(sub);
   } catch {
     return serverError();

@@ -8,7 +8,7 @@ protocol ProductAPIProviding: Sendable {
     func updateSubscription(id: String, input: SubscriptionInput) async throws -> Subscription
     func deleteSubscription(id: String) async throws
     func deleteMeasurementData(subscriptionId: String) async throws
-    func recommendations() async throws -> [Recommendation]
+    func recommendations() async throws -> RecommendationCollection
     func recomputeRecommendations() async throws
     func upcomingRenewals(days: Int) async throws -> [UpcomingRenewal]
     func serviceCatalog() async throws -> [ServiceCatalogItem]
@@ -68,12 +68,11 @@ extension APIClient {
         )
     }
 
-    func recommendations() async throws -> [Recommendation] {
-        let response: RecommendationCollection = try await sendAuthenticated(
+    func recommendations() async throws -> RecommendationCollection {
+        try await sendAuthenticated(
             path: "/api/recommendations",
             method: "GET"
         )
-        return response.items
     }
 
     func recomputeRecommendations() async throws {
@@ -359,8 +358,14 @@ struct SubscriptionInput: Codable, Equatable {
     let capacityCheckedAt: String?
 }
 
-struct RecommendationCollection: Decodable {
+struct RecommendationCollection: Decodable, Equatable {
     let items: [Recommendation]
+    let blockedItems: [BlockedRecommendation]?
+}
+
+struct BlockedRecommendation: Decodable, Equatable {
+    let subscriptionId: String
+    let message: String
 }
 
 struct Recommendation: Decodable, Identifiable, Equatable {
@@ -381,7 +386,51 @@ struct Recommendation: Decodable, Identifiable, Equatable {
     let confidence: Double
     let reason: String
     let matchedPatterns: [MatchedPattern]?
+    let reviewPriority: ReviewPriority
+    let reviewUnknowns: [ReviewUnknown]
+    let reviewOptions: [ReviewOption]
+    let annualSavingsIfCancelled: Int?
+    let annualSavingsIfDowngraded: Int?
+    let annualSavingsIfSwitched: Int?
     let generatedAt: String
+}
+
+enum ReviewPriority: String, Codable, CaseIterable, Identifiable {
+    case now
+    case beforeRenewal = "before_renewal"
+    case missingInformation = "missing_information"
+    case lowUrgency = "low_urgency"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .now: return "今確認したい"
+        case .beforeRenewal: return "更新前に確認したい"
+        case .missingInformation: return "情報が不足している"
+        case .lowUrgency: return "現時点では急いで確認する材料が少ない"
+        }
+    }
+}
+
+struct ReviewUnknown: Decodable, Equatable, Identifiable {
+    let code: String
+    let message: String
+    var id: String { code }
+}
+
+struct ReviewOption: Decodable, Equatable, Identifiable {
+    let kind: String
+    let title: String
+    let detail: String
+    let targetName: String?
+    let currentMonthlyAmount: Int?
+    let targetMonthlyAmount: Int?
+    let annualSavings: Int?
+    let calculation: String?
+    let sourceUrl: String?
+    let verifiedAt: String?
+    var id: String { "\(kind)-\(title)-\(targetName ?? "")" }
 }
 
 enum RecommendationDecision: String, Codable, CaseIterable, Identifiable {
@@ -392,15 +441,6 @@ enum RecommendationDecision: String, Codable, CaseIterable, Identifiable {
     case strongCancelCandidate = "strong_cancel_candidate"
 
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .keep: return "現時点では急いで確認する材料が少ない"
-        case .review: return "更新前に確認したい"
-        case .considerDowngrade: return "安いプランを確認したい"
-        case .considerCancel: return "今確認したい"
-        case .strongCancelCandidate: return "今確認したい"
-        }
-    }
 }
 
 enum RecommendationDataStatus: String, Codable {

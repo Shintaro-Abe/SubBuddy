@@ -11,6 +11,7 @@ enum ExistingSubscriptionLoadOutcome: Equatable {
 final class ProductStore: ObservableObject {
     @Published private(set) var subscriptions: [Subscription] = []
     @Published private(set) var recommendations: [Recommendation] = []
+    @Published private(set) var blockedRecommendations: [BlockedRecommendation] = []
     @Published private(set) var upcomingRenewals: [UpcomingRenewal] = []
     @Published private(set) var catalog: [ServiceCatalogItem] = []
     @Published private(set) var sessions: [UserSession] = []
@@ -43,6 +44,7 @@ final class ProductStore: ObservableObject {
         guard let previewSnapshot else { return }
         subscriptions = previewSnapshot.subscriptions
         recommendations = previewSnapshot.recommendations
+        blockedRecommendations = previewSnapshot.blockedRecommendations
         upcomingRenewals = previewSnapshot.upcomingRenewals
         dashboard = previewSnapshot.dashboard
         spending = previewSnapshot.spending
@@ -103,7 +105,9 @@ final class ProductStore: ObservableObject {
             )
             self.dashboard = try await dashboard
             self.spending = try await spending
-            self.recommendations = try await recommendations
+            let reviewCollection = try await recommendations
+            self.recommendations = reviewCollection.items
+            blockedRecommendations = reviewCollection.blockedItems ?? []
             self.upcomingRenewals = try await upcoming
             self.catalog = try await catalog
             lastUpdatedAt = Date()
@@ -165,7 +169,9 @@ final class ProductStore: ObservableObject {
         defer { isSaving = false }
         do {
             try await client.recomputeRecommendations()
-            recommendations = try await client.recommendations()
+            let reviewCollection = try await client.recommendations()
+            recommendations = reviewCollection.items
+            blockedRecommendations = reviewCollection.blockedItems ?? []
         } catch {
             handle(error)
         }
@@ -216,6 +222,7 @@ final class ProductStore: ObservableObject {
     func clearSensitiveData() {
         subscriptions = []
         recommendations = []
+        blockedRecommendations = []
         upcomingRenewals = []
         catalog = []
         sessions = []
@@ -318,6 +325,7 @@ final class ProductStore: ObservableObject {
 struct ProductPreviewSnapshot {
     let subscriptions: [Subscription]
     let recommendations: [Recommendation]
+    var blockedRecommendations: [BlockedRecommendation] = []
     let upcomingRenewals: [UpcomingRenewal]
     let dashboard: DashboardSummary?
     let spending: SpendingSummary?

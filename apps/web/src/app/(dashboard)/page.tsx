@@ -34,8 +34,8 @@ export default async function DashboardPage() {
     yearlyTotal += toYearlyAmount(s.amount, s.billingCycle);
   }
 
-  const strongCancel = rows.filter(
-    (r) => r.recommendation?.decision === "strong_cancel_candidate",
+  const reviewNow = rows.filter(
+    (r) => r.recommendation?.reviewPriority === "now",
   ).length;
   const observing = rows.filter((r) => r.recommendation?.dataStatus === "observing").length;
   const renewalsSoon = active.filter((r) => {
@@ -67,21 +67,21 @@ export default async function DashboardPage() {
             契約へ →
           </Link>
           <Link href="/recommendations" className="text-[var(--sage)] hover:underline">
-            判定の根拠を見る →
+            見直し内容を見る →
           </Link>
         </div>
 
-        {strongCancel > 0 && (
+        {reviewNow > 0 && (
           <div className="memo mt-5 flex flex-wrap items-center justify-between gap-6">
             <div>
               <p className="title">見直しメモ</p>
               <p className="body mt-2 max-w-[46ch]">
-                見直し候補が <span className="num">{strongCancel}</span> 件あります。
+                今確認したい契約が <span className="num">{reviewNow}</span> 件あります。
                 根拠をもとに、続けるか見直すかはご自身で判断できます。
               </p>
             </div>
             <Link href="/recommendations" className="memobtn">
-              根拠の詳細を見る
+              見直し内容を見る
             </Link>
           </div>
         )}
@@ -112,8 +112,8 @@ export default async function DashboardPage() {
           />
           <StatCard label="年額合計（継続中）" value={formatYen(yearlyTotal)} />
           <StatCard
-            label="見直し候補"
-            value={`${strongCancel} 件`}
+            label="今確認したい"
+            value={`${reviewNow} 件`}
             sub={observing > 0 ? `観測中 ${observing} 件` : undefined}
           />
           <StatCard label="更新間近（14日以内）" value={`${renewalsSoon} 件`} />

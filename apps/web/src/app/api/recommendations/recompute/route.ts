@@ -13,7 +13,8 @@ export async function POST(req: Request) {
     if (!auth) return unauthorized();
     if (config.mode !== "local" && !authorizeStateChange(req, auth, config)) return forbidden();
     const results = await recomputeRecommendations(auth.actor.userId);
-    return ok({ recomputed: results.length, items: results });
+    // 未検証の計算途中データを返さず、表示は安全検査済みのGETから取得させる。
+    return ok({ recomputed: results.length });
   } catch {
     return serverError();
   }

@@ -69,8 +69,29 @@ enum PreviewFixtures {
         reason: "更新が近く、利用頻度に対して安いプランを確認できる可能性があります。",
         matchedPatterns: [
             MatchedPattern(label: "更新が近い", detail: "5日後に更新予定です"),
-            MatchedPattern(label: "安いプランがある", detail: "料金条件を公式サイトで確認してください")
+            MatchedPattern(label: "確認済みの下位プランがある", detail: "料金条件を公式サイトで確認してください")
         ],
+        reviewPriority: .now,
+        reviewUnknowns: [
+            ReviewUnknown(code: "usage_scope", message: "別の端末やブラウザでの利用は記録に含まれない場合があります。")
+        ],
+        reviewOptions: [
+            ReviewOption(
+                kind: "downgrade",
+                title: "下位プランを確認する",
+                detail: "合成ライトプランへ変更した場合の差額目安です。",
+                targetName: "合成ライトプラン",
+                currentMonthlyAmount: 1_000,
+                targetMonthlyAmount: 700,
+                annualSavings: 3_600,
+                calculation: "(月額換算¥1,000−¥700)×12",
+                sourceUrl: "https://example.com/synthetic-plan",
+                verifiedAt: "2026-07-16T00:00:00.000Z"
+            )
+        ],
+        annualSavingsIfCancelled: 12_000,
+        annualSavingsIfDowngraded: 3_600,
+        annualSavingsIfSwitched: nil,
         generatedAt: "2026-07-16T09:38:00.000Z"
     )
 

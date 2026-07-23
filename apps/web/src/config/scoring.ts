@@ -24,10 +24,8 @@ export const scoringConfigSchema = z.object({
   /** P6：契約がこの月数以上で「長期」。 */
   longContractMonths: z.number().int().min(1).default(12),
 
-  /** 知識ベースの料金が古いとみなす日数。 */
-  knowledgeBaseStaleDays: z.number().int().min(1).default(180),
-  /** 陳腐化時の信頼度係数（0〜1）。 */
-  staleConfidenceMultiplier: z.number().min(0).max(1).default(0.7),
+  /** 知識ベースの料金・候補・公式導線を確認済みとして扱う日数。 */
+  knowledgeBaseFreshnessDays: z.number().int().min(1).default(90),
 
   /** 容量ゲート（iCloud+）：使用容量がこの日数以内に確認されていれば鮮度OK。 */
   capacityFreshnessDays: z.number().int().min(1).default(30),

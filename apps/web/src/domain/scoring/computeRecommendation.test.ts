@@ -26,11 +26,54 @@ function input(overrides: Partial<RecommendationInput> = {}): RecommendationInpu
     daysSinceCapacityCheck: null,
     cheaperPlanCandidates: [],
     planCapacityGb: null,
+    hasStaleCatalogCandidates: false,
     ...overrides,
   };
 }
 
 const cfg = defaultScoringConfig;
+
+describe("利用者向け見直し出力", () => {
+  it("利用記録0日だけでは確認優先度を上げず情報不足にする", () => {
+    const result = computeRecommendation(
+      input({
+        usageDaysInSpan: 0,
+        daysSinceLastUse: 90,
+        hasUsageData: true,
+      }),
+      cfg,
+    );
+
+    expect(result.reviewPriority).toBe("missing_information");
+    expect(result.reviewUnknowns.some((item) => item.code === "usage_scope")).toBe(true);
+  });
+
+  it("確認済み下位プランを構造化した選択肢と年間差額で返す", () => {
+    const result = computeRecommendation(
+      input({
+        cheaperPlan: {
+          name: "合成ライト",
+          monthlyPrice: 700,
+          verifiedAt: "2026-07-23T00:00:00.000Z",
+          sourceUrl: "https://example.com/synthetic-plan",
+        },
+      }),
+      cfg,
+    );
+
+    expect(result.reviewPriority).toBe("now");
+    expect(result.annualSavingsIfDowngraded).toBe(3_600);
+    expect(result.reviewOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "downgrade",
+          targetName: "合成ライト",
+          annualSavings: 3_600,
+        }),
+      ]),
+    );
+  });
+});
 
 describe("P1：使っていない（方式C＝スパン＋最終利用）", () => {
   it("スパン内利用0日＋最終利用61日以上 → strong_cancel_candidate", () => {

@@ -136,10 +136,10 @@ private struct SubscriptionRow: View {
                 .foregroundStyle(AppColor.secondaryText)
             if let recommendation {
                 StatusPill(
-                    text: recommendation.dataStatus == .observing
-                        ? "観測中・あと\(recommendation.daysUntilReady)日"
-                        : recommendation.decision?.label ?? "情報が不足しています",
-                    color: recommendation.decision == .strongCancelCandidate ? .red : AppColor.caution
+                    text: recommendation.reviewPriority.label,
+                    color: recommendation.reviewPriority == .missingInformation
+                        ? AppColor.secondaryText
+                        : AppColor.caution
                 )
             } else if subscription.nextRenewalDate == nil {
                 StatusPill(text: "更新日を追加できます", color: AppColor.caution)

@@ -135,10 +135,10 @@ final class ProductUITests: XCTestCase {
         XCTAssertEqual(pattern.code, "P5")
     }
 
-    func testRecommendationLabelsDoNotExposeInternalDecisionCodes() {
-        for decision in RecommendationDecision.allCases {
-            XCTAssertFalse(decision.label.contains(decision.rawValue))
-            XCTAssertFalse(decision.label.isEmpty)
+    func testReviewPriorityLabelsDoNotExposeInternalCodes() {
+        for priority in ReviewPriority.allCases {
+            XCTAssertFalse(priority.label.contains(priority.rawValue))
+            XCTAssertFalse(priority.label.isEmpty)
         }
     }
 
@@ -237,6 +237,23 @@ final class ProductUITests: XCTestCase {
     }
 
     @MainActor
+    func testProductStoreKeepsOnlySafeMessageForBlockedReview() async {
+        let blocked = BlockedRecommendation(
+            subscriptionId: PreviewFixtures.video.id,
+            message: "見直し材料を再計算してください。"
+        )
+        let store = ProductStore(
+            client: SyntheticProductAPI(blockedItems: [blocked]),
+            measurementCleaner: NoopMeasurementCleaner()
+        )
+
+        await store.loadAll()
+
+        XCTAssertTrue(store.recommendations.isEmpty)
+        XCTAssertEqual(store.blockedRecommendations, [blocked])
+    }
+
+    @MainActor
     func testExistingSubscriptionLoadUsesOnlySubscriptionEndpoint() async {
         let store = ProductStore(
             client: ExistingSubscriptionProductAPI(result: .populated),
@@ -304,6 +321,7 @@ final class ProductUITests: XCTestCase {
 
         XCTAssertTrue(store.subscriptions.isEmpty)
         XCTAssertTrue(store.recommendations.isEmpty)
+        XCTAssertTrue(store.blockedRecommendations.isEmpty)
         XCTAssertNil(store.dashboard)
         XCTAssertNil(store.spending)
         XCTAssertNil(store.lastUpdatedAt)
@@ -911,7 +929,7 @@ private actor ExistingSubscriptionProductAPI: ProductAPIProviding {
 
     func dashboardSummary() async throws -> DashboardSummary { throw SyntheticAPIError.unused }
     func spendingSummary() async throws -> SpendingSummary { throw SyntheticAPIError.unused }
-    func recommendations() async throws -> [Recommendation] { throw SyntheticAPIError.unused }
+    func recommendations() async throws -> RecommendationCollection { throw SyntheticAPIError.unused }
     func upcomingRenewals(days: Int) async throws -> [UpcomingRenewal] { throw SyntheticAPIError.unused }
     func serviceCatalog() async throws -> [ServiceCatalogItem] { throw SyntheticAPIError.unused }
     func sessions() async throws -> [UserSession] { throw SyntheticAPIError.unused }
@@ -929,9 +947,14 @@ private actor SyntheticProductAPI: ProductAPIProviding {
     private var measurementDeletionIDs: [String] = []
     private var guidance = GuidanceProgress.empty
     private let guidanceShouldFail: Bool
+    private let blockedItems: [BlockedRecommendation]
 
-    init(guidanceShouldFail: Bool = false) {
+    init(
+        guidanceShouldFail: Bool = false,
+        blockedItems: [BlockedRecommendation] = []
+    ) {
         self.guidanceShouldFail = guidanceShouldFail
+        self.blockedItems = blockedItems
     }
 
     func dashboardSummary() async throws -> DashboardSummary {
@@ -943,7 +966,12 @@ private actor SyntheticProductAPI: ProductAPIProviding {
     }
 
     func subscriptions() async throws -> [Subscription] { [PreviewFixtures.video] }
-    func recommendations() async throws -> [Recommendation] { [PreviewFixtures.videoReview] }
+    func recommendations() async throws -> RecommendationCollection {
+        RecommendationCollection(
+            items: blockedItems.isEmpty ? [PreviewFixtures.videoReview] : [],
+            blockedItems: blockedItems
+        )
+    }
     func upcomingRenewals(days: Int) async throws -> [UpcomingRenewal] { [] }
     func serviceCatalog() async throws -> [ServiceCatalogItem] { [] }
     func sessions() async throws -> [UserSession] { [] }

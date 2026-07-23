@@ -16,7 +16,6 @@ import {
   appendRecommendationSnapshot,
   buildRecommendationUsageMetrics,
 } from "@/repositories/recommendations";
-import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
 import { prisma } from "@/lib/prisma";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,12 +34,27 @@ function diffMonths(from: Date, to: Date): number {
   return Math.max(0, Math.floor((to.getTime() - from.getTime()) / (DAY_MS * 30)));
 }
 
+function isFreshKnowledge(
+  verifiedAt: Date | null,
+  sourceUrl: string | null,
+  asOf: Date,
+  config: ScoringConfig,
+): boolean {
+  if (!verifiedAt || !sourceUrl || !/^https?:\/\//i.test(sourceUrl)) return false;
+  const ageDays = Math.floor((asOf.getTime() - verifiedAt.getTime()) / DAY_MS);
+  return ageDays >= 0 && ageDays <= config.knowledgeBaseFreshnessDays;
+}
+
 export async function recomputeRecommendations(
   userId: string,
   config: ScoringConfig = defaultScoringConfig,
   asOf: Date = new Date(),
+  onlySubscriptionId?: string,
 ): Promise<RecomputeResultItem[]> {
-  const subs = await listSubscriptions(userId);
+  const allSubscriptions = await listSubscriptions(userId);
+  const subs = onlySubscriptionId
+    ? allSubscriptions.filter((subscription) => subscription.id === onlySubscriptionId)
+    : allSubscriptions;
 
   // 1) 利用集計
   const windowDays = 30;
@@ -100,25 +114,29 @@ export async function recomputeRecommendations(
     let cheaperPlan: CheaperOption | null = null;
     let cheaperAlternative: CheaperOption | null = null;
     let cheaperPlanCandidates: PlanCandidate[] = [];
+    let hasStaleCatalogCandidates = false;
+    let currentPlanCapacityGb: number | null = s.planCapacityGb ?? null;
 
     const matchedServiceId = s.matchedServiceId;
     if (matchedServiceId) {
-      const plans = await prisma.servicePlan.findMany({
+      const allPlans = await prisma.servicePlan.findMany({
         where: {
           serviceId: matchedServiceId,
           isFreeTier: false,
-          monthlyPrice: { lt: monthlyAmt },
         },
         orderBy: { monthlyPrice: "asc" },
       });
-      const planConfidence = (verifiedAt: Date) =>
-        Math.floor((asOf.getTime() - verifiedAt.getTime()) / DAY_MS) > config.knowledgeBaseStaleDays
-          ? config.staleConfidenceMultiplier
-          : 1.0;
+      const cheaperPlans = allPlans.filter((plan) => plan.monthlyPrice < monthlyAmt);
+      const plans = cheaperPlans.filter((plan) =>
+        isFreshKnowledge(plan.verifiedAt, plan.sourceUrl, asOf, config),
+      );
+      hasStaleCatalogCandidates = cheaperPlans.length > plans.length;
       if (plans.length > 0) {
         cheaperPlan = {
           name: plans[0].name,
-          monthlyPrice: Math.round(plans[0].monthlyPrice * planConfidence(plans[0].verifiedAt)),
+          monthlyPrice: plans[0].monthlyPrice,
+          verifiedAt: plans[0].verifiedAt.toISOString(),
+          sourceUrl: plans[0].sourceUrl as string,
         };
       }
       // 容量ゲート用：容量(GB)を持つ安い有料プラン候補（iCloud+ など容量型で使用）
@@ -126,14 +144,33 @@ export async function recomputeRecommendations(
         .filter((p) => p.capacityGb !== null)
         .map((p) => ({
           name: p.name,
-          monthlyPrice: Math.round(p.monthlyPrice * planConfidence(p.verifiedAt)),
+          monthlyPrice: p.monthlyPrice,
           capacityGb: p.capacityGb as number,
         }));
+
+      if (currentPlanCapacityGb === null) {
+        const currentCandidates = allPlans.filter((plan) =>
+          plan.capacityGb !== null &&
+          isFreshKnowledge(plan.verifiedAt, plan.sourceUrl, asOf, config),
+        );
+        const currentPlan = currentCandidates.reduce<(typeof currentCandidates)[number] | null>(
+          (best, plan) => !best ||
+            Math.abs(plan.monthlyPrice - monthlyAmt) < Math.abs(best.monthlyPrice - monthlyAmt)
+            ? plan
+            : best,
+          null,
+        );
+        currentPlanCapacityGb = currentPlan?.capacityGb ?? null;
+      }
 
       const alts = await prisma.serviceAlternative.findMany({
         where: { fromServiceId: matchedServiceId },
       });
       for (const alt of alts) {
+        if (!isFreshKnowledge(alt.verifiedAt, alt.sourceUrl, asOf, config)) {
+          hasStaleCatalogCandidates = true;
+          continue;
+        }
         const altPlans = await prisma.servicePlan.findMany({
           where: {
             serviceId: alt.toServiceId,
@@ -142,10 +179,12 @@ export async function recomputeRecommendations(
           orderBy: { monthlyPrice: "asc" },
         });
         if (altPlans.length > 0) {
-          const altStaleDays = Math.floor((asOf.getTime() - altPlans[0].verifiedAt.getTime()) / DAY_MS);
-          const altConfidence = altStaleDays > config.knowledgeBaseStaleDays
-            ? config.staleConfidenceMultiplier : 1.0;
-          const altPrice = Math.round(altPlans[0].monthlyPrice * altConfidence);
+          const freshAltPlans = altPlans.filter((plan) =>
+            isFreshKnowledge(plan.verifiedAt, plan.sourceUrl, asOf, config),
+          );
+          if (freshAltPlans.length < altPlans.length) hasStaleCatalogCandidates = true;
+          if (freshAltPlans.length === 0) continue;
+          const altPrice = freshAltPlans[0].monthlyPrice;
           if (altPrice < monthlyAmt) {
             const altService = await prisma.serviceCatalog.findUnique({
               where: { id: alt.toServiceId },
@@ -154,6 +193,8 @@ export async function recomputeRecommendations(
               cheaperAlternative = {
                 name: altService.canonicalName,
                 monthlyPrice: altPrice,
+                verifiedAt: freshAltPlans[0].verifiedAt.toISOString(),
+                sourceUrl: freshAltPlans[0].sourceUrl as string,
               };
             }
           }
@@ -193,8 +234,8 @@ export async function recomputeRecommendations(
           ? Math.floor((asOf.getTime() - s.capacityCheckedAt.getTime()) / DAY_MS)
           : null,
         cheaperPlanCandidates,
-        // プラン容量は登録情報（金額→カタログ）から導出。手入力に依存させない。
-        planCapacityGb: await getCurrentPlanCapacityGb(matchedServiceId, monthlyAmt),
+        planCapacityGb: currentPlanCapacityGb,
+        hasStaleCatalogCandidates,
       },
       config,
     );
@@ -202,6 +243,7 @@ export async function recomputeRecommendations(
       userId,
       s.id,
       result,
+      s.updatedAt,
       buildRecommendationUsageMetrics(
         monthlyAmt,
         agg.usageDays30d,
@@ -211,4 +253,23 @@ export async function recomputeRecommendations(
     results.push({ subscriptionId: s.id, name: s.name, ...result });
   }
   return results;
+}
+
+/**
+ * 契約・利用量の変更後に対象契約だけを更新する。
+ * 失敗しても元データの保存は成功扱いとし、古い見直しだけを表示させない。
+ */
+export async function refreshRecommendationAfterMutation(
+  userId: string,
+  subscriptionId: string,
+  config: ScoringConfig = defaultScoringConfig,
+  asOf: Date = new Date(),
+): Promise<boolean> {
+  try {
+    await prisma.recommendationSnapshot.deleteMany({ where: { userId, subscriptionId } });
+    await recomputeRecommendations(userId, config, asOf, subscriptionId);
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -40,6 +40,13 @@ enum DataStatus {
   ready // 確定（利用ベース判定を出せる）
 }
 
+enum ReviewPriority {
+  now
+  before_renewal
+  missing_information
+  low_urgency
+}
+
 // 利用バケット（iOS 集計値。functional-design §5.2）。
 enum UsageBucket {
   none
@@ -244,6 +251,13 @@ model RecommendationSnapshot {
   confidence       Float      @default(1.0) // 暫定/確定の確からしさ（§8.5）
   reason           String
   matchedPatterns  Json?      @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
+  reviewPriority   ReviewPriority? @map("review_priority")
+  reviewUnknowns   Json?      @map("review_unknowns")
+  reviewOptions    Json?      @map("review_options")
+  annualSavingsIfCancelled  Int? @map("annual_savings_if_cancelled")
+  annualSavingsIfDowngraded Int? @map("annual_savings_if_downgraded")
+  annualSavingsIfSwitched   Int? @map("annual_savings_if_switched")
+  sourceSubscriptionUpdatedAt DateTime? @map("source_subscription_updated_at")
   generatedAt      DateTime   @default(now()) @map("generated_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -266,6 +280,8 @@ model ServiceCatalog {
   isExcluded      Boolean @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
   notes           String?
   usageType       String  @default("active_foreground") @map("usage_type")
+  cancellationUrlVerifiedAt DateTime? @map("cancellation_url_verified_at")
+  cancellationUrlSourceUrl  String?   @map("cancellation_url_source_url")
 
   plans            ServicePlan[]
   alternativesFrom ServiceAlternative[] @relation("alt_from")
@@ -293,6 +309,8 @@ model ServiceAlternative {
   fromServiceId String @map("from_service_id")
   toServiceId   String @map("to_service_id")
   relation      String @default("same_category")
+  verifiedAt    DateTime? @map("verified_at")
+  sourceUrl     String?   @map("source_url")
 
   fromService ServiceCatalog @relation("alt_from", fields: [fromServiceId], references: [id], onDelete: Cascade)
 

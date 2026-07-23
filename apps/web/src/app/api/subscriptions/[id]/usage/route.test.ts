@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
   authorizeStateChange: vi.fn(),
   deleteMeasurementData: vi.fn(),
-  recomputeRecommendations: vi.fn(),
+  refreshRecommendationAfterMutation: vi.fn(),
 }));
 
 vi.mock("@/config/auth", () => ({ parseAuthConfig: mocks.parseAuthConfig }));
@@ -17,7 +17,7 @@ vi.mock("@/repositories/measurement-data", () => ({
   deleteMeasurementData: mocks.deleteMeasurementData,
 }));
 vi.mock("@/services/recompute", () => ({
-  recomputeRecommendations: mocks.recomputeRecommendations,
+  refreshRecommendationAfterMutation: mocks.refreshRecommendationAfterMutation,
 }));
 
 import { DELETE } from "./route";
@@ -35,7 +35,7 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
     mocks.authenticateRequest.mockResolvedValue({ actor: { userId: "synthetic-user" } });
     mocks.authorizeStateChange.mockReturnValue(true);
     mocks.deleteMeasurementData.mockResolvedValue({ usageCount: 2, recommendationCount: 1 });
-    mocks.recomputeRecommendations.mockResolvedValue([]);
+    mocks.refreshRecommendationAfterMutation.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -51,7 +51,10 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
       "synthetic-user",
       "synthetic-subscription",
     );
-    expect(mocks.recomputeRecommendations).toHaveBeenCalledWith("synthetic-user");
+    expect(mocks.refreshRecommendationAfterMutation).toHaveBeenCalledWith(
+      "synthetic-user",
+      "synthetic-subscription",
+    );
   });
 
   it("所有しない契約は404にして再計算しない", async () => {
@@ -59,7 +62,7 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
     const response = await DELETE(request(), context());
 
     expect(response.status).toBe(404);
-    expect(mocks.recomputeRecommendations).not.toHaveBeenCalled();
+    expect(mocks.refreshRecommendationAfterMutation).not.toHaveBeenCalled();
   });
 
   it("認証なしは401にする", async () => {
@@ -78,16 +81,11 @@ describe("DELETE /api/subscriptions/:id/usage", () => {
     expect(mocks.deleteMeasurementData).not.toHaveBeenCalled();
   });
 
-  it("再計算失敗は500になり、再実行可能なままにする", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const failure = new Error("synthetic failure");
-    mocks.recomputeRecommendations.mockRejectedValue(failure);
+  it("再計算失敗でも利用量削除は成功し、古い結果を再表示しない", async () => {
+    mocks.refreshRecommendationAfterMutation.mockResolvedValue(false);
     const response = await DELETE(request(), context());
 
-    expect(response.status).toBe(500);
-    expect(consoleError).toHaveBeenCalledWith(
-      "DELETE /api/subscriptions/[id]/usage failed",
-      failure,
-    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ deleted: true });
   });
 });

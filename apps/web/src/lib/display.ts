@@ -1,28 +1,13 @@
-import type { Decision } from "@prisma/client";
+import type { ReviewPriority } from "@prisma/client";
+import { REVIEW_PRIORITY_LABEL } from "@/domain/review/output";
 
-/**
- * 画面表示用のラベル・整形ユーティリティ。
- * 判定ラベルは glossary.md に一致させる（review = 「様子見」）。
- */
+export { REVIEW_PRIORITY_LABEL };
 
-export const DECISION_LABEL: Record<Decision, string> = {
-  keep: "継続",
-  review: "様子見",
-  consider_downgrade: "ダウングレード検討",
-  consider_cancel: "解約検討",
-  strong_cancel_candidate: "強い解約候補",
-};
-
-/**
- * 判定→ドット色クラス（新デザイン／design.css）。バッジは「ドット＋ラベル」形式で表示する。
- * 警告赤は strong_cancel_candidate のみ（DESIGN.md §2）。observing/未判定は b-observe。
- */
-export const DECISION_DOT_CLASS: Record<Decision, string> = {
-  keep: "b-keep",
-  review: "b-review",
-  consider_downgrade: "b-consider",
-  consider_cancel: "b-consider",
-  strong_cancel_candidate: "b-strong",
+export const REVIEW_PRIORITY_DOT_CLASS: Record<ReviewPriority, string> = {
+  now: "b-strong",
+  before_renewal: "b-review",
+  missing_information: "b-observe",
+  low_urgency: "b-keep",
 };
 
 /**

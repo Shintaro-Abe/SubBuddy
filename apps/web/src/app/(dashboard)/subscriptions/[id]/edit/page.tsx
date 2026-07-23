@@ -19,7 +19,7 @@ export default async function EditSubscriptionPage({
       <div className="pagehead">
         <p className="display">サブスクを編集</p>
         <p className="caption" style={{ marginTop: 8 }}>
-          内容を更新すると、見直しの判定にも反映されます。
+          内容を更新すると、見直し材料にも反映されます。
         </p>
       </div>
       <SubscriptionForm

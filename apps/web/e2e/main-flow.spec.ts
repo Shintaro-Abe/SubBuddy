@@ -30,12 +30,13 @@ test.describe("SubBuddy 主要導線", () => {
     await expect(page.getByText("契約情報")).toBeVisible();
   });
 
-  test("見直しに判定別グループが出る", async ({ page }) => {
+  test("見直しに確認優先度別グループが出る", async ({ page }) => {
     await page.goto("/recommendations");
     await expect(page.getByText("見直し", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("強い解約候補", { exact: true })).toBeVisible();
+    await expect(page.getByText("今確認したい", { exact: true })).toBeVisible();
+    await expect(page.getByText("情報が不足している", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: /AIツールX/ })).toBeVisible();
-    await expect(page.getByText("解約検討", { exact: true })).toBeVisible();
+    await expect(page.getByText(/強い解約候補|解約検討/)).toHaveCount(0);
   });
 
   test("使い方で4段階と任意の利用状況設定を確認できる", async ({ page }) => {
@@ -92,16 +93,17 @@ test.describe("SubBuddy 主要導線", () => {
         (r) =>
           r.url().includes("/api/recommendations/recompute") && r.request().method() === "POST",
       ),
-      page.getByRole("button", { name: "判定を再計算" }).click(),
+      page.getByRole("button", { name: "見直し材料を再計算" }).click(),
     ]);
     expect(resp.status()).toBe(200);
-    await expect(page.getByText("強い解約候補", { exact: true })).toBeVisible();
+    await expect(page.getByText("今確認したい", { exact: true })).toBeVisible();
   });
 
-  test("継続ラベルが表示される", async ({ page }) => {
+  test("低優先度を継続推奨として表示しない", async ({ page }) => {
     await page.goto("/subscriptions");
     const card = page.getByRole("link", { name: /学習サブスク/ });
-    await expect(card).toContainText("継続");
+    await expect(card).toContainText("現時点では急いで確認する材料が少ない");
+    await expect(card).not.toContainText("継続");
   });
 
   test("passive のサブスクに「使っていない」判定が出ない", async ({ page }) => {
@@ -118,12 +120,15 @@ test.describe("SubBuddy 主要導線", () => {
     await expect(page.getByText(/最後に使ったのは/)).toHaveCount(0);
   });
 
-  test("知識ベース連携でダウングレード提案が出る", async ({ page }) => {
-    // Netflix（matchedServiceId 付き・プレミアム ¥2,290）に安いプラン（P3）の提案が出る
+  test("出典のない料金候補と節約額を表示しない", async ({ page }) => {
+    // Netflixのカタログ料金には確認済みの公式出典を付けていないため比較へ使わない。
     await page.goto("/subscriptions");
     await page.getByRole("link", { name: /Netflix/ }).click();
     await expect(page.getByText("Netflix", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/広告つきスタンダード（¥[\d,]+\/月）に変更できます/)).toBeVisible();
+    await expect(
+      page.getByText("料金情報を90日以内に再確認できていない候補は表示していません。"),
+    ).toBeVisible();
+    await expect(page.getByText(/広告つきスタンダード/)).toHaveCount(0);
   });
 
   test("サブスクを登録して一覧に現れ、削除できる", async ({ page }) => {

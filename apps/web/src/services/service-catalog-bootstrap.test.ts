@@ -66,7 +66,7 @@ function fakeCatalogDb() {
 describe("syncServiceCatalog", () => {
   it("利用者データに触れずiCloud+と容量プランを同期する", async () => {
     const { db, snapshot } = fakeCatalogDb();
-    const result = await syncServiceCatalog(db as never, new Date("2026-07-18T00:00:00.000Z"));
+    const result = await syncServiceCatalog(db as never);
     const state = snapshot();
     const iCloud = state.catalog.find(([name]) => name === "iCloud+");
 
@@ -86,16 +86,27 @@ describe("syncServiceCatalog", () => {
 
   it("2回実行してもカタログ・プラン・代替関係が重複しない", async () => {
     const { db, snapshot } = fakeCatalogDb();
-    const verifiedAt = new Date("2026-07-18T00:00:00.000Z");
-
-    const first = await syncServiceCatalog(db as never, verifiedAt);
+    const first = await syncServiceCatalog(db as never);
     const firstState = snapshot();
-    const second = await syncServiceCatalog(db as never, verifiedAt);
+    const second = await syncServiceCatalog(db as never);
     const secondState = snapshot();
 
     expect(second).toEqual(first);
     expect(secondState.catalog).toHaveLength(firstState.catalog.length);
     expect(secondState.plans).toEqual(firstState.plans);
     expect(secondState.alternatives).toEqual(firstState.alternatives);
+  });
+
+  it("出典のないプランを配備日で確認済みにしない", async () => {
+    const { db, snapshot } = fakeCatalogDb();
+    await syncServiceCatalog(db as never);
+    const state = snapshot();
+    const netflix = state.catalog.find(([name]) => name === "Netflix");
+    const plans = state.plans.find(([serviceId]) => serviceId === netflix?.[1].id)?.[1] ?? [];
+
+    expect(plans[0]).toMatchObject({
+      sourceUrl: null,
+      verifiedAt: new Date("1970-01-01T00:00:00.000Z"),
+    });
   });
 });

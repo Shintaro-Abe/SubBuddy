@@ -1,6 +1,6 @@
 import type { RecommendationSnapshot, Subscription } from "@prisma/client";
 import { listSubscriptions } from "@/repositories/subscriptions";
-import { listLatestRecommendations } from "@/repositories/recommendations";
+import { listLatestRecommendationsForDisplay } from "@/repositories/recommendations";
 
 /**
  * サーバーコンポーネント用の読み取り合成。
@@ -9,6 +9,7 @@ import { listLatestRecommendations } from "@/repositories/recommendations";
 export interface SubscriptionWithRecommendation {
   subscription: Subscription;
   recommendation: RecommendationSnapshot | null;
+  reviewBlocked: boolean;
 }
 
 export async function getSubscriptionsWithLatestRecommendation(
@@ -16,11 +17,13 @@ export async function getSubscriptionsWithLatestRecommendation(
 ): Promise<SubscriptionWithRecommendation[]> {
   const [subs, recs] = await Promise.all([
     listSubscriptions(userId),
-    listLatestRecommendations(userId),
+    listLatestRecommendationsForDisplay(userId),
   ]);
-  const byId = new Map(recs.map((r) => [r.subscriptionId, r]));
+  const byId = new Map(recs.items.map((r) => [r.subscriptionId, r]));
+  const blockedIds = new Set(recs.blockedItems.map((item) => item.subscriptionId));
   return subs.map((subscription) => ({
     subscription,
     recommendation: byId.get(subscription.id) ?? null,
+    reviewBlocked: blockedIds.has(subscription.id),
   }));
 }

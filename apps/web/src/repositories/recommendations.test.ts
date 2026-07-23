@@ -14,6 +14,7 @@ const result: RecommendationResult = {
   matchedPatterns: [],
   annualSavingsIfCancelled: 12_000,
   annualSavingsIfDowngraded: null,
+  annualSavingsIfSwitched: null,
   monthlyAmount: 1_000,
   yearlyAmount: 12_000,
   daysSinceLastUse: 0,
@@ -21,6 +22,15 @@ const result: RecommendationResult = {
   hasOverlap: false,
   confidence: 0.5,
   reason: "合成データでは継続候補です",
+  reviewPriority: "low_urgency",
+  reviewUnknowns: [],
+  reviewOptions: [
+    {
+      kind: "continue",
+      title: "このまま利用する",
+      detail: "合成データの選択肢です。",
+    },
+  ],
 };
 
 describe("recommendation snapshot usage metrics", () => {
@@ -45,6 +55,7 @@ describe("recommendation snapshot usage metrics", () => {
       "synthetic-user",
       "synthetic-subscription",
       result,
+      new Date("2026-07-23T00:00:00.000Z"),
       {
         usageDays30d: 1,
         usageMinutes30d: 15,
@@ -70,6 +81,7 @@ describe("recommendation snapshot usage metrics", () => {
       "synthetic-user",
       "synthetic-subscription",
       result,
+      new Date("2026-07-23T00:00:00.000Z"),
       {
         usageDays30d: 0,
         usageMinutes30d: 0,

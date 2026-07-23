@@ -81,10 +81,10 @@
     "usageType": "active_background",
     "commonAliases": "スポティファイ",
     "plans": [
-      { "name": "Individual", "monthlyPrice": 1080, "isFreeTier": false },
-      { "name": "Duo", "monthlyPrice": 1480, "isFreeTier": false },
-      { "name": "Family", "monthlyPrice": 1880, "isFreeTier": false },
-      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true }
+      { "name": "Individual", "monthlyPrice": 1080, "isFreeTier": false, "verifiedAt": "2026-07-23", "sourceUrl": "https://www.spotify.com/jp/premium/" },
+      { "name": "Duo", "monthlyPrice": 1480, "isFreeTier": false, "verifiedAt": "2026-07-23", "sourceUrl": "https://www.spotify.com/jp/premium/" },
+      { "name": "Family", "monthlyPrice": 1880, "isFreeTier": false, "verifiedAt": "2026-07-23", "sourceUrl": "https://www.spotify.com/jp/premium/" },
+      { "name": "Free", "monthlyPrice": 0, "isFreeTier": true, "verifiedAt": "2026-07-23", "sourceUrl": "https://www.spotify.com/jp/premium/" }
     ],
     "alternatives": ["Amazon Music Unlimited", "Apple Music", "YouTube Music"]
   },
@@ -183,10 +183,10 @@
     "usageType": "capacity",
     "commonAliases": "アイクラウド,iCloud",
     "plans": [
-      { "name": "50GB", "monthlyPrice": 150, "isFreeTier": false, "capacityGb": 50 },
-      { "name": "200GB", "monthlyPrice": 450, "isFreeTier": false, "capacityGb": 200 },
-      { "name": "2TB", "monthlyPrice": 1500, "isFreeTier": false, "capacityGb": 2000 },
-      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true, "capacityGb": 5 }
+      { "name": "50GB", "monthlyPrice": 150, "isFreeTier": false, "capacityGb": 50, "verifiedAt": "2026-07-23", "sourceUrl": "https://support.apple.com/ja-jp/108047" },
+      { "name": "200GB", "monthlyPrice": 450, "isFreeTier": false, "capacityGb": 200, "verifiedAt": "2026-07-23", "sourceUrl": "https://support.apple.com/ja-jp/108047" },
+      { "name": "2TB", "monthlyPrice": 1500, "isFreeTier": false, "capacityGb": 2000, "verifiedAt": "2026-07-23", "sourceUrl": "https://support.apple.com/ja-jp/108047" },
+      { "name": "無料（5GB）", "monthlyPrice": 0, "isFreeTier": true, "capacityGb": 5, "verifiedAt": "2026-07-23", "sourceUrl": "https://support.apple.com/ja-jp/108047" }
     ],
     "alternatives": ["Google One", "Dropbox", "OneDrive"]
   },

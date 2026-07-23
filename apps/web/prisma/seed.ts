@@ -63,7 +63,14 @@ async function main() {
     category: string;
     usageType: string;
     commonAliases: string;
-    plans: { name: string; monthlyPrice: number; isFreeTier: boolean; capacityGb?: number }[];
+    plans: {
+      name: string;
+      monthlyPrice: number;
+      isFreeTier: boolean;
+      capacityGb?: number;
+      verifiedAt?: string;
+      sourceUrl?: string;
+    }[];
     alternatives: string[];
   }
   const catalogPath = join(__dirname, "seed", "service-catalog.json");
@@ -89,7 +96,8 @@ async function main() {
           monthlyPrice: p.monthlyPrice,
           isFreeTier: p.isFreeTier,
           capacityGb: p.capacityGb ?? null,
-          verifiedAt: now,
+          verifiedAt: new Date(p.verifiedAt ?? "1970-01-01T00:00:00.000Z"),
+          sourceUrl: p.sourceUrl ?? null,
         })),
       });
     }

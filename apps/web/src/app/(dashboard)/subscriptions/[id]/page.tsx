@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireServerUserId } from "@/lib/server-auth";
 import { getSubscription } from "@/repositories/subscriptions";
-import { listLatestRecommendations } from "@/repositories/recommendations";
-import { getCurrentPlanCapacityGb } from "@/repositories/service-catalog";
+import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { toMonthlyAmount, toYearlyAmount } from "@/lib/money";
 import { categoryLabel, daysSince, formatDate, formatYen, safeHttpUrl } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
@@ -11,6 +10,7 @@ import { DeleteSubscriptionButton } from "@/components/DeleteSubscriptionButton"
 import { ShortcutsQrCode } from "@/components/ShortcutsQrCode";
 import { CapacityInput } from "@/components/CapacityInput";
 import { parseMatchedPatterns } from "@/domain/scoring/matchedPatterns";
+import { parseReviewOptions, parseReviewUnknowns } from "@/domain/review/output";
 import { GuidanceEventReporter } from "@/components/GuidanceEventReporter";
 
 export const dynamic = "force-dynamic";
@@ -46,21 +46,19 @@ export default async function SubscriptionDetailPage({
   const s = await getSubscription(userId, id);
   if (!s) notFound();
 
-  const recs = await listLatestRecommendations(userId);
-  const rec = recs.find((r) => r.subscriptionId === id) ?? null;
+  const reviewRows = await getSubscriptionsWithLatestRecommendation(userId);
+  const reviewRow = reviewRows.find((row) => row.subscription.id === id);
+  const rec = reviewRow?.recommendation ?? null;
+  const reviewBlocked = reviewRow?.reviewBlocked ?? false;
   const cancelUrl = safeHttpUrl(s.cancellationUrl);
   const sRec = s as Record<string, unknown>;
   const usageType = sRec.usageType as string | undefined;
   const showQr = usageType === "active_foreground" || usageType === "active_background";
   const isCapacity = usageType === "capacity";
   const capacityCheckedAt = sRec.capacityCheckedAt as Date | null | undefined;
-  // プラン容量は登録情報（金額→カタログ）から導出する。容量パネルで再入力させない。
-  const currentPlanCapacityGb = isCapacity
-    ? await getCurrentPlanCapacityGb(
-        sRec.matchedServiceId as string | null | undefined,
-        toMonthlyAmount(s.amount, s.billingCycle),
-      )
-    : null;
+  const currentPlanCapacityGb = isCapacity ? s.planCapacityGb : null;
+  const reviewUnknowns = rec ? parseReviewUnknowns(rec.reviewUnknowns) ?? [] : [];
+  const reviewOptions = rec ? parseReviewOptions(rec.reviewOptions) ?? [] : [];
 
   return (
     <div>
@@ -80,7 +78,7 @@ export default async function SubscriptionDetailPage({
         <p className="display" style={{ margin: 0 }}>
           {s.name}
         </p>
-        <DecisionBadge recommendation={rec} />
+        <DecisionBadge recommendation={rec} blocked={reviewBlocked} />
       </div>
       <p className="caption" style={{ marginTop: 4 }}>
         {categoryLabel(s.category)}
@@ -121,58 +119,120 @@ export default async function SubscriptionDetailPage({
           <p className="title" style={{ marginBottom: 8 }}>
             見直し
           </p>
-          {rec ? (
+          {reviewBlocked ? (
+            <div>
+              <p className="body">
+                見直し情報を安全に表示できないため、古い内容を隠しています。
+              </p>
+              <p className="caption" style={{ marginTop: 8 }}>
+                「見直し材料を再計算」を実行してください。
+              </p>
+            </div>
+          ) : rec ? (
             <>
-              {rec.dataStatus === "observing" ? (
-                <Row label="状態" value={`観測中（あと ${rec.daysUntilReady} 日）`} />
-              ) : (
-                <>
-                  {rec.daysSinceLastUse !== null && (
-                    <Row label="最終利用からの日数" value={`${rec.daysSinceLastUse} 日`} amount />
-                  )}
-                  <Row label="重複あり" value={rec.hasOverlap ? "あり" : "なし"} />
-
-                  {/* 節約額（中立トーン：事実として控えめに表示） */}
-                  {rec.decision && rec.decision !== "keep" && (
-                    <Row
-                      label="解約した場合の年間節約額"
-                      value={
-                        <span className="num" style={{ color: "var(--muted)" }}>
-                          {formatYen(rec.yearlyAmount)}
-                        </span>
-                      }
-                    />
-                  )}
-                </>
+              <Row
+                label="確認の優先度"
+                value={<DecisionBadge recommendation={rec} />}
+              />
+              <Row label="最近30日の利用日" value={`${rec.usageDays30d} 日`} amount />
+              {rec.usageMinutes30d > 0 && (
+                <Row label="最近30日の利用時間目安" value={`${rec.usageMinutes30d} 分以上`} amount />
               )}
+              {rec.costPerUsageDay !== null && (
+                <Row
+                  label="1利用日あたり"
+                  value={formatYen(Math.round(rec.costPerUsageDay))}
+                  amount
+                />
+              )}
+              {rec.daysSinceLastUse !== null && (
+                <Row label="最終利用からの日数" value={`${rec.daysSinceLastUse} 日`} amount />
+              )}
+              <Row label="重複する契約" value={rec.hasOverlap ? "あり" : "なし"} />
+              <Row label="計算日" value={formatDate(rec.generatedAt)} />
 
-              {/* 根拠タグ（matchedPatterns）。根拠がないときは出さない */}
               {(() => {
                 const patterns = parseMatchedPatterns(rec.matchedPatterns);
                 if (patterns.length === 0) return null;
                 return (
-                  <div className="chips" style={{ marginTop: 14 }}>
+                  <div style={{ marginTop: 16 }}>
+                    <p className="title" style={{ fontSize: 16 }}>確認の根拠</p>
                     {patterns.map((p) => (
-                      <span key={p.pattern} title={p.evidence} className="chip">
-                        {p.label}
-                      </span>
+                      <div key={p.pattern} style={{ marginTop: 10 }}>
+                        <p className="body" style={{ fontWeight: 700 }}>{p.label}</p>
+                        <p className="caption" style={{ marginTop: 2 }}>{p.evidence}</p>
+                        {p.caveat && (
+                          <p className="caption" style={{ marginTop: 2, color: "var(--muted)" }}>
+                            注意: {p.caveat}
+                          </p>
+                        )}
+                      </div>
                     ))}
                   </div>
                 );
               })()}
 
-              {/* 理由（パターン根拠）：落ち着いた表示 */}
               <p className="body" style={{ marginTop: 14 }}>
                 {rec.reason}
               </p>
             </>
           ) : (
             <p className="caption" style={{ margin: 0 }}>
-              まだ判定がありません。ダッシュボードの「判定を再計算」を実行してください。
+              見直し情報はまだありません。「見直し材料を再計算」を実行してください。
             </p>
           )}
         </section>
       </div>
+
+      {rec && !reviewBlocked && reviewUnknowns.length > 0 && (
+        <section className="section panel">
+          <h2 className="title">まだ分からないこと</h2>
+          {reviewUnknowns.map((unknown) => (
+            <p key={unknown.code} className="body" style={{ marginTop: 10 }}>
+              {unknown.message}
+            </p>
+          ))}
+        </section>
+      )}
+
+      {rec && !reviewBlocked && reviewOptions.length > 0 && (
+        <section className="section panel">
+          <h2 className="title">確認できる選択肢</h2>
+          <div className="mobile-card-list" style={{ marginTop: 8 }}>
+            {reviewOptions.map((option, index) => (
+              <div key={`${option.kind}-${index}`} className="rowitem" style={{ display: "block" }}>
+                <p className="body" style={{ fontWeight: 700 }}>{option.title}</p>
+                <p className="caption" style={{ marginTop: 4 }}>{option.detail}</p>
+                {option.annualSavings !== undefined && (
+                  <p className="body num" style={{ marginTop: 6 }}>
+                    年間差額の目安 {formatYen(option.annualSavings)}
+                  </p>
+                )}
+                {option.calculation && (
+                  <p className="caption" style={{ marginTop: 2 }}>
+                    計算: {option.calculation}
+                  </p>
+                )}
+                {option.verifiedAt && (
+                  <p className="caption" style={{ marginTop: 2 }}>
+                    料金確認日 {formatDate(option.verifiedAt)}
+                  </p>
+                )}
+                {option.sourceUrl && (
+                  <a
+                    href={safeHttpUrl(option.sourceUrl) ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="caption text-[var(--sage)] hover:underline"
+                  >
+                    確認に使った公式情報を見る ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {isCapacity && (
         <CapacityInput
@@ -187,7 +247,7 @@ export default async function SubscriptionDetailPage({
       <div className="mt-5 flex flex-wrap gap-3">
         {cancelUrl && (
           <a href={cancelUrl} target="_blank" rel="noopener noreferrer" className="btn ghost">
-            解約手続きページを開く ↗
+            登録した手続きページを開く ↗
           </a>
         )}
 

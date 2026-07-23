@@ -1,6 +1,6 @@
 import { authenticateRequest } from "@/lib/auth";
 import { ok, serverError, unauthorized } from "@/lib/api";
-import { listLatestRecommendations } from "@/repositories/recommendations";
+import { listLatestRecommendationsForDisplay } from "@/repositories/recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,8 @@ export async function GET(req: Request) {
   try {
     const auth = await authenticateRequest(req);
     if (!auth) return unauthorized();
-    const items = await listLatestRecommendations(auth.actor.userId);
-    return ok({ items });
+    const result = await listLatestRecommendationsForDisplay(auth.actor.userId);
+    return ok(result);
   } catch {
     return serverError();
   }

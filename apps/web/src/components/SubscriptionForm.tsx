@@ -303,7 +303,7 @@ export function SubscriptionForm({
               {issueMessage("importance")}
             </p>
           )}
-          <div className="help">「なくなったら困る度合い」。判定の参考にします。</div>
+          <div className="help">「なくなったら困る度合い」。見直し材料の参考にします。</div>
         </div>
       </div>
 

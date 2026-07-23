@@ -21,12 +21,11 @@ struct ReviewListView: View {
             case .all:
                 return true
             case .now:
-                return item.decision == .considerCancel || item.decision == .strongCancelCandidate
-                    || item.decision == .considerDowngrade
+                return item.reviewPriority == .now
             case .renewal:
-                return (item.daysUntilRenewal ?? Int.max) <= 30
+                return item.reviewPriority == .beforeRenewal
             case .missing:
-                return item.dataStatus == .observing || item.decision == nil
+                return item.reviewPriority == .missingInformation
             }
         }
     }
@@ -77,6 +76,27 @@ struct ReviewListView: View {
                         }
                     }
 
+                    if !store.blockedRecommendations.isEmpty {
+                        Section("再計算が必要") {
+                            ForEach(store.blockedRecommendations, id: \.subscriptionId) { blocked in
+                                VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                                    if let subscription = store.subscription(id: blocked.subscriptionId) {
+                                        Text(subscription.name)
+                                            .font(.appHeadline)
+                                    }
+                                    Text(blocked.message)
+                                        .font(.appSubheadline)
+                                        .foregroundStyle(AppColor.secondaryText)
+                                    Button("見直し材料を再計算") {
+                                        Task { await store.recompute() }
+                                    }
+                                    .disabled(store.isSaving)
+                                }
+                                .padding(.vertical, AppSpacing.xSmall)
+                            }
+                        }
+                    }
+
                     ForEach(filtered) { recommendation in
                         if let subscription = store.subscription(id: recommendation.subscriptionId) {
                             NavigationLink {
@@ -88,10 +108,8 @@ struct ReviewListView: View {
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     StatusPill(
-                                        text: recommendation.dataStatus == .observing
-                                            ? "観測中"
-                                            : recommendation.decision?.label ?? "情報が不足しています",
-                                        color: color(for: recommendation.decision)
+                                        text: recommendation.reviewPriority.label,
+                                        color: color(for: recommendation.reviewPriority)
                                     )
                                     Text(subscription.name).font(.appHeadline)
                                     Text(recommendation.reason)
@@ -121,11 +139,12 @@ struct ReviewListView: View {
         }
     }
 
-    private func color(for decision: RecommendationDecision?) -> Color {
-        switch decision {
-        case .strongCancelCandidate: return .red
-        case .considerCancel, .considerDowngrade: return AppColor.caution
-        default: return AppColor.accent
+    private func color(for priority: ReviewPriority) -> Color {
+        switch priority {
+        case .now: return AppColor.caution
+        case .beforeRenewal: return AppColor.caution
+        case .missingInformation: return AppColor.secondaryText
+        case .lowUrgency: return AppColor.accent
         }
     }
 }
@@ -137,9 +156,7 @@ struct ReviewSummaryCard: View {
     var body: some View {
         ReviewCard {
             VStack(alignment: .leading, spacing: AppSpacing.small) {
-                Text(recommendation.dataStatus == .observing
-                     ? "観測中・あと\(recommendation.daysUntilReady)日"
-                     : recommendation.decision?.label ?? "情報が不足しています")
+                Text(recommendation.reviewPriority.label)
                     .font(.appCaptionBold)
                     .foregroundStyle(.white.opacity(0.8))
                 Text(subscription.name).font(.appTitle2)
@@ -164,10 +181,8 @@ struct ReviewDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.large) {
                 StatusPill(
-                    text: recommendation.dataStatus == .observing
-                        ? "観測中"
-                        : recommendation.decision?.label ?? "情報不足",
-                    color: recommendation.decision == .strongCancelCandidate ? .red : AppColor.caution
+                    text: recommendation.reviewPriority.label,
+                    color: color(for: recommendation.reviewPriority)
                 )
                 Text(subscription.name)
                     .font(.appDisplay)
@@ -225,12 +240,12 @@ struct ReviewDetailView: View {
                 SurfaceCard {
                     VStack(alignment: .leading, spacing: AppSpacing.small) {
                         Text("まだ分からないこと").font(.appTitle)
-                        if recommendation.dataStatus == .observing {
-                            Text("利用状況は観測中です。確定まであと\(recommendation.daysUntilReady)日かかります。")
-                        } else if recommendation.usageDays30d == 0 {
-                            Text("別の端末やブラウザで使っている場合は記録されません。利用記録がないことだけで解約を判断できません。")
-                        } else {
+                        if recommendation.reviewUnknowns.isEmpty {
                             Text("利用頻度だけでは、その契約が必要かどうかを判断できません。仕事、家族利用、特典などもご自身で確認してください。")
+                        } else {
+                            ForEach(recommendation.reviewUnknowns) { unknown in
+                                Text(unknown.message)
+                            }
                         }
                     }
                 }
@@ -238,13 +253,34 @@ struct ReviewDetailView: View {
                 SurfaceCard {
                     VStack(alignment: .leading, spacing: AppSpacing.medium) {
                         Text("確認できる選択肢").font(.appTitle)
-                        Label("このまま継続する", systemImage: "circle")
-                        Label("料金やプランを確認する", systemImage: "circle")
-                        Label("使い方や重複を確認する", systemImage: "circle")
-                        Label("公式ページで解約条件を確認する", systemImage: "circle")
-                        Text("表示される差額や節約額は、現在登録されている料金を基にした目安です。")
-                            .font(.appFootnote)
-                            .foregroundStyle(AppColor.secondaryText)
+                        ForEach(recommendation.reviewOptions) { option in
+                            VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                                Label(option.title, systemImage: "circle")
+                                Text(option.detail)
+                                    .font(.appSubheadline)
+                                    .foregroundStyle(AppColor.secondaryText)
+                                if let annualSavings = option.annualSavings {
+                                    Text("年間差額の目安 \(AppFormatters.yen(annualSavings))")
+                                        .font(.appHeadline)
+                                }
+                                if let calculation = option.calculation {
+                                    Text("計算: \(calculation)")
+                                        .font(.appFootnote)
+                                        .foregroundStyle(AppColor.secondaryText)
+                                }
+                                if let verifiedAt = option.verifiedAt {
+                                    Text("料金確認 \(AppFormatters.date(verifiedAt))")
+                                        .font(.appFootnote)
+                                        .foregroundStyle(AppColor.secondaryText)
+                                }
+                                if let url = safeURL(option.sourceUrl) {
+                                    Button("確認に使った公式情報を見る") {
+                                        openURL(url)
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -252,7 +288,7 @@ struct ReviewDetailView: View {
                     Button {
                         openURL(url)
                     } label: {
-                        Label("公式の手続きページを見る", systemImage: "arrow.up.right.square")
+                        Label("登録した手続きページを見る", systemImage: "arrow.up.right.square")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -275,6 +311,14 @@ struct ReviewDetailView: View {
         guard let rawValue, let url = URL(string: rawValue),
               ["https", "http"].contains(url.scheme?.lowercased() ?? "") else { return nil }
         return url
+    }
+
+    private func color(for priority: ReviewPriority) -> Color {
+        switch priority {
+        case .now, .beforeRenewal: return AppColor.caution
+        case .missingInformation: return AppColor.secondaryText
+        case .lowUrgency: return AppColor.accent
+        }
     }
 }
 

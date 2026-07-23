@@ -17,6 +17,8 @@ type CatalogEntry = {
     monthlyPrice: number;
     isFreeTier: boolean;
     capacityGb?: number;
+    verifiedAt?: string;
+    sourceUrl?: string;
   }>;
   alternatives: string[];
 };
@@ -42,14 +44,12 @@ export type ServiceCatalogSyncResult = {
  */
 export async function syncServiceCatalog(
   db: CatalogDb,
-  verifiedAt: Date = new Date(),
 ): Promise<ServiceCatalogSyncResult> {
-  return db.$transaction(async (tx) => syncCatalogInTransaction(tx, verifiedAt));
+  return db.$transaction(async (tx) => syncCatalogInTransaction(tx));
 }
 
 async function syncCatalogInTransaction(
   tx: CatalogTransaction,
-  verifiedAt: Date,
 ): Promise<ServiceCatalogSyncResult> {
   const serviceIdByName = new Map<string, string>();
 
@@ -91,7 +91,9 @@ async function syncCatalogInTransaction(
           monthlyPrice: plan.monthlyPrice,
           isFreeTier: plan.isFreeTier,
           capacityGb: plan.capacityGb ?? null,
-          verifiedAt,
+          // 確認日は配備日ではない。カタログ資材に明記した公式確認日だけを使う。
+          verifiedAt: new Date(plan.verifiedAt ?? "1970-01-01T00:00:00.000Z"),
+          sourceUrl: plan.sourceUrl ?? null,
         })),
       });
       planCount += entry.plans.length;
@@ -106,7 +108,10 @@ async function syncCatalogInTransaction(
     if (!fromServiceId) return [];
     return entry.alternatives.flatMap((alternativeName) => {
       const toServiceId = serviceIdByName.get(alternativeName);
-      return toServiceId ? [{ fromServiceId, toServiceId }] : [];
+      // 代替関係は出典と確認日を別途持つまで見直し根拠へ使わない。
+      return toServiceId
+        ? [{ fromServiceId, toServiceId, verifiedAt: null, sourceUrl: null }]
+        : [];
     });
   });
   if (alternatives.length > 0) {

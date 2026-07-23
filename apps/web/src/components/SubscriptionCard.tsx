@@ -7,7 +7,7 @@ import { DecisionBadge } from "./DecisionBadge";
  * 一覧で使うサブスクカード。クラス重複を避けるため共通化（T6-7）。
  */
 export function SubscriptionCard({ row }: { row: SubscriptionWithRecommendation }) {
-  const { subscription: s, recommendation: rec } = row;
+  const { subscription: s, recommendation: rec, reviewBlocked } = row;
   const cycleLabel = s.billingCycle === "yearly" ? "/年" : "/月";
 
   return (
@@ -17,7 +17,7 @@ export function SubscriptionCard({ row }: { row: SubscriptionWithRecommendation 
           <div className="nm">{s.name}</div>
           <div className="ct">{categoryLabel(s.category)}</div>
         </div>
-        <DecisionBadge recommendation={rec} />
+        <DecisionBadge recommendation={rec} blocked={reviewBlocked} />
       </div>
       <div className="price">
         {formatYen(s.amount)} <small>{cycleLabel}</small>

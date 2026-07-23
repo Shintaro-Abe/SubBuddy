@@ -9,8 +9,7 @@ describe("scoringConfigSchema", () => {
     expect(defaultScoringConfig.renewalSoonDays).toBe(7);
     expect(defaultScoringConfig.highCostThreshold).toBe(2000);
     expect(defaultScoringConfig.longContractMonths).toBe(12);
-    expect(defaultScoringConfig.knowledgeBaseStaleDays).toBe(180);
-    expect(defaultScoringConfig.staleConfidenceMultiplier).toBe(0.7);
+    expect(defaultScoringConfig.knowledgeBaseFreshnessDays).toBe(90);
     expect(defaultScoringConfig.capacityFreshnessDays).toBe(30);
     expect(defaultScoringConfig.capacitySafetyBufferGb).toBe(5);
     expect(defaultScoringConfig.capacitySafetyBufferRatio).toBe(0.1);
@@ -26,8 +25,7 @@ describe("scoringConfigSchema", () => {
     expect(scoringConfigSchema.safeParse({ minObservationDays: 1.5 }).success).toBe(false);
   });
 
-  it("staleConfidenceMultiplier が 0〜1 の範囲外を拒否", () => {
-    expect(scoringConfigSchema.safeParse({ staleConfidenceMultiplier: 1.5 }).success).toBe(false);
-    expect(scoringConfigSchema.safeParse({ staleConfidenceMultiplier: -0.1 }).success).toBe(false);
+  it("knowledgeBaseFreshnessDays は1日未満を拒否", () => {
+    expect(scoringConfigSchema.safeParse({ knowledgeBaseFreshnessDays: 0 }).success).toBe(false);
   });
 });

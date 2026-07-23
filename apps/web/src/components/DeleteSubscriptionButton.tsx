@@ -10,7 +10,7 @@ export function DeleteSubscriptionButton({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
 
   async function handleDelete() {
-    if (!window.confirm("このサブスクを削除しますか？（利用履歴・判定も削除されます）")) return;
+    if (!window.confirm("このサブスクを削除しますか？（利用履歴・見直し情報も削除されます）")) return;
     setBusy(true);
     try {
       const res = await authenticatedFetch(`/api/subscriptions/${id}`, { method: "DELETE" });

@@ -15,6 +15,7 @@ import {
   getSubscription,
   updateSubscription,
 } from "@/repositories/subscriptions";
+import { refreshRecommendationAfterMutation } from "@/services/recompute";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     if (!parsed.success) return fromZodError(parsed.error);
 
     const updated = await updateSubscription(auth.actor.userId, id, parsed.data);
+    if (updated) await refreshRecommendationAfterMutation(auth.actor.userId, id);
     return updated ? ok(updated) : notFound();
   } catch {
     return serverError();

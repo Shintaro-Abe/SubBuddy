@@ -3,6 +3,11 @@ import { toMonthlyAmount, toYearlyAmount, type BillingCycle } from "@/lib/money"
 import { type ScoringConfig } from "@/config/scoring";
 import { smallestFittingPlan, type PlanCandidate } from "@/domain/capacity/fit";
 import { buildReason, reasonObserving } from "./reasons";
+import type {
+  ReviewOption,
+  ReviewPriorityValue,
+  ReviewUnknown,
+} from "@/domain/review/output";
 
 /**
  * パターン判定方式のレコメンドエンジン（純関数・副作用なし）。
@@ -27,6 +32,8 @@ export type InitialValueAnswer = "very_important" | "somewhat" | "not_much";
 export interface CheaperOption {
   name: string;
   monthlyPrice: number;
+  verifiedAt?: string;
+  sourceUrl?: string;
 }
 
 // type エイリアスにすることで暗黙の索引シグネチャが付き、Prisma の Json 入力型
@@ -69,6 +76,7 @@ export interface RecommendationInput {
   cheaperPlanCandidates: PlanCandidate[]; // 自分より安い有料プラン（容量つき）
   // 現在の契約プラン容量(GB)。判定には使わず、確定提案の文言を具体化する表示用途のみ。
   planCapacityGb: number | null;
+  hasStaleCatalogCandidates: boolean;
 }
 
 export interface RecommendationResult {
@@ -79,6 +87,7 @@ export interface RecommendationResult {
   matchedPatterns: MatchedPattern[];
   annualSavingsIfCancelled: number;
   annualSavingsIfDowngraded: number | null;
+  annualSavingsIfSwitched: number | null;
   monthlyAmount: number;
   yearlyAmount: number;
   daysSinceLastUse: number | null;
@@ -86,6 +95,9 @@ export interface RecommendationResult {
   hasOverlap: boolean;
   confidence: number;
   reason: string;
+  reviewPriority: ReviewPriorityValue;
+  reviewUnknowns: ReviewUnknown[];
+  reviewOptions: ReviewOption[];
 }
 
 // ---- 実装 ----
@@ -132,6 +144,7 @@ export function computeRecommendation(
 
     const immediatePatterns = matchPatternsP2toP6(input, config, monthlyAmount, yearlyAmount, p3);
 
+    const review = buildReviewOutput(input, immediatePatterns, p3, monthlyAmount, yearlyAmount, true);
     return {
       ...base,
       decision: immediatePatterns.length > 0 ? determineDecision(immediatePatterns, input, config) : null,
@@ -140,6 +153,7 @@ export function computeRecommendation(
       matchedPatterns: immediatePatterns,
       annualSavingsIfCancelled: yearlyAmount,
       annualSavingsIfDowngraded: calcDowngradeSavings(p3.savingsPlan, monthlyAmount),
+      annualSavingsIfSwitched: calcOptionSavings(input.cheaperAlternative, monthlyAmount),
       confidence,
       reason: immediatePatterns.length > 0
         ? buildReason(immediatePatterns)
@@ -148,6 +162,7 @@ export function computeRecommendation(
             renewalSoon,
             daysUntilRenewal: input.daysUntilRenewal,
           }),
+      ...review,
     };
   }
 
@@ -157,6 +172,7 @@ export function computeRecommendation(
     ? determineDecision(patterns, input, config)
     : Decision.keep;
 
+  const review = buildReviewOutput(input, patterns, p3, monthlyAmount, yearlyAmount, false);
   return {
     ...base,
     decision,
@@ -165,8 +181,10 @@ export function computeRecommendation(
     matchedPatterns: patterns,
     annualSavingsIfCancelled: yearlyAmount,
     annualSavingsIfDowngraded: calcDowngradeSavings(p3.savingsPlan, monthlyAmount),
+    annualSavingsIfSwitched: calcOptionSavings(input.cheaperAlternative, monthlyAmount),
     confidence: patterns.length > 0 ? 1.0 : 0.5,
     reason: buildReason(patterns),
+    ...review,
   };
 }
 
@@ -291,7 +309,7 @@ function matchP1(input: RecommendationInput, config: ScoringConfig): MatchedPatt
   if (spanDays === 0 && lastUseDays >= config.p1CancelLastUseDays) {
     return {
       pattern: "P1",
-      label: "使っていない",
+        label: "最近の利用記録がない",
       evidence: `最後に使ったのは${lastUseDays}日前です。直近${input.judgmentSpanDays}日間の利用が0日です`,
       caveat,
     };
@@ -300,7 +318,7 @@ function matchP1(input: RecommendationInput, config: ScoringConfig): MatchedPatt
   if (spanDays === 0 && lastUseDays >= config.p1WatchLastUseDays) {
     return {
       pattern: "P1",
-      label: "使っていない",
+      label: "最近の利用記録がない",
       evidence: `最後に使ったのは${lastUseDays}日前です`,
       caveat,
     };
@@ -311,7 +329,7 @@ function matchP1(input: RecommendationInput, config: ScoringConfig): MatchedPatt
     // 年額契約ではスパン内に利用がある時点で「使っている」とみなす（年1回利用のサービスを救う）
     return {
       pattern: "P1",
-      label: "使っていない",
+      label: "最近の利用記録が少ない",
       evidence: `直近${input.judgmentSpanDays}日間に利用がありますが、最後に使ったのは${lastUseDays}日前です`,
       caveat,
     };
@@ -334,7 +352,7 @@ function matchPatternsP2toP6(
     if (monthlyAmount > input.cheapestInCategory) {
       patterns.push({
         pattern: "P2",
-        label: "重複で割高",
+        label: "同じカテゴリの契約がある",
         evidence: `同カテゴリに¥${input.cheapestInCategory.toLocaleString()}/月のサービスがあります`,
       });
     }
@@ -344,7 +362,9 @@ function matchPatternsP2toP6(
   if (p3.show) {
     patterns.push({
       pattern: "P3",
-      label: "安いプランがある",
+      label: p3.status === "needs_capacity_check"
+        ? "プラン確認に情報が必要"
+        : "確認済みの下位プランがある",
       evidence: p3.evidence,
       ...(p3.caveat ? { caveat: p3.caveat } : {}),
       ...(p3.status ? { status: p3.status } : {}),
@@ -357,7 +377,7 @@ function matchPatternsP2toP6(
     if (saving > 0) {
       patterns.push({
         pattern: "P4",
-        label: "安い競合がある",
+        label: "確認済みの代替候補がある",
         evidence: `${input.cheaperAlternative.name}（¥${input.cheaperAlternative.monthlyPrice.toLocaleString()}/月）があります`,
       });
     }
@@ -383,7 +403,7 @@ function matchPatternsP2toP6(
   ) {
     patterns.push({
       pattern: "P6",
-      label: "高額で長期継続",
+      label: "支出が大きく継続期間が長い",
       evidence: `${input.contractMonths}ヶ月継続中（累計¥${input.cumulativeSpend.toLocaleString()}）`,
     });
   }
@@ -440,4 +460,146 @@ function calcDowngradeSavings(
   if (!cheaperPlan) return null;
   const saving = monthlyAmount - cheaperPlan.monthlyPrice;
   return saving > 0 ? saving * 12 : null;
+}
+
+function calcOptionSavings(
+  option: CheaperOption | null,
+  monthlyAmount: number,
+): number | null {
+  if (!option) return null;
+  const saving = monthlyAmount - option.monthlyPrice;
+  return saving > 0 ? saving * 12 : null;
+}
+
+function buildReviewOutput(
+  input: RecommendationInput,
+  patterns: MatchedPattern[],
+  p3: ResolvedP3,
+  monthlyAmount: number,
+  yearlyAmount: number,
+  observing: boolean,
+): {
+  reviewPriority: ReviewPriorityValue;
+  reviewUnknowns: ReviewUnknown[];
+  reviewOptions: ReviewOption[];
+} {
+  const unknowns: ReviewUnknown[] = [];
+  const options: ReviewOption[] = [
+    {
+      kind: "continue",
+      title: "このまま利用する",
+      detail: "必要性、家族利用、仕事での利用なども含めてご自身で判断できます。",
+    },
+    {
+      kind: "check_cancellation",
+      title: "解約条件を確認する",
+      detail: `解約した場合の年額目安は¥${yearlyAmount.toLocaleString()}です。返金や日割りはサービスごとに異なります。`,
+      currentMonthlyAmount: monthlyAmount,
+      annualSavings: yearlyAmount,
+      calculation: `登録中の月額換算¥${monthlyAmount.toLocaleString()}×12`,
+    },
+  ];
+
+  if (observing) {
+    unknowns.push({
+      code: "observation_incomplete",
+      message: "利用状況は観測中です。観測が終わるまで利用頻度は確定できません。",
+    });
+  }
+
+  const hasUsagePattern = patterns.some((pattern) => pattern.pattern === "P1");
+  if (hasUsagePattern || (canApplyP1(input.usageType) && !input.hasUsageData)) {
+    unknowns.push({
+      code: "usage_scope",
+      message: "別の端末、ブラウザ、家族による利用や背景での利用は記録に含まれない場合があります。",
+    });
+    options.push({
+      kind: "check_usage",
+      title: "計測外の利用を確認する",
+      detail: "別の端末、ブラウザ、家族利用、特典利用がないか確認します。",
+    });
+  }
+
+  const p3Pattern = patterns.find((pattern) => pattern.pattern === "P3");
+  if (p3Pattern?.status === "needs_capacity_check") {
+    unknowns.push({
+      code: input.usedCapacityGb === null ? "capacity_missing" : "capacity_stale",
+      message: input.usedCapacityGb === null
+        ? "現在の使用容量が分からないため、下位プランへ安全に変更できるか判断できません。"
+        : "使用容量の確認日が古いため、現在も下位プランへ収まるか判断できません。",
+    });
+    options.push({
+      kind: "check_plan",
+      title: "現在の使用容量を確認する",
+      detail: "最新の使用容量を確認してからプラン変更を検討します。",
+    });
+  }
+
+  if (input.hasStaleCatalogCandidates) {
+    unknowns.push({
+      code: "catalog_stale",
+      message: "料金情報を90日以内に再確認できていない候補は表示していません。",
+    });
+  }
+
+  if (patterns.some((pattern) => pattern.pattern === "P2")) {
+    options.push({
+      kind: "check_overlap",
+      title: "同じ目的の契約を確認する",
+      detail: "役割が重なっているか、両方必要かをご自身で確認します。",
+    });
+  }
+
+  if (p3.savingsPlan) {
+    const annualSavings = calcOptionSavings(p3.savingsPlan, monthlyAmount);
+    if (annualSavings !== null) {
+      options.push({
+        kind: "downgrade",
+        title: "下位プランを確認する",
+        detail: `${p3.savingsPlan.name}へ変更した場合の差額目安です。`,
+        targetName: p3.savingsPlan.name,
+        currentMonthlyAmount: monthlyAmount,
+        targetMonthlyAmount: p3.savingsPlan.monthlyPrice,
+        annualSavings,
+        calculation: `(月額換算¥${monthlyAmount.toLocaleString()}−¥${p3.savingsPlan.monthlyPrice.toLocaleString()})×12`,
+        sourceUrl: p3.savingsPlan.sourceUrl,
+        verifiedAt: p3.savingsPlan.verifiedAt,
+      });
+    }
+  }
+
+  if (input.cheaperAlternative) {
+    const annualSavings = calcOptionSavings(input.cheaperAlternative, monthlyAmount);
+    if (annualSavings !== null) {
+      options.push({
+        kind: "switch",
+        title: "代替サービスを確認する",
+        detail: `${input.cheaperAlternative.name}へ切り替えた場合の差額目安です。機能や条件が同じとは限りません。`,
+        targetName: input.cheaperAlternative.name,
+        currentMonthlyAmount: monthlyAmount,
+        targetMonthlyAmount: input.cheaperAlternative.monthlyPrice,
+        annualSavings,
+        calculation: `(月額換算¥${monthlyAmount.toLocaleString()}−¥${input.cheaperAlternative.monthlyPrice.toLocaleString()})×12`,
+        sourceUrl: input.cheaperAlternative.sourceUrl,
+        verifiedAt: input.cheaperAlternative.verifiedAt,
+      });
+    }
+  }
+
+  const hasNowReason = patterns.some((pattern) =>
+    pattern.pattern === "P2" ||
+    pattern.pattern === "P4" ||
+    pattern.pattern === "P6" ||
+    (pattern.pattern === "P3" && pattern.status !== "needs_capacity_check"),
+  );
+  const hasRenewalReason = patterns.some((pattern) => pattern.pattern === "P5");
+  const reviewPriority: ReviewPriorityValue = hasNowReason
+    ? "now"
+    : hasRenewalReason
+      ? "before_renewal"
+      : unknowns.length > 0 || hasUsagePattern
+        ? "missing_information"
+        : "low_urgency";
+
+  return { reviewPriority, reviewUnknowns: unknowns, reviewOptions: options };
 }

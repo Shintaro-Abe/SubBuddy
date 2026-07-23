@@ -7,7 +7,7 @@ import type { MatchedPattern } from "./computeRecommendation";
 
 export function buildReason(patterns: MatchedPattern[]): string {
   if (patterns.length === 0) {
-    return "見直し対象に該当する条件がありません。継続をおすすめします。";
+    return "現時点では、急いで確認する材料は見つかっていません。継続をすすめる意味ではありません。";
   }
   const parts = patterns.map((p) => {
     let text = p.evidence;

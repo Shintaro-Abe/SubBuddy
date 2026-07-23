@@ -10,6 +10,7 @@ import { usageDailyBatchSchema } from "@/schemas/usage";
 import { normalizeUsageBatch } from "@/domain/usage/normalize";
 import { upsertUsageDailyBatch, UsageSubscriptionNotFoundError } from "@/repositories/usage";
 import { parseAuthConfig } from "@/config/auth";
+import { refreshRecommendationAfterMutation } from "@/services/recompute";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,12 @@ export async function POST(req: Request) {
   try {
     const normalized = normalizeUsageBatch(parsed.data.items);
     const result = await upsertUsageDailyBatch(actor.userId, normalized);
+    const subscriptionIds = [...new Set(normalized.map((item) => item.subscriptionId))];
+    await Promise.all(
+      subscriptionIds.map((subscriptionId) =>
+        refreshRecommendationAfterMutation(actor.userId, subscriptionId),
+      ),
+    );
     if (actor.kind === "device") {
       await touchDeviceLastSyncedAt(actor.deviceId);
     }

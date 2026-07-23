@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-23（iPhone向けWebと通知の実装境界を反映）
+> 最終更新：2026-07-23（見直し全出力・安全検査・90日鮮度を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -185,11 +185,19 @@ flowchart LR
 - **ORM**：Prisma。スキーマ（`schema.prisma`）を単一ソースとし、マイグレーションで DB を管理。
 - **テーブル**：`users / user_guidance_progress / devices / auth_sessions / subscriptions / billing_events / ios_usage_daily_summaries / recommendation_snapshots / service_catalog / service_plans / service_alternatives`（定義は `functional-design.md` 5）。
 - **冪等同期**：`ios_usage_daily_summaries` は `(subscription_id, usage_date)` を一意キーに upsert（機能設計 4.1 / 10.1）。
-- **履歴保持**：`recommendation_snapshots` はスコアリング結果を追記（履歴）として保存し、判定の推移を追える。
+- **履歴保持**：`recommendation_snapshots` は内部判定に加え、4つの確認優先度、不足情報、選択肢、各差額、計算元の契約更新時刻を追記する。利用者向け表示は最新の安全検査済み行だけを使う。
 - **金額の扱い**：金額は**整数（最小通貨単位）**で保持し浮動小数の誤差を避ける。通貨は既定 JPY。
 - **seed/fixture**：合成データのみ。実 PII を seed・テスト・スクショに使わない（`AGENTS.md` PII 方針）。
 
-### 5.1 利用量の取り込み：Ingestion API + ソース別コネクタ（採用）
+### 5.1 見直し情報の安全境界
+
+- 保存時はZodで不足情報・選択肢の構造を検証する。読取時は所有者、契約更新時刻、登録金額、情報鮮度、優先度の根拠、節約額の計算条件を再検証する。
+- 検査に失敗したスナップショットは、金額・理由・候補をAPIレスポンスへ含めない。クライアントには対象契約IDと固定の再計算案内だけを返す。
+- 契約登録・編集、利用量同期、容量更新後は対象契約だけを再計算する。再計算に失敗しても元データの保存を取り消さず、古い見直しは表示しない。
+- カタログの比較情報は`source_url`と`verified_at`を必須とし、確認後90日以内だけ使用する。配備時刻を確認日として保存せず、期限切れ料金を係数で補正しない。
+- ユーザーが登録した手続きURLは安全なhttp/httpsだけを開くが、確認済みカタログ由来でない限り「公式」と表示しない。
+
+### 5.2 利用量の取り込み：Ingestion API + ソース別コネクタ（採用）
 
 取得源（Screen Time＝利用時間 / iCloud+＝容量 / 将来候補の請求情報等）は性質が異なる。
 入力ごとに検証・最小化の境界を置き、共通化は実装が複数現れてから行う。現時点の実装は`POST /api/usage/daily`と容量フィールドであり、汎用コネクタ基盤はまだ作らない。
@@ -215,7 +223,7 @@ flowchart LR
 
 - 設定項目（例）：未使用日数しきい値（強解約/解約検討）、金額しきい値、重複判定の対象カテゴリ、
   iCloud+ 容量余剰の判定閾、`importance` による補正係数、更新日接近の日数、
-  **確定に必要な最小観測日数（`minObservationDays`）**（段階的な情報提供＝`functional-design.md` §8.5）。
+  **確定に必要な最小観測日数（`minObservationDays`）**（段階的な情報提供＝`functional-design.md` §8.6）。
 - 形式：型付き設定（TypeScript + Zod 検証）として 1 箇所に集約し、将来 UI からの調整余地を残す。
 - 目的：要求 14「ルールベースのスコアリングは設定値として外出しし、調整可能にする」を技術的に担保。
 - ルール変更時は `recommendation_snapshots` に履歴が残るため、しきい値変更前後の判定差分を追跡できる。
