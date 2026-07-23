@@ -1,6 +1,6 @@
 # テスト実施状況台帳
 
-> 基準日時: 2026-07-21 UTC<br>
+> 基準日時: 2026-07-23 UTC<br>
 > 対象: 実際に始めた、または実施したことを確認できるテストだけ。今後行う予定のテストは含めない。<br>
 > 個人情報の保護: 件数、結果、作り物のテストデータによる確認内容だけを記録する。実在する人の情報、パスワード類、詳しい実行記録は載せない。
 
@@ -18,6 +18,7 @@
 
 | 開始・確認日 | 確認したもの | 確認方法 | 何を確かめたか | 現在の結果 | 結果の詳細 | 証拠となる記録 |
 |---|---|---|---|---|---|---|
+| 2026-07-23 | 現行実装と利用者向け文書の再同期 | コード・DB・監査台帳との照合、Markdown・生成HTML・リンク・用語・機微情報形式・差分検査 | `docs/`、`manuals/`、`obsidian/`が実装済み・一部実装・未実装・未確認を区別し、iPhone向けWeb、見直し、通知等の現行状態を正しく説明するか | 合格 | Web 11画面、API 23経路・28操作、Prisma 11モデル、iPhoneの主要Viewと状態を照合。対象Markdown 40件の相対リンク切れ0件、閉じ忘れコードフェンス0件、旧画面名と旧最小幅0件。変更した手順2件はMarkdownからHTMLを再生成し、シェル例0件・コピーボタン0件が一致、外部アセット依存0件。`docs/`、`manuals/`、`obsidian/`のgitleaks検出0件、差分形式も合格。外部URL到達性、Mermaid描画、アプリのbuild・自動試験・実機確認は今回の文書同期では再実行していない | [タスクリスト](../.steering/20260723-sync-docs-current-implementation/tasklist.md)、[現行実装一覧](../.steering/20260723-sync-docs-current-implementation/implementation-inventory.md) |
 | 2026-07-21 | iPhone向けWeb UI実装 | Web単体・型・lint・build・代表幅E2E、PC回帰、WBS型・単体、実機手順 | 320〜430px、横向き、下部ナビ、その他メニュー、全画面再配置、フォーム、画面説明、PC維持を確認する | 一部合格 | 合成データのみでWeb単体37ファイル206件、Web全E2E24件、WBS単体14件、Web・WBS型、変更対象lint、本番buildが合格。E2Eは320・375・390・430px、横向き、200%相当、全閲覧画面、追加・編集・詳細・サインイン、画面説明の排他表示、PC棒グラフ、長い名称・大金額・長文・合成200契約を確認した。Safari・Chrome実機、VoiceOver、ソフトウェアキーボード、実機safe areaは手順作成済みで未確認 | [タスクリスト](../.steering/20260721-responsive-web-mobile/tasklist.md)、[実機確認手順](../manuals/web-mobile-ui-check.md)、[Web E2E](../apps/web/e2e/mobile-layout.spec.ts) |
 | 2026-07-21 | iPhone向けWeb契約フォームのHTML試作 | 320px・390pxのブラウザ描画、入力・選択操作領域、横方向のはみ出し、外部依存の確認 | 1列入力、16px入力文字、44px以上の操作領域、末尾の保存操作、長い選択肢の折り返しが小さい画面で成立するか | 合格 | 320px・390pxとも文書幅と表示幅が一致し、横方向のはみ出し0件。入力文字16px、最小操作高44px、長い利用方法の折り返し、末尾の全幅保存、入力画面で下部ナビを隠す構成、外部アセット依存0件を描画確認した。合成入力例だけを使用 | [HTML試作](../.steering/20260721-responsive-web-mobile/mobile-contract-form-prototype.html)、[390px画像](../.steering/20260721-responsive-web-mobile/mobile-contract-form-390.png)、[320px画像](../.steering/20260721-responsive-web-mobile/mobile-contract-form-320.png) |
 | 2026-07-21 | iPhone向けWeb支出画面のHTML試作 | 320px・390pxのブラウザ描画、横方向のはみ出し、外部依存、HTML構造の確認 | 月次推移の縦リスト、支出概要、カテゴリ内訳、下部ナビゲーションを小さい画面で読んで操作できるか | 合格 | 320px・390pxとも文書幅と表示幅が一致し、横方向のはみ出し0件。設定操作44×44px、下部ナビゲーション高65px、外部アセット依存0件。月次6件の金額と比較バー、320pxでの概要1列化、390pxでの概要2列化、固定ナビゲーション下の余白を描画確認した。合成金額・合成カテゴリだけを使用 | [HTML試作](../.steering/20260721-responsive-web-mobile/mobile-spending-prototype.html) |

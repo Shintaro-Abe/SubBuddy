@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iPhone支出・更新数値の実機確認手順</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>iPhone支出・更新数値の実機確認手順</h1>
+<h2>目的</h2>
+<p>iPhoneのホーム、支出の内訳、更新が近い画面が、Web版と同じAPIデータを正しく表示することを確認する。合成契約3件だけを使い、月払い・年払いの換算、カテゴリ別集計、月次推移、契約状態、14日以内の更新条件を確認する。</p>
+<h2>前提</h2>
+<ul><li><a href="./ios-render-e2e-testflight-prep.md" target="_blank" rel="noopener">iPhone利用者向けUIのRender実機確認手順</a>が合格している。</li><li><a href="./ios-contract-crud-real-device-check.md" target="_blank" rel="noopener">iPhone契約CRUD・iCloud+容量の実機確認手順</a>が合格している。</li><li>iPhoneとWeb版で同じテスト用Appleアカウントへサインインしている。</li><li>確認開始時点で、テスト用アカウントの契約が0件になっている。</li><li>Renderへ確認対象の<code>main</code>がデプロイされている。</li></ul>
+<div class="callout warn"><p>実在の契約・金額・更新日を使わない。契約が残っている場合は、それが合成確認用だと確実に判断できるものだけを削除する。判断できない契約には触れず、この確認を中止する。</p></div>
+<hr>
+<h2>1. テスト監査台帳を実施中にする</h2>
+<p>○ 実機確認を始めたことを正本へ記録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>を開く。</li><li>「iPhone支出・更新数値の実機API結合」の行を追加する。</li><li>開始日、対象、確認内容を記入し、現在の結果を<code>実施中</code>にする。</li></ol>
+<div class="callout warn"><p>契約名、金額、Appleアカウント、識別子、スクリーンショットを台帳へ記録しない。</p></div>
+<div class="callout ok"><p>対象の行が<code>実施中</code>になっている。</p></div>
+<hr>
+<h2>2. 開始状態を確認する</h2>
+<p>○ 期待値を正確に計算できる状態にする。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>Web版の契約一覧を開く。</li><li>契約が0件であることを確認する。</li><li>iPhoneの<code>契約</code>タブを下へ引いて更新する。</li><li>iPhoneでも契約が0件であることを確認する。</li></ol>
+<div class="callout warn"><p>0件にできない場合、この手順の固定期待値は使えない。既存契約を無断で削除せず、確認を中止する。</p></div>
+<div class="callout ok"><p>Web版とiPhoneの契約がどちらも0件になっている。</p></div>
+<hr>
+<h2>3. 月払いの合成契約を登録する</h2>
+<p>○ 月額換算と14日以内の更新対象を作る。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>契約</code>タブで<code>契約を追加</code>を押す。</li><li>次の合成値を入力する。</li></ol>
+<table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成支出・月払い</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>video_streaming</code></td></tr><tr><td>日本円の請求額</td><td><code>1200</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>更新日を登録</td><td>オン</td></tr><tr><td>次回更新日</td><td>実施日の7日後</td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr><tr><td>重要度</td><td><code>3 / 5</code></td></tr></tbody></table>
+<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li>契約一覧へ戻り、対象が表示されることを確認する。</li></ol>
+<div class="callout ok"><p>月払い1,200円、利用中、7日後更新の合成契約を登録できる。</p></div>
+<hr>
+<h2>4. 年払いの合成契約を登録する</h2>
+<p>○ 年払いから月額へ換算する対象を作る。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>契約を追加</code>を押す。</li><li>次の合成値を入力する。</li></ol>
+<table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成支出・年払い</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>productivity</code></td></tr><tr><td>日本円の請求額</td><td><code>12000</code></td></tr><tr><td>請求周期</td><td><code>年払い</code></td></tr><tr><td>更新日を登録</td><td>オン</td></tr><tr><td>次回更新日</td><td>実施日の20日後</td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr><tr><td>重要度</td><td><code>3 / 5</code></td></tr></tbody></table>
+<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li>契約一覧へ戻り、対象が表示されることを確認する。</li></ol>
+<div class="callout ok"><p>年払い12,000円、利用中、20日後更新の合成契約を登録できる。</p></div>
+<hr>
+<h2>5. 一時停止の合成契約を登録する</h2>
+<p>○ 支出と更新対象から除外される契約を作る。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>契約を追加</code>を押す。</li><li>次の合成値を入力する。</li></ol>
+<table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成支出・一時停止</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>music</code></td></tr><tr><td>日本円の請求額</td><td><code>9000</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>更新日を登録</td><td>オン</td></tr><tr><td>次回更新日</td><td>実施日の5日後</td></tr><tr><td>契約状態</td><td><code>一時停止</code></td></tr><tr><td>重要度</td><td><code>3 / 5</code></td></tr></tbody></table>
+<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li>契約一覧に合成契約が合計3件あることを確認する。</li></ol>
+<div class="callout ok"><p>5日後更新でも集計対象外となる一時停止契約を登録できる。</p></div>
+<hr>
+<h2>6. ホームの合計を確認する</h2>
+<p>○ 利用中の月払い・年払いだけが年間支出へ反映されることを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>ホーム</code>タブを開く。</li><li>画面を下へ引いて更新する。</li><li><code>登録中の年間支出（目安）</code>が<code>26,400円</code>であることを確認する。</li><li>件数が<code>2件</code>であることを確認する。</li><li>Web版のホームを再読込する。</li><li>Web版の月額合計が<code>2,200円</code>、年額合計が<code>26,400円</code>、継続中が2件であることを確認する。</li></ol>
+<p>計算根拠：</p>
+<table><thead><tr><th>対象</th><th>月額換算</th><th>年額換算</th></tr></thead><tbody><tr><td>月払い1,200円</td><td>1,200円</td><td>14,400円</td></tr><tr><td>年払い12,000円</td><td>1,000円</td><td>12,000円</td></tr><tr><td>一時停止9,000円</td><td>0円</td><td>0円</td></tr><tr><td>合計</td><td>2,200円</td><td>26,400円</td></tr></tbody></table>
+<div class="callout ok"><p>iPhoneとWeb版の年間支出・利用中件数が一致し、一時停止契約が除外される。</p></div>
+<hr>
+<h2>7. 支出の内訳を確認する</h2>
+<p>○ 月額換算とカテゴリ別集計を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneホームの<code>支出の内訳</code>を開く。</li><li><code>月額換算</code>が<code>2,200円</code>であることを確認する。</li><li><code>年額見込み</code>が<code>26,400円</code>であることを確認する。</li><li>カテゴリ別に、動画配信が<code>1,200円</code>、仕事効率化が<code>1,000円</code>と表示されることを確認する。</li><li>音楽カテゴリの9,000円が表示されないことを確認する。</li><li>Web版の<code>支出</code>を開き、月額、年額、カテゴリ別金額がiPhoneと一致することを確認する。</li></ol>
+<div class="callout ok"><p>月払いと年払いが正しく月額換算され、利用中だけがカテゴリ別に集計される。</p></div>
+<hr>
+<h2>8. 6か月推移を確認する</h2>
+<p>○ 登録月から積み上がる月次推移を確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>支出の内訳</code>で<code>月次推移</code>を見る。</li><li>VoiceOverを一時的に有効にするか、棒グラフのアクセシビリティ情報を確認できる方法で各月の値を読む。</li><li>直近6か月のうち、前月以前が<code>0円</code>、登録した当月が<code>2,200円</code>であることを確認する。</li><li>Web版の月次推移も、前月以前が<code>0円</code>、当月が<code>2,200円</code>であることを確認する。</li><li>iPhoneとWeb版で6か月の並びと値が一致することを確認する。</li></ol>
+<div class="callout warn"><p>月末・月初のUTC境界で確認する場合、当月ラベルが想定と異なる可能性がある。その場合はiPhoneとWeb版の一致を合格条件とし、勝手に期待値を書き換えない。</p></div>
+<div class="callout ok"><p>iPhoneとWeb版の6か月推移が一致し、一時停止契約は推移にも含まれない。</p></div>
+<hr>
+<h2>9. 14日以内の更新を確認する</h2>
+<p>○ 契約状態と更新日による絞り込みを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>ホーム</code>へ戻る。</li><li><code>更新が近い</code>の件数が<code>1件</code>であることを確認する。</li><li><code>更新が近い</code>を開く。</li><li><code>合成支出・月払い</code>だけが表示されることを確認する。</li><li>20日後更新の<code>合成支出・年払い</code>が表示されないことを確認する。</li><li>5日後更新でも一時停止中の<code>合成支出・一時停止</code>が表示されないことを確認する。</li><li>表示された金額、請求周期、更新日が登録値と一致することを確認する。</li><li>Web版の<code>更新間近</code>を開き、対象が同じ1件であることを確認する。</li></ol>
+<div class="callout ok"><p>利用中かつ14日以内の契約だけが、iPhoneとWeb版の両方に表示される。</p></div>
+<hr>
+<h2>10. 再読込後の安定性を確認する</h2>
+<p>○ 複数回読み込んでも件数や金額が重複しないことを確認する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneホームを下へ引いて2回更新する。</li><li>年間支出が<code>26,400円</code>、利用中が2件、更新が近いが1件のままであることを確認する。</li><li><code>支出の内訳</code>を開き、月額換算が<code>2,200円</code>のままであることを確認する。</li><li>Web版も2回再読込し、同じ値であることを確認する。</li></ol>
+<div class="callout ok"><p>再読込で契約や金額が重複せず、iPhoneとWeb版の数値が一致し続ける。</p></div>
+<hr>
+<h2>11. 合成契約を削除する</h2>
+<p>○ 確認用データを残さず終了する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li>iPhoneの<code>契約</code>タブを開く。</li><li><code>合成支出・月払い</code>を削除する。</li><li><code>合成支出・年払い</code>を削除する。</li><li><code>合成支出・一時停止</code>を削除する。</li><li>iPhoneの契約一覧が0件になったことを確認する。</li><li>Web版を再読込し、契約一覧が0件になったことを確認する。</li><li>iPhoneホームを更新し、年間支出0円、利用中0件、更新が近い0件になることを確認する。</li></ol>
+<div class="callout warn"><p>名前が完全に一致する3件だけを削除する。</p></div>
+<div class="callout ok"><p>合成確認用契約がiPhoneとWeb版の両方に残っていない。</p></div>
+<hr>
+<h2>12. テスト監査台帳を更新する</h2>
+<p>○ 合否と残った未確認範囲だけを記録する。</p>
+<p>□ 操作</p>
+<ol class="gui"><li><code>.audit/test-status.md</code>の「iPhone支出・更新数値の実機API結合」の行を開く。</li><li>すべて成功した場合は<code>合格</code>へ変更する。</li><li>一部だけ確認できた場合は<code>一部合格</code>とし、未確認の画面・条件だけを書く。</li><li>失敗した場合は<code>不合格</code>または<code>もう一度確認が必要</code>とし、安全なエラー表示と操作名だけを書く。</li><li>生ログ、契約内容、アカウント情報、識別子、スクリーンショットは記録しない。</li></ol>
+<div class="callout ok"><p>結果、確認範囲、残った未確認範囲だけが台帳に記録されている。</p></div>
+<hr>
+<h2>13. 完了条件</h2>
+<ul><li>[ ] 月払い・年払い・一時停止の合成契約3件を登録できる。</li><li>[ ] ホームの年間支出が26,400円、利用中が2件になる。</li><li>[ ] 支出の内訳が月額2,200円、年額26,400円になる。</li><li>[ ] カテゴリ別が1,200円と1,000円に分かれる。</li><li>[ ] 一時停止の9,000円が支出に含まれない。</li><li>[ ] 6か月推移がiPhoneとWeb版で一致する。</li><li>[ ] 14日以内かつ利用中の1件だけが更新対象になる。</li><li>[ ] 2回再読込しても件数・金額が重複しない。</li><li>[ ] 合成契約3件を削除し、開始前の0件へ戻した。</li><li>[ ] テスト監査台帳へPII・秘密情報・実データを記録していない。</li></ul>
+<div class="callout ok"><p>すべて合格したら、<code>.steering/20260716-ios-main-ui/feature-migration-matrix.md</code>のF-02、F-03、F-12、<code>tasklist.md</code>のT-7、WBSの<code>REL-0.3.4</code>へ結果を反映できる。</p></div>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

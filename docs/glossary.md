@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-21（案内完了後の表示とWeb設定の用語を照合）
+> 最終更新：2026-07-23（iPhone向けWeb、見直し、通知の現行状態を照合）
 > 関連：`product-requirements.md`、`functional-design.md`、`architecture.md`、`repository-structure.md`、`development-guidelines.md`
 
 ---
@@ -192,6 +192,7 @@
 | 案内進捗 | Guidance Progress | はじめ方の完了状態。契約内容を複製せず、棚卸し完了日時、支出・見直しの初回表示日時、利用状況の選択だけを利用者単位で保存する。 |
 | この画面について | About This Screen | 契約、支出、見直し、更新間近の目的と表示対象を短く説明し、初回表示後も再確認できる入口。 |
 | 設定（Web） | Web Settings | cloud modeでは現在のブラウザセッションからログアウトする画面。local modeではログインを使わないため、ログアウト操作を表示せず説明だけを示す。 |
+| 通知設定 | Notification Settings | iPhoneで更新日前通知と同期失敗通知の希望を管理する予定の画面。現行は誤って利用可能に見せないよう無効化され、通知許可要求・予約・配信は未接続である。 |
 
 ---
 

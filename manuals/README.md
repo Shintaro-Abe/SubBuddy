@@ -29,3 +29,7 @@
 | [ios-screen-time-auto-measurement-regression-check.md](./ios-screen-time-auto-measurement-regression-check.md) | Swift Actor隔離・Simulator起動前検査の修復確認と、Screen Time自動開始・変更・解除・認可復帰・通信失敗の回帰確認 | `.steering/20260719-auto-screen-time-measurement-lifecycle/`、`.steering/20260719-auto-usage-sync/` |
 | [render-screen-time-usage-db-query.md](./render-screen-time-usage-db-query.md) | Render Web ServiceのShellからScreen Time同期の到達日時と日別集計値を安全に確認する | `.steering/20260719-auto-usage-sync/` |
 | [ios-screen-time-seven-day-continuous-check.md](./ios-screen-time-seven-day-continuous-check.md) | iPhone Screen Timeの7日連続計測、自動同期、再起動、通信切断、自動再送、同日再送、日付境界 | `.steering/20260711-release-roadmap-rebaseline/`、`.steering/20260719-auto-usage-sync/` |
+
+## 現在まだ手順書がない機能
+
+見直し全出力と通知配信は未完成のため、利用可能な機能として確認する手順書をまだ用意していません。iPhoneの通知設定画面は無効状態で、通知許可要求・予約・配信は未接続です。実装後に合成データだけを使う実機手順を追加します。

@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-21（案内進捗、Web設定、iPhone共通操作色の現行実装を反映）
+> 最終更新：2026-07-23（iPhone向けWebと通知の実装境界を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -77,6 +77,8 @@ flowchart TB
 | Lint / Format | ESLint + Prettier | `development-guidelines.md` の規約を機械的に強制 |
 
 > バージョンの具体値（Node / Next / Postgres 等）は `repository-structure.md` または `package.json` / `.tool-versions` を一次情報とし、本書では固定しない（陳腐化防止）。
+
+Webは同じHTMLを画面幅で再配置し、1023px以下で上部バー・下部ナビ・「その他」シート、1024px以上で左サイドバーを使う。320〜430px、横向き、200%相当、合成200契約とPC表示はPlaywrightで確認済みである。Safari・Chrome実機、VoiceOver、ソフトウェアキーボード、実機safe areaは手動確認が残る。
 
 ### 3.2 iPhone 側（主製品UI・利用量センサー）
 
@@ -417,5 +419,5 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 ### 14.5 対応環境
 
 - iOS 17.4以降、iPhone専用、縦向き。標準画面・大画面、提出時点の最新iOSを回帰対象とする。
-- WebはmacOS・iOSのSafari/Chrome最新と1つ前を正式対応、Edge/Firefox最新版を動作確認対象とし、画面幅360px以上を前提とする。
+- WebはmacOS・iOSのSafari/Chrome最新と1つ前を正式対応、Edge/Firefox最新版を動作確認対象とし、画面幅320px以上を前提とする。
 - iPhoneはVoiceOver・最大Dynamic Type・44ポイント操作領域、Webはキーボード・可視フォーカス・200%拡大・通常文字4.5:1以上のコントラストを満たす。
