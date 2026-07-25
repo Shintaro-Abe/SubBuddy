@@ -38,7 +38,15 @@ type AuthDb = {
     }): Promise<DeviceRecord>;
     updateMany(args: {
       where: { id: string; userId: string; revokedAt: null };
-      data: { revokedAt: Date };
+      data: {
+        revokedAt: Date;
+        pushTokenCiphertext?: null;
+        pushTokenFingerprint?: null;
+        pushTokenKeyVersion?: null;
+        pushEnvironment?: null;
+        notificationDeliveryEnabled?: false;
+        pushTokenUpdatedAt?: null;
+      };
     }): Promise<{ count: number }>;
   };
 };
@@ -238,7 +246,15 @@ export async function revokeSession(
     if (session.deviceId) {
       await tx.device.updateMany({
         where: { id: session.deviceId, userId, revokedAt: null },
-        data: { revokedAt: now },
+        data: {
+          revokedAt: now,
+          pushTokenCiphertext: null,
+          pushTokenFingerprint: null,
+          pushTokenKeyVersion: null,
+          pushEnvironment: null,
+          notificationDeliveryEnabled: false,
+          pushTokenUpdatedAt: null,
+        },
       });
     }
     return true;
@@ -258,7 +274,15 @@ export async function revokeAllSessionsAndDevices(
     });
     await tx.device.updateMany({
       where: { userId, revokedAt: null },
-      data: { revokedAt: now },
+      data: {
+        revokedAt: now,
+        pushTokenCiphertext: null,
+        pushTokenFingerprint: null,
+        pushTokenKeyVersion: null,
+        pushEnvironment: null,
+        notificationDeliveryEnabled: false,
+        pushTokenUpdatedAt: null,
+      },
     });
   });
 }
@@ -540,7 +564,15 @@ export async function revokeDeviceForAppleUser(
 ): Promise<boolean> {
   const result = await db.device.updateMany({
     where: { id: deviceId, userId, revokedAt: null },
-    data: { revokedAt: new Date() },
+    data: {
+      revokedAt: new Date(),
+      pushTokenCiphertext: null,
+      pushTokenFingerprint: null,
+      pushTokenKeyVersion: null,
+      pushEnvironment: null,
+      notificationDeliveryEnabled: false,
+      pushTokenUpdatedAt: null,
+    },
   });
   return result.count > 0;
 }
@@ -554,7 +586,15 @@ export async function revokeDeviceAndSessions(
   return db.$transaction(async (tx) => {
     const device = await tx.device.updateMany({
       where: { id: deviceId, userId, revokedAt: null },
-      data: { revokedAt: now },
+      data: {
+        revokedAt: now,
+        pushTokenCiphertext: null,
+        pushTokenFingerprint: null,
+        pushTokenKeyVersion: null,
+        pushEnvironment: null,
+        notificationDeliveryEnabled: false,
+        pushTokenUpdatedAt: null,
+      },
     });
     if (device.count !== 1) return false;
     await tx.authSession.updateMany({

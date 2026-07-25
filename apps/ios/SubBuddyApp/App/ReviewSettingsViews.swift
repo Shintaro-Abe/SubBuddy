@@ -347,6 +347,7 @@ private struct ReasonLabelStyle: LabelStyle {
 struct SettingsView: View {
     @ObservedObject var authSession: AuthSession
     @ObservedObject var store: ProductStore
+    @ObservedObject var notificationManager: NotificationManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -372,22 +373,26 @@ struct SettingsView: View {
                 } label: {
                     Label("Screen Timeと計測対象", systemImage: "hourglass")
                 }
-                NavigationLink {
-                    SyncSettingsView()
-                } label: {
+                NavigationLink(value: SettingsDestination.sync) {
                     Label("同期", systemImage: "arrow.triangle.2.circlepath")
                 }
-                NavigationLink {
-                    NotificationSettingsView()
-                } label: {
-                    Label("通知", systemImage: "bell")
+                NavigationLink(value: SettingsDestination.notifications) {
+                    HStack {
+                        Label("通知", systemImage: "bell")
+                        Spacer()
+                        let unreadCount = notificationManager.notices.filter { $0.readAt == nil }.count
+                        if unreadCount > 0 {
+                            Text("\(unreadCount)")
+                                .font(.appCaption)
+                                .foregroundStyle(AppColor.accent)
+                                .accessibilityLabel("未読\(unreadCount)件")
+                        }
+                    }
                 }
             }
 
             Section("安全とサポート") {
-                NavigationLink {
-                    SessionSettingsView(store: store)
-                } label: {
+                NavigationLink(value: SettingsDestination.sessions) {
                     Label("端末とセッション", systemImage: "iphone.and.arrow.forward")
                 }
                 NavigationLink {
@@ -432,6 +437,20 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("閉じる") { dismiss() }
+            }
+        }
+        .navigationDestination(for: SettingsDestination.self) { destination in
+            switch destination {
+            case .sync:
+                SyncSettingsView()
+            case .notifications:
+                NotificationSettingsView(
+                    authSession: authSession,
+                    store: store,
+                    manager: notificationManager
+                )
+            case .sessions:
+                SessionSettingsView(store: store)
             }
         }
     }
@@ -563,19 +582,165 @@ private struct SyncSettingsView: View {
 }
 
 private struct NotificationSettingsView: View {
-    @AppStorage("renewal_notifications") private var renewalNotifications = false
-    @AppStorage("sync_failure_notifications") private var syncNotifications = false
+    @ObservedObject var authSession: AuthSession
+    @ObservedObject var store: ProductStore
+    @ObservedObject var manager: NotificationManager
+
     var body: some View {
         Form {
-            Toggle("更新日の事前通知", isOn: $renewalNotifications)
-            Toggle("同期失敗の通知", isOn: $syncNotifications)
-            Text("通知の許可要求と配信処理は未接続です。設定は端末内に保存し、接続完了まで通知済みとは表示しません。")
-                .font(.appFootnote)
-                .foregroundStyle(AppColor.secondaryText)
+            Section {
+                LabeledContent("状態", value: manager.state.label)
+                if manager.state == .osDisabled {
+                    Button("iPhoneの通知設定を開く") {
+                        manager.openSystemSettings()
+                    }
+                } else if manager.state == .active {
+                    Button("このiPhoneでは通知を停止") {
+                        Task {
+                            await manager.setDeliveryOnThisDevice(
+                                false,
+                                subscriptions: store.subscriptions,
+                                deviceId: authSession.deviceId
+                            )
+                        }
+                    }
+                } else if manager.featureEnabled && manager.state == .disabledOnDevice {
+                    Button("このiPhoneで通知を再開") {
+                        Task {
+                            await manager.setDeliveryOnThisDevice(
+                                true,
+                                subscriptions: store.subscriptions,
+                                deviceId: authSession.deviceId
+                            )
+                        }
+                    }
+                } else if manager.featureEnabled && manager.state == .notConfigured {
+                    Button("このiPhoneで通知を設定") {
+                        Task {
+                            await manager.requestPermission(
+                                subscriptions: store.subscriptions,
+                                deviceId: authSession.deviceId
+                            )
+                        }
+                    }
+                }
+            } footer: {
+                Text("通知の希望とiPhoneの許可は別に管理されます。許可しなくても契約、支出、見直しは利用できます。")
+            }
+
+            if manager.featureEnabled {
+                Section("更新日の事前通知") {
+                    Toggle(
+                        "年額契約を7日前に知らせる",
+                        isOn: preferenceBinding(
+                            \.yearlyRenewalEnabled,
+                            preferenceKey: "yearlyRenewalEnabled"
+                        )
+                    )
+                    Toggle(
+                        "月額契約を1日前に知らせる",
+                        isOn: preferenceBinding(
+                            \.monthlyRenewalEnabled,
+                            preferenceKey: "monthlyRenewalEnabled"
+                        )
+                    )
+                    Text("午前10時に「更新日が近い契約があります」とだけ表示します。契約名、金額、更新日はロック画面に出しません。")
+                        .font(.appFootnote)
+                        .foregroundStyle(AppColor.secondaryText)
+                }
+
+                Section("同期と安全") {
+                    Toggle(
+                        "同期できない状態が24時間続いたら知らせる",
+                        isOn: preferenceBinding(
+                            \.syncFailureEnabled,
+                            preferenceKey: "syncFailureEnabled"
+                        )
+                    )
+                    Toggle(
+                        "新しいサインインをプッシュで知らせる",
+                        isOn: preferenceBinding(
+                            \.newSignInPushEnabled,
+                            preferenceKey: "newSignInPushEnabled"
+                        )
+                    )
+                    Text("削除予定と安全性・長期障害のお知らせは、停止できないアプリ内の重要連絡として表示します。")
+                        .font(.appFootnote)
+                        .foregroundStyle(AppColor.secondaryText)
+                }
+
+                Section("お知らせ") {
+                    if manager.notices.isEmpty {
+                        Text("現在、お知らせはありません。")
+                            .foregroundStyle(AppColor.secondaryText)
+                    } else {
+                        ForEach(manager.notices) { notice in
+                            VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                                HStack {
+                                    Text(notice.title).font(.appHeadline)
+                                    if notice.readAt == nil {
+                                        Text("未読")
+                                            .font(.appCaption)
+                                            .foregroundStyle(AppColor.accent)
+                                    }
+                                }
+                                Text(notice.detail)
+                                    .font(.appSubheadline)
+                                    .foregroundStyle(AppColor.secondaryText)
+                                if notice.readAt == nil {
+                                    Button("確認済みにする") {
+                                        Task { await manager.markRead(notice) }
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                            }
+                            .padding(.vertical, AppSpacing.xSmall)
+                        }
+                    }
+                }
+            } else {
+                Section {
+                    Text("通知は現在準備中です。設定、許可要求、予約、配信はまだ有効になっていません。")
+                        .foregroundStyle(AppColor.secondaryText)
+                }
+            }
+
+            if let error = manager.errorMessage {
+                Section {
+                    Text(error)
+                        .foregroundStyle(AppColor.caution)
+                        .accessibilityLabel("通知のエラー。\(error)")
+                }
+            }
         }
-        .disabled(true)
         .appListBackground()
         .navigationTitle("通知")
+        .task {
+            await manager.refresh(
+                subscriptions: store.subscriptions,
+                deviceId: authSession.deviceId
+            )
+        }
+    }
+
+    private func preferenceBinding(
+        _ keyPath: WritableKeyPath<NotificationPreferences, Bool>,
+        preferenceKey: String
+    ) -> Binding<Bool> {
+        Binding(
+            get: { manager.preferences[keyPath: keyPath] },
+            set: { value in
+                Task {
+                    await manager.update(
+                        keyPath: keyPath,
+                        preferenceKey: preferenceKey,
+                        value: value,
+                        subscriptions: store.subscriptions,
+                        deviceId: authSession.deviceId
+                    )
+                }
+            }
+        )
     }
 }
 

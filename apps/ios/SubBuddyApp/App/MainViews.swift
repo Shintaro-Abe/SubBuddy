@@ -6,15 +6,29 @@ enum MainTab: Hashable {
     case review
 }
 
+enum SettingsDestination: Hashable {
+    case sync
+    case notifications
+    case sessions
+}
+
 struct MainTabView: View {
     @ObservedObject var authSession: AuthSession
     @ObservedObject var store: ProductStore
+    @ObservedObject var notificationManager: NotificationManager
     @State private var selection: MainTab = .home
+    @State private var requestedSettingsDestination: SettingsDestination?
+    @AppStorage("pending_notification_route") private var pendingNotificationRoute = ""
 
     var body: some View {
         TabView(selection: $selection) {
             NavigationStack {
-                HomeView(authSession: authSession, store: store) { selection = $0 }
+                HomeView(
+                    authSession: authSession,
+                    store: store,
+                    notificationManager: notificationManager,
+                    requestedSettingsDestination: $requestedSettingsDestination
+                ) { selection = $0 }
             }
             .tabItem { Label("ホーム", systemImage: "house") }
             .tag(MainTab.home)
@@ -33,18 +47,54 @@ struct MainTabView: View {
         }
         .task {
             if store.subscriptions.isEmpty || store.requiresReauthentication { await store.loadAll() }
+            await notificationManager.refresh(
+                subscriptions: store.subscriptions,
+                deviceId: authSession.deviceId
+            )
+            followPendingNotificationRoute()
         }
+        .onChange(of: pendingNotificationRoute) { _, _ in followPendingNotificationRoute() }
         .onChange(of: store.requiresReauthentication) { _, required in
             if required { authSession.requireReauthentication() }
         }
+        .onChange(of: store.subscriptions) { _, subscriptions in
+            Task {
+                await notificationManager.refresh(
+                    subscriptions: subscriptions,
+                    deviceId: authSession.deviceId
+                )
+            }
+        }
+    }
+
+    private func followPendingNotificationRoute() {
+        guard !pendingNotificationRoute.isEmpty else { return }
+        switch pendingNotificationRoute {
+        case "renewals":
+            selection = .subscriptions
+        case "sync", "sessions", "notices":
+            selection = .home
+            requestedSettingsDestination = switch pendingNotificationRoute {
+            case "sync": .sync
+            case "sessions": .sessions
+            default: .notifications
+            }
+        default:
+            break
+        }
+        pendingNotificationRoute = ""
     }
 }
 
 struct HomeView: View {
     @ObservedObject var authSession: AuthSession
     @ObservedObject var store: ProductStore
+    @ObservedObject var notificationManager: NotificationManager
+    @Binding var requestedSettingsDestination: SettingsDestination?
     var navigateToTab: (MainTab) -> Void = { _ in }
     @State private var showsSettings = false
+    @State private var settingsPath: [SettingsDestination] = []
+    @AppStorage("notification_prompt_dismissed") private var notificationPromptDismissed = false
 
     var body: some View {
         ScrollView {
@@ -52,6 +102,26 @@ struct HomeView: View {
                 if let error = store.errorMessage {
                     InlineErrorView(message: error) {
                         Task { await store.loadAll() }
+                    }
+                }
+
+                if importantUnreadCount > 0 {
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: AppSpacing.small) {
+                            Text("重要なお知らせ")
+                                .font(.appCaption)
+                                .foregroundStyle(AppColor.caution)
+                            Text("確認が必要なお知らせが\(importantUnreadCount)件あります")
+                                .font(.appHeadline)
+                            Text("削除予定または安全性・長期障害に関する内容です。")
+                                .font(.appSubheadline)
+                                .foregroundStyle(AppColor.secondaryText)
+                            Button("お知らせを確認") {
+                                settingsPath = [.notifications]
+                                showsSettings = true
+                            }
+                                .buttonStyle(.bordered)
+                        }
                     }
                 }
 
@@ -67,6 +137,34 @@ struct HomeView: View {
                                  ? "1件登録すると、年間支出の目安を確認できます。"
                                  : "料金や更新日を確認しながら、結果が育つのを待てます。")
                                 .foregroundStyle(AppColor.secondaryText)
+                        }
+                    }
+                }
+
+                if shouldShowNotificationPrompt {
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: AppSpacing.small) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                                    Text("更新前にお知らせできます")
+                                        .font(.appHeadline)
+                                    Text("通知を使うかは後から選べます。契約名や金額はロック画面に表示しません。")
+                                        .font(.appSubheadline)
+                                        .foregroundStyle(AppColor.secondaryText)
+                                }
+                                Spacer()
+                                Button("閉じる", systemImage: "xmark") {
+                                    notificationPromptDismissed = true
+                                    Task { await notificationManager.dismissPrompt() }
+                                }
+                                .labelStyle(.iconOnly)
+                                .accessibilityHint("この案内を今後表示しません")
+                            }
+                            Button("通知を設定") {
+                                settingsPath = [.notifications]
+                                showsSettings = true
+                            }
+                            .buttonStyle(.bordered)
                         }
                     }
                 }
@@ -118,16 +216,44 @@ struct HomeView: View {
         .navigationTitle("ホーム")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("設定", systemImage: "gearshape") { showsSettings = true }
+                Button("設定", systemImage: "gearshape") {
+                    settingsPath = []
+                    showsSettings = true
+                }
                     .accessibilityHint("データ、同期、アカウントの設定を開きます")
             }
         }
         .refreshable { await store.loadAll() }
         .sheet(isPresented: $showsSettings) {
-            NavigationStack {
-                SettingsView(authSession: authSession, store: store)
+            NavigationStack(path: $settingsPath) {
+                SettingsView(
+                    authSession: authSession,
+                    store: store,
+                    notificationManager: notificationManager
+                )
             }
         }
+        .onChange(of: requestedSettingsDestination) { _, destination in
+            guard let destination else { return }
+            settingsPath = [destination]
+            showsSettings = true
+            requestedSettingsDestination = nil
+        }
+    }
+
+    private var shouldShowNotificationPrompt: Bool {
+        !notificationPromptDismissed
+            && !UserDefaults.standard.bool(forKey: "notification_delivery_on_device")
+            && store.subscriptions.contains {
+                $0.status == .active && $0.nextRenewalDate != nil
+            }
+    }
+
+    private var importantUnreadCount: Int {
+        notificationManager.notices.filter {
+            $0.readAt == nil
+                && ($0.kind == "account_deletion_scheduled" || $0.kind == "safety_incident")
+        }.count
     }
 
     @ViewBuilder

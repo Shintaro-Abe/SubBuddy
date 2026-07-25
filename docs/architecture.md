@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-23（見直し全出力・安全検査・90日鮮度を反映）
+> 最終更新：2026-07-25（通知の実装済み範囲と残る信頼性対応を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -63,18 +63,18 @@ flowchart TB
 
 ### 3.1 Web / API / DB / Worker側
 
-| 領域 | 採用技術 | 採用理由 |
-|---|---|---|
-| 言語 | TypeScript | 型安全。Web/API/ドメインを単一言語で統一 |
-| Web フレームワーク | Next.js（App Router） | Web ダッシュボードと Route Handlers API を 1 アプリで提供。ローカル単体起動が容易 |
-| UI | React + Tailwind CSS | 共通デザインシステムで統一感（要求 14・機能設計 6.1） |
-| API | Next.js Route Handlers | Webと同じサービスで`/api/*`を提供（機能設計 10） |
-| ORM | Prisma | スキーマ駆動・マイグレーション・型生成。リポジトリ層を薄く保つ |
-| DB | PostgreSQL | local modeはローカル、cloud-testflight modeはRenderのマネージドDB。集計・履歴・将来拡張に耐える |
-| ジョブ/Worker | MVP: アプリ内処理 / フェーズ2: BullMQ + Redis | MVP は同期計算で十分。将来の定期実行・分離に備える |
-| バリデーション | Zod | API 入力・フォーム入力のスキーマ検証。型と単一ソース化 |
-| テスト | Vitest（単体）/ Playwright（E2E） | ドメインロジックを単体テスト中心で担保し、主要Web導線をE2Eで確認 |
-| Lint / Format | ESLint + Prettier | `development-guidelines.md` の規約を機械的に強制 |
+| 領域               | 採用技術                                      | 採用理由                                                                                        |
+| ------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 言語               | TypeScript                                    | 型安全。Web/API/ドメインを単一言語で統一                                                        |
+| Web フレームワーク | Next.js（App Router）                         | Web ダッシュボードと Route Handlers API を 1 アプリで提供。ローカル単体起動が容易               |
+| UI                 | React + Tailwind CSS                          | 共通デザインシステムで統一感（要求 14・機能設計 6.1）                                           |
+| API                | Next.js Route Handlers                        | Webと同じサービスで`/api/*`を提供（機能設計 10）                                                |
+| ORM                | Prisma                                        | スキーマ駆動・マイグレーション・型生成。リポジトリ層を薄く保つ                                  |
+| DB                 | PostgreSQL                                    | local modeはローカル、cloud-testflight modeはRenderのマネージドDB。集計・履歴・将来拡張に耐える |
+| ジョブ/Worker      | MVP: アプリ内処理 / フェーズ2: BullMQ + Redis | MVP は同期計算で十分。将来の定期実行・分離に備える                                              |
+| バリデーション     | Zod                                           | API 入力・フォーム入力のスキーマ検証。型と単一ソース化                                          |
+| テスト             | Vitest（単体）/ Playwright（E2E）             | ドメインロジックを単体テスト中心で担保し、主要Web導線をE2Eで確認                                |
+| Lint / Format      | ESLint + Prettier                             | `development-guidelines.md` の規約を機械的に強制                                                |
 
 > バージョンの具体値（Node / Next / Postgres 等）は `repository-structure.md` または `package.json` / `.tool-versions` を一次情報とし、本書では固定しない（陳腐化防止）。
 
@@ -82,16 +82,16 @@ Webは同じHTMLを画面幅で再配置し、1023px以下で上部バー・下�
 
 ### 3.2 iPhone 側（主製品UI・利用量センサー）
 
-| 領域 | 採用技術 | 用途 |
-|---|---|---|
-| 言語 / UI | Swift / SwiftUI | iOS アプリ本体 |
-| 利用量計測 | FamilyControls / DeviceActivity / ManagedSettings | Screen Time のしきい値イベント取得（要 entitlement） |
-| 対象選択 | FamilyActivityPicker | 1契約につき1つの計測対象アプリを選択（UC-09）。同じアプリの契約間重複は端末内で拒否 |
-| 集計イベント | DeviceActivityMonitor Extension | 現行しきい値（15分/30分/60分/120分）超過イベントを受信し日別集計。1分/5分はAPI互換用の共有enumにのみ残す |
-| 秘密情報の保存 | Keychain（ThisDeviceOnly） | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID |
-| 計測データの共有 | App Group内JSONファイル | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない |
-| 同期 | URLSession（HTTPS） | 本体アプリの起動・サインイン完了・フォアグラウンド復帰時にSubBuddy APIへ**集計値のみ**自動送信。失敗時は端末内保持して再試行 |
-| UIデザイン | SwiftUI標準操作 + `AppColor` / 共通View modifier | Webのブランド基準をiPhone向け動的色へ対応付け、ライト・ダーク・高コントラスト、Dynamic Type、VoiceOverを維持 |
+| 領域             | 採用技術                                          | 用途                                                                                                                         |
+| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 言語 / UI        | Swift / SwiftUI                                   | iOS アプリ本体                                                                                                               |
+| 利用量計測       | FamilyControls / DeviceActivity / ManagedSettings | Screen Time のしきい値イベント取得（要 entitlement）                                                                         |
+| 対象選択         | FamilyActivityPicker                              | 1契約につき1つの計測対象アプリを選択（UC-09）。同じアプリの契約間重複は端末内で拒否                                          |
+| 集計イベント     | DeviceActivityMonitor Extension                   | 現行しきい値（15分/30分/60分/120分）超過イベントを受信し日別集計。1分/5分はAPI互換用の共有enumにのみ残す                     |
+| 秘密情報の保存   | Keychain（ThisDeviceOnly）                        | 更新トークン、セッションID、デバイス同期トークン、端末内生成ID                                                               |
+| 計測データの共有 | App Group内JSONファイル                           | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない                                                    |
+| 同期             | URLSession（HTTPS）                               | 本体アプリの起動・サインイン完了・フォアグラウンド復帰時にSubBuddy APIへ**集計値のみ**自動送信。失敗時は端末内保持して再試行 |
+| UIデザイン       | SwiftUI標準操作 + `AppColor` / 共通View modifier  | Webのブランド基準をiPhone向け動的色へ対応付け、ライト・ダーク・高コントラスト、Dynamic Type、VoiceOverを維持                 |
 
 > iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤でのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 
@@ -120,11 +120,11 @@ Webは同じHTMLを画面幅で再配置し、1023px以下で上部バー・下�
 
 SubBuddy は **同一コードベースを実行モードで切り替える**。ローカル版は残すが、本番と別構成にしない。
 
-| 実行モード | 主な用途 | API/DB | 認証 | iPhone 同期 |
-|---|---|---|---|---|
-| `local mode` | 開発者・個人運用 | ローカル Next.js + ローカル PostgreSQL | ローカル簡易認証 | `USAGE_SYNC_TOKEN` による互換同期 |
-| `cloud-testflight mode` | TestFlight小規模検証版 | Renderシンガポール + マネージド PostgreSQL | Apple サインイン + 認証セッション | デバイス同期トークン |
-| `production mode` | 将来の一般公開版 | クラウド本番環境 | Apple サインイン | デバイス同期トークン |
+| 実行モード              | 主な用途               | API/DB                                     | 認証                              | iPhone 同期                       |
+| ----------------------- | ---------------------- | ------------------------------------------ | --------------------------------- | --------------------------------- |
+| `local mode`            | 開発者・個人運用       | ローカル Next.js + ローカル PostgreSQL     | ローカル簡易認証                  | `USAGE_SYNC_TOKEN` による互換同期 |
+| `cloud-testflight mode` | TestFlight小規模検証版 | Renderシンガポール + マネージド PostgreSQL | Apple サインイン + 認証セッション | デバイス同期トークン              |
+| `production mode`       | 将来の一般公開版       | クラウド本番環境                           | Apple サインイン                  | デバイス同期トークン              |
 
 実行モードは `SUBBUDDY_MODE` で切り替える。値は `local` / `cloud-testflight` / `production` のいずれかとする。`local` では `USAGE_SYNC_TOKEN` による互換同期を使い、`cloud-testflight` / `production` では Apple サインインとデバイス同期トークンを使う。
 
@@ -251,7 +251,12 @@ Route Handler 以降の内部処理は、認証方式の違いを直接扱わず
 ```ts
 type AuthenticatedActor =
   | { kind: "user"; userId: string; authProvider: "local" | "apple" }
-  | { kind: "device"; userId: string; deviceId: string; authProvider: "device_token" };
+  | {
+      kind: "device";
+      userId: string;
+      deviceId: string;
+      authProvider: "device_token";
+    };
 ```
 
 #### 8.1.1 local mode：ローカル簡易認証
@@ -314,16 +319,16 @@ type AuthenticatedActor =
 
 ## 9. 技術的制約
 
-| # | 制約 | 根拠 |
-|---|---|---|
-| TC-1 | `local mode` はクラウド・外部 DB に依存せず単体起動できること | ローカルファースト（要求 8.1） |
-| TC-2 | 外部サービスの ID/PW を保存しない／自動ログインしない | 要求 7・8.4 |
-| TC-3 | iPhone から受け取るのは集計値のみ（詳細ログ不可） | 要求 14 / 機能設計 12 |
-| TC-4 | iOS 計測は entitlement 依存。配布用 entitlement と TestFlight 検証なしに配布版へ進まない | 要求 10.3 |
-| TC-5 | スコアリングのしきい値はコード直書きせず設定外出し | 要求 14 / 本書 6 |
-| TC-6 | 金額は整数（最小通貨単位）で保持 | 計算誤差防止（本書 5） |
-| TC-7 | Apple Music/TV+/Arcade/One を実装・サンプル・レコメンドに含めない | 要求 5・6 |
-| TC-8 | 実 PII を開発成果物（コード/seed/fixture/ログ/スクショ）に含めない | `AGENTS.md` PII 方針 |
+| #    | 制約                                                                                     | 根拠                           |
+| ---- | ---------------------------------------------------------------------------------------- | ------------------------------ |
+| TC-1 | `local mode` はクラウド・外部 DB に依存せず単体起動できること                            | ローカルファースト（要求 8.1） |
+| TC-2 | 外部サービスの ID/PW を保存しない／自動ログインしない                                    | 要求 7・8.4                    |
+| TC-3 | iPhone から受け取るのは集計値のみ（詳細ログ不可）                                        | 要求 14 / 機能設計 12          |
+| TC-4 | iOS 計測は entitlement 依存。配布用 entitlement と TestFlight 検証なしに配布版へ進まない | 要求 10.3                      |
+| TC-5 | スコアリングのしきい値はコード直書きせず設定外出し                                       | 要求 14 / 本書 6               |
+| TC-6 | 金額は整数（最小通貨単位）で保持                                                         | 計算誤差防止（本書 5）         |
+| TC-7 | Apple Music/TV+/Arcade/One を実装・サンプル・レコメンドに含めない                        | 要求 5・6                      |
+| TC-8 | 実 PII を開発成果物（コード/seed/fixture/ログ/スクショ）に含めない                       | `AGENTS.md` PII 方針           |
 
 ---
 
@@ -331,13 +336,13 @@ type AuthenticatedActor =
 
 local modeは個人・単一ユーザー規模、cloud-testflight modeは上限50人が前提である。大規模処理より**応答性・正確性・テナント分離**を重視する。
 
-| 指標 | 目標（MVP） | 備考 |
-|---|---|---|
-| ダッシュボード初期表示 | 体感即時（ローカルで概ね 1 秒未満） | 登録サブスク数は数十件規模を想定 |
-| 一覧・集計（月額/年額/単価） | 即時 | DB 件数が小規模のため単純集計で十分 |
-| スコアリング再計算（全件） | 数百ms〜1秒程度 | 全サブスク × 直近30日サマリの線形処理 |
-| iOS 同期 API（日別バッチ upsert） | 1 バッチ即時応答 | `(subscription_id, usage_date)` upsert、冪等 |
-| データ規模想定 | local modeはサブスク数十件、cloud-testflight modeは最大50人・1人200契約 | インデックス：`user_id`・`subscription_id`・`usage_date`・`next_renewal_date` |
+| 指標                              | 目標（MVP）                                                             | 備考                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| ダッシュボード初期表示            | 体感即時（ローカルで概ね 1 秒未満）                                     | 登録サブスク数は数十件規模を想定                                              |
+| 一覧・集計（月額/年額/単価）      | 即時                                                                    | DB 件数が小規模のため単純集計で十分                                           |
+| スコアリング再計算（全件）        | 数百ms〜1秒程度                                                         | 全サブスク × 直近30日サマリの線形処理                                         |
+| iOS 同期 API（日別バッチ upsert） | 1 バッチ即時応答                                                        | `(subscription_id, usage_date)` upsert、冪等                                  |
+| データ規模想定                    | local modeはサブスク数十件、cloud-testflight modeは最大50人・1人200契約 | インデックス：`user_id`・`subscription_id`・`usage_date`・`next_renewal_date` |
 
 - 大規模分散・高 QPS は要件外。早すぎる最適化は行わない。
 - 集計クエリが増えた場合に備え、利用サマリの日付・サブスク ID にインデックスを張る。
@@ -346,32 +351,32 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 
 ## 11. 非機能要件（技術的実現）
 
-| 区分 | 要件 | 実現方法 |
-|---|---|---|
-| プライバシー | 実行モードごとに保存先を明確化し、詳細ログを外に出さない | local DB またはクラウド DB・集計値同期・保存時暗号化 |
-| セキュリティ | ID/PW 非保存・入力検証・XSS 対策 | Zod 検証・エスケープ・`.env` 管理・シークレットスキャン |
-| 可搬性 | local mode と cloud mode を同一コードベースで扱う | ドメインロジック独立・リポジトリ抽象・認証境界の正規化 |
-| 保守性 | しきい値調整・ルール変更容易 | 設定外出し（本書 6）・履歴保存 |
-| 信頼性 | 同期の冪等性・データ整合 | upsert・一意制約・マイグレーション管理 |
-| 統一性（UI） | デザイン統一 | Tailwind CSS 共通デザインシステム |
-| 統一性（iPhone UI） | 画面モード別の可読性と操作領域 | SwiftUI動的色、共通ボタンスタイル、Dynamic Type、VoiceOver、44pt以上の主要操作領域 |
-| 品質 | 変更後の検証 | Lint・型チェック・テストを必須（`development-guidelines.md`） |
+| 区分                | 要件                                                     | 実現方法                                                                           |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| プライバシー        | 実行モードごとに保存先を明確化し、詳細ログを外に出さない | local DB またはクラウド DB・集計値同期・保存時暗号化                               |
+| セキュリティ        | ID/PW 非保存・入力検証・XSS 対策                         | Zod 検証・エスケープ・`.env` 管理・シークレットスキャン                            |
+| 可搬性              | local mode と cloud mode を同一コードベースで扱う        | ドメインロジック独立・リポジトリ抽象・認証境界の正規化                             |
+| 保守性              | しきい値調整・ルール変更容易                             | 設定外出し（本書 6）・履歴保存                                                     |
+| 信頼性              | 同期の冪等性・データ整合                                 | upsert・一意制約・マイグレーション管理                                             |
+| 統一性（UI）        | デザイン統一                                             | Tailwind CSS 共通デザインシステム                                                  |
+| 統一性（iPhone UI） | 画面モード別の可読性と操作領域                           | SwiftUI動的色、共通ボタンスタイル、Dynamic Type、VoiceOver、44pt以上の主要操作領域 |
+| 品質                | 変更後の検証                                             | Lint・型チェック・テストを必須（`development-guidelines.md`）                      |
 
 ---
 
 ## 12. 技術リスクと対応方針
 
-| リスク | 影響 | 対応 |
-|---|---|---|
-| Family Controls entitlement 取得不可 | P1 パターン（使っていない）の判定が能動前面サブスクで成立しない | 先行 Spike（要求 10.3）。不成立時は iPhone アプリ内の起動シグナルで補助、または P2〜P6 のみで判定 |
-| DeviceActivity の実機イベント挙動の不確実性 | 利用バケットの精度低下 | Spike で発火・再起動後挙動を確認。バケット粒度で吸収 |
-| 配布用 Family Controls entitlement 取得不可 | TestFlight 配布版で利用量同期が成立しない | Apple 公式要件を実装前に再確認し、配布用 entitlement / TestFlight / クラウド送信を必須ゲートにする |
-| Apple サインイン実装・審査要件の変更 | ログイン導線や審査で手戻り | 実装直前に Apple 公式情報を確認し、メールを必須識別子にしない設計を維持 |
-| テナント分離漏れ | 他ユーザーのサブスク・利用量が見える重大事故 | repository / API で認証済み `userId` を必須化し、他ユーザーアクセス拒否のテストを追加 |
-| デバイス同期トークン漏えい | 不正な利用量送信 | ハッシュ保存、失効・再発行、ログ出力禁止、レート制限 |
-| iOS ⇄ Mac の LAN HTTPS / 証明書運用 | local mode の同期失敗 | ローカル CA / 自己署名 + トークン検証。手順を README 化 |
-| スコアリングしきい値の妥当性 | 判定が体感とずれる | 設定外出し + 履歴比較で調整（本書 6） |
-| ローカル運用ゆえのバックアップ欠如 | データ消失 | ローカルバックアップ手順を運用で定義（実 PII を外部に出さない範囲で） |
+| リスク                                      | 影響                                                            | 対応                                                                                               |
+| ------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Family Controls entitlement 取得不可        | P1 パターン（使っていない）の判定が能動前面サブスクで成立しない | 先行 Spike（要求 10.3）。不成立時は iPhone アプリ内の起動シグナルで補助、または P2〜P6 のみで判定  |
+| DeviceActivity の実機イベント挙動の不確実性 | 利用バケットの精度低下                                          | Spike で発火・再起動後挙動を確認。バケット粒度で吸収                                               |
+| 配布用 Family Controls entitlement 取得不可 | TestFlight 配布版で利用量同期が成立しない                       | Apple 公式要件を実装前に再確認し、配布用 entitlement / TestFlight / クラウド送信を必須ゲートにする |
+| Apple サインイン実装・審査要件の変更        | ログイン導線や審査で手戻り                                      | 実装直前に Apple 公式情報を確認し、メールを必須識別子にしない設計を維持                            |
+| テナント分離漏れ                            | 他ユーザーのサブスク・利用量が見える重大事故                    | repository / API で認証済み `userId` を必須化し、他ユーザーアクセス拒否のテストを追加              |
+| デバイス同期トークン漏えい                  | 不正な利用量送信                                                | ハッシュ保存、失効・再発行、ログ出力禁止、レート制限                                               |
+| iOS ⇄ Mac の LAN HTTPS / 証明書運用         | local mode の同期失敗                                           | ローカル CA / 自己署名 + トークン検証。手順を README 化                                            |
+| スコアリングしきい値の妥当性                | 判定が体感とずれる                                              | 設定外出し + 履歴比較で調整（本書 6）                                                              |
+| ローカル運用ゆえのバックアップ欠如          | データ消失                                                      | ローカルバックアップ手順を運用で定義（実 PII を外部に出さない範囲で）                              |
 
 ---
 
@@ -412,11 +417,11 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 
 ### 14.4 信頼性・性能・費用
 
-| 項目 | TestFlight | 一般公開 |
-|---|---:|---:|
-| 許容データ損失 | 24時間 | 1時間 |
-| 復旧目標時間 | 24時間 | 8時間 |
-| クラッシュなしセッション | 99%以上 | 99.5%以上 |
+| 項目                     | TestFlight |  一般公開 |
+| ------------------------ | ---------: | --------: |
+| 許容データ損失           |     24時間 |     1時間 |
+| 復旧目標時間             |     24時間 |     8時間 |
+| クラッシュなしセッション |    99%以上 | 99.5%以上 |
 
 - TestFlight前に合成データで別環境への復元を行い、一般公開後は月1回復元可能性を確認する。復旧時は削除記録を再適用する。
 - iPhoneのキャッシュ表示は2秒以内、Web主要表示は75%以上で2.5秒以内、Web操作反応は75%以上で200ミリ秒以内を目標とする。
@@ -429,3 +434,13 @@ local modeは個人・単一ユーザー規模、cloud-testflight modeは上限5
 - iOS 17.4以降、iPhone専用、縦向き。標準画面・大画面、提出時点の最新iOSを回帰対象とする。
 - WebはmacOS・iOSのSafari/Chrome最新と1つ前を正式対応、Edge/Firefox最新版を動作確認対象とし、画面幅320px以上を前提とする。
 - iPhoneはVoiceOver・最大Dynamic Type・44ポイント操作領域、Webはキーボード・可視フォーカス・200%拡大・通常文字4.5:1以上のコントラストを満たす。
+
+### 14.6 通知配信
+
+- 更新日前と同期失敗は`UNUserNotificationCenter`によるiPhone端末内通知とし、契約情報を外部送信しない。更新予定日は入力した基準日と請求周期から算出し、入力値を上書きしない。
+- 新規サインイン、削除予定、安全通知はPostgreSQLの送信待ちへ保存し、Render Cronが5分ごとにリース取得して処理する。Redisと常時Workerは初回版に追加しない。
+- APNsはトークン認証で直接送信し、無効トークンは停止、429・5xxは上限付きで再試行する。TestFlightとproductionでAPNs環境、DB、鍵を分離する。
+- サーバー通知はAPNsとアプリ内のお知らせに限定し、メール送信サービスは使わない。
+- APNsトークンはAES-256-GCMで暗号化し、検索用fingerprintは用途別HMAC鍵で作る。秘密鍵はRender Secretに置く。
+- 2026-07-25時点のコードは、APNs送信待ち、リース、再試行、保持期限まで実装済みである。一方、削除予定など通常のサーバー通知を端末現地時刻9〜20時へ制限する処理と、業務処理成功後に通知作成が失敗した場合の再実行は未実装である。両方を完成ゲートに含め、解消まで機能フラグを有効にしない。
+- `NOTIFICATIONS_ENABLED`は初期オフとし、local modeでは有効化を拒否する。資格情報、migration、Cron、自動試験、実機試験の全ゲート合格後だけ環境単位で有効化する。

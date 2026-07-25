@@ -95,6 +95,112 @@ actor APIClient {
         clearSession()
     }
 
+    func notificationPreferences() async throws -> NotificationPreferencesEnvelope {
+        try await sendAuthenticated(path: "/api/notification-preferences", method: "GET")
+    }
+
+    func updateNotificationPreference(key: String, value: Bool) async throws -> NotificationPreferences {
+        let body: NotificationPreferencePatch
+        switch key {
+        case "yearlyRenewalEnabled":
+            body = NotificationPreferencePatch(
+                yearlyRenewalEnabled: value,
+                monthlyRenewalEnabled: nil,
+                syncFailureEnabled: nil,
+                newSignInPushEnabled: nil,
+                promptDismissed: nil
+            )
+        case "monthlyRenewalEnabled":
+            body = NotificationPreferencePatch(
+                yearlyRenewalEnabled: nil,
+                monthlyRenewalEnabled: value,
+                syncFailureEnabled: nil,
+                newSignInPushEnabled: nil,
+                promptDismissed: nil
+            )
+        case "syncFailureEnabled":
+            body = NotificationPreferencePatch(
+                yearlyRenewalEnabled: nil,
+                monthlyRenewalEnabled: nil,
+                syncFailureEnabled: value,
+                newSignInPushEnabled: nil,
+                promptDismissed: nil
+            )
+        default:
+            body = NotificationPreferencePatch(
+                yearlyRenewalEnabled: nil,
+                monthlyRenewalEnabled: nil,
+                syncFailureEnabled: nil,
+                newSignInPushEnabled: value,
+                promptDismissed: nil
+            )
+        }
+        return try await sendAuthenticated(
+            path: "/api/notification-preferences",
+            method: "PATCH",
+            body: body
+        )
+    }
+
+    func dismissNotificationPrompt() async throws {
+        let body = NotificationPreferencePatch(
+            yearlyRenewalEnabled: nil,
+            monthlyRenewalEnabled: nil,
+            syncFailureEnabled: nil,
+            newSignInPushEnabled: nil,
+            promptDismissed: true
+        )
+        let _: NotificationPreferences = try await sendAuthenticated(
+            path: "/api/notification-preferences",
+            method: "PATCH",
+            body: body
+        )
+    }
+
+    func notificationNotices() async throws -> [NotificationNotice] {
+        let response: NotificationNoticeCollection = try await sendAuthenticated(
+            path: "/api/notices",
+            method: "GET"
+        )
+        return response.items
+    }
+
+    func markNoticeRead(id: String) async throws {
+        let _: NoticeReadResponse = try await sendAuthenticated(
+            path: "/api/notices/\(id)/read",
+            method: "POST",
+            body: EmptyRequest()
+        )
+    }
+
+    func registerPushToken(
+        deviceId: String,
+        token: String,
+        deliveryEnabled: Bool = true
+    ) async throws {
+        #if DEBUG
+        let environment = "sandbox"
+        #else
+        let environment = "production"
+        #endif
+        let _: PushTokenResponse = try await sendAuthenticated(
+            path: "/api/devices/\(deviceId)/push-token",
+            method: "PUT",
+            body: PushTokenRequest(
+                token: token,
+                environment: environment,
+                deliveryEnabled: deliveryEnabled
+            )
+        )
+    }
+
+    func removePushToken(deviceId: String) async throws {
+        let _: PushTokenRemovalResponse = try await sendAuthenticated(
+            path: "/api/devices/\(deviceId)/push-token",
+            method: "DELETE"
+        )
+    }
+
     func sendAuthenticated<RequestBody: Encodable, ResponseBody: Decodable>(
         path: String,
         method: String,

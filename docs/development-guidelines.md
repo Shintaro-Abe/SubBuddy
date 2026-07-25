@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-21（iPhone共通操作スタイルと文書現行性検査を反映）
+> 最終更新：2026-07-25（通知の実装・有効化ゲートを反映）
 > 関連：`architecture.md`（技術仕様）、`repository-structure.md`（構成）、`functional-design.md`（機能設計）、`glossary.md`（用語）
 
 ---
@@ -49,15 +49,15 @@
 
 ### 3.1 TypeScript（Mac 側）
 
-| 対象 | 規則 | 例 |
-|---|---|---|
-| 変数・関数 | camelCase | `computeRecommendation()`、`matchedPatterns` |
-| 型・インターフェース・クラス | PascalCase | `Subscription`、`UsageSummary` |
-| 定数（真の不変値） | UPPER_SNAKE_CASE | `DEFAULT_CURRENCY` |
-| ファイル（実装） | kebab-case | `scoring-rules.ts`、`gym-visit-connector.ts` |
-| React コンポーネント | PascalCase（ファイルも） | `SubscriptionCard.tsx` |
-| Zod スキーマ | `xxxSchema` | `usageSummarySchema` |
-| ディレクトリ | kebab-case | `gym-visit/`、`billing-email/` |
+| 対象                         | 規則                     | 例                                           |
+| ---------------------------- | ------------------------ | -------------------------------------------- |
+| 変数・関数                   | camelCase                | `computeRecommendation()`、`matchedPatterns` |
+| 型・インターフェース・クラス | PascalCase               | `Subscription`、`UsageSummary`               |
+| 定数（真の不変値）           | UPPER_SNAKE_CASE         | `DEFAULT_CURRENCY`                           |
+| ファイル（実装）             | kebab-case               | `scoring-rules.ts`、`gym-visit-connector.ts` |
+| React コンポーネント         | PascalCase（ファイルも） | `SubscriptionCard.tsx`                       |
+| Zod スキーマ                 | `xxxSchema`              | `usageSummarySchema`                         |
+| ディレクトリ                 | kebab-case               | `gym-visit/`、`billing-email/`               |
 
 - **ドメイン用語は `glossary.md` の英日対応表に従う**。コード上の命名とビジネス用語を一致させる（例：`recommendation`、`billingEvent`）。
 - 真偽値は `is/has/should` 接頭辞（例：`isApproximate`、`hasActiveSubscription`）。
@@ -220,3 +220,12 @@ wbs.yml 編集 → dry-run（差分のみ表示・無書き込み） → 差分�
 - 認証、削除、データ移行、競合解決、見直し計算の根幹変更は子ステアリングで再承認する。
 - 重大事故時は新規参加と影響機能を停止する。閲覧、データ出力、完全退会、安全通知は可能な限り維持する。
 - WBSの外部同期は必ずdry-run差分を提示し、ユーザー承認後だけ反映する。
+
+### 10.5 通知の実装・試験
+
+- 通知文は`src/domain/notifications/templates.ts`の定型文から作り、契約名、金額、更新日、利用量、見直し内容、メールアドレス、端末トークンを本文・件名・payload・ログへ追加しない。
+- 更新日前と同期失敗はiPhone内、新規サインイン・削除予定・安全通知はサーバー送信とする。この責任境界を新しい通知種類の都合で崩さない。
+- 安全通知は事故ID付きのdry-runで対象件数と経路を確認し、管理者が同じ引数へ`--apply`を付けた場合だけ作成する。自由文と個別利用者指定を受け付けない。
+- 通知試験は合成契約と検証用端末だけを使う。APNs・Cronの実試験前に`.audit/test-status.md`へ開始を記録する。
+- 通常のサーバー通知は端末現地時刻9〜20時だけ配信する。業務処理と通知作成を別処理にする場合は、失敗を記録して必ず再実行できるようにし、ログを出すだけで通知を失わない。
+- 問題時は`NOTIFICATIONS_ENABLED=false`で外部送信を停止し、閲覧・データ出力・完全退会を維持する。

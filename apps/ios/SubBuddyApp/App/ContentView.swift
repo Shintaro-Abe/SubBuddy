@@ -7,6 +7,7 @@ struct ContentView: View {
     @StateObject private var authSession = AuthSession()
     @StateObject private var productStore = ProductStore()
     @StateObject private var usageAutoSync = UsageAutoSyncCoordinator()
+    @StateObject private var notificationManager = NotificationManager()
     @AppStorage("has_seen_intro") private var hasSeenIntro = false
     @AppStorage("onboarding_completed") private var onboardingCompleted = false
 
@@ -28,8 +29,12 @@ struct ContentView: View {
         .onChange(of: authSession.isSignedIn) { _, isSignedIn in
             if !isSignedIn {
                 productStore.clearSensitiveData()
+                LocalNotificationScheduler.clearAll()
             } else {
-                Task { _ = await usageAutoSync.syncIfEligible(isSignedIn: true) }
+                Task {
+                    _ = await usageAutoSync.syncIfEligible(isSignedIn: true)
+                    await refreshNotifications()
+                }
             }
         }
         .onChange(of: productStore.requiresReauthentication) { _, requiresReauthentication in
@@ -38,11 +43,23 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, authSession.isSignedIn {
                 productStore.reconcileMeasurements()
-                Task { _ = await usageAutoSync.syncIfEligible(isSignedIn: true) }
+                Task {
+                    _ = await usageAutoSync.syncIfEligible(isSignedIn: true)
+                    await refreshNotifications()
+                }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .subBuddyPushTokenChanged)) { _ in
+            guard authSession.isSignedIn else { return }
+            Task { await refreshNotifications() }
         }
         .task {
             _ = await usageAutoSync.syncIfEligible(isSignedIn: authSession.isSignedIn)
+            if authSession.isSignedIn {
+                await refreshNotifications()
+            } else {
+                LocalNotificationScheduler.clearAll()
+            }
         }
     }
 
@@ -63,9 +80,20 @@ struct ContentView: View {
                     onboardingCompleted = true
                 }
             } else {
-                MainTabView(authSession: authSession, store: productStore)
+                MainTabView(
+                    authSession: authSession,
+                    store: productStore,
+                    notificationManager: notificationManager
+                )
             }
         }
+    }
+
+    private func refreshNotifications() async {
+        await notificationManager.refresh(
+            subscriptions: productStore.subscriptions,
+            deviceId: authSession.deviceId
+        )
     }
 }
 
@@ -73,9 +101,14 @@ struct ContentView: View {
 private struct SyntheticQualityRootView: View {
     @StateObject private var authSession = AuthSession()
     @StateObject private var productStore = ProductStore(previewSnapshot: PreviewFixtures.twoHundred)
+    @StateObject private var notificationManager = NotificationManager()
 
     var body: some View {
-        MainTabView(authSession: authSession, store: productStore)
+        MainTabView(
+            authSession: authSession,
+            store: productStore,
+            notificationManager: notificationManager
+        )
     }
 }
 #endif

@@ -38,7 +38,9 @@ coverage/
 *.tsbuildinfo
 
 # Local/manual operation notes
-manuals/
+manuals/*
+!manuals/notification-delivery-setup-and-check.md
+!manuals/notification-delivery-setup-and-check.html
 memory/
 
 # Real data / PII (実データはリポジトリに含めない — CLAUDE.md PII方針)

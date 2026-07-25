@@ -2,7 +2,7 @@
 
 > プロジェクト名 / アプリ名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-21（案内進捗、Web設定、iPhone自動同期、手順書管理を反映）
+> 最終更新：2026-07-25（通知サービス・運用コマンドの配置を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -109,7 +109,7 @@ apps/web/
     │   ├── scoring/               # パターンマッチング判定・判定根拠(matchedPatterns)（functional-design §8）
     │   ├── spending/              # 支出集計（月額/年額合計・カテゴリ別内訳・月次推移。F-12）
     │   └── usage/                 # 利用量データの集計・正規化（判定の入力準備）
-    ├── services/                  # ★アプリケーションサービス（認証、案内進捗、再計算等）
+    ├── services/                  # ★アプリケーションサービス（認証、案内進捗、再計算、通知送信待ち等）
     ├── repositories/              # Prisma 経由の永続化（ドメインから DB を隠蔽）
     ├── config/                    # スコアリング閾値等の外出し設定（Zod 検証。architecture §6）
     ├── schemas/                   # Zod スキーマ（API 入力・取り込みペイロード）
@@ -126,6 +126,7 @@ apps/web/
 - **DB アクセスは `src/repositories/` 経由のみ**。ドメイン層から Prisma を直接呼ばない（Worker 分離・テスト容易性のため）。
 - **スコアリング閾値はコード直書きせず `src/config/` に外出し**（Zod 検証。`architecture.md` §6）。
 - **Zod スキーマは `src/schemas/` に集約**し、API 入力・取り込みペイロードの検証境界を一元化する。
+- 通知の更新予定日計算と定型文は`src/domain/notifications/`、暗号化・送信待ち・APNsは`src/services/notification-delivery/`、運用コマンドは`apps/web/scripts/`へ置く。
 - `prisma/seed.ts` とテストは**合成データのみ**。クラウドのカタログ同期には、利用者・契約へ触れない`bootstrap-service-catalog.ts`を使い、開発用seedを使わない。
 
 ---
@@ -136,7 +137,7 @@ apps/web/
 apps/ios/
 ├── project.yml                    # XcodeGenのプロジェクト定義
 ├── SubBuddyApp/
-│   ├── App/                       # SwiftUI画面、デザイン、APIモデル、認証、計測、同期、Keychain
+│   ├── App/                       # SwiftUI画面、デザイン、APIモデル、認証、計測、同期、通知、Keychain
 │   ├── Shared/                    # App Group共有の対応表・集計レコード
 │   ├── Resources/                 # 同梱フォントとOFLライセンス
 │   └── Assets.xcassets/           # アプリアイコン等
@@ -190,20 +191,20 @@ secrets/
 
 ## 7. ファイル配置の基本ルール（横断）
 
-| 対象 | 置き場所 | 備考 |
-|---|---|---|
-| 永続ドキュメント | `docs/` | 基本設計の変更時のみ更新 |
-| 作業単位ドキュメント | `.steering/[YYYYMMDD]-[タイトル]/` | 作業ごとに新規・履歴保持 |
-| Web/API 実装 | `apps/web/src/` | レイヤ別（domain / services / repositories / config / schemas / components） |
-| iOS 実装 | `apps/ios/` | 主製品UI、認証、計測、同期、端末内保存。見直し計算はサーバー側に置く |
-| DB スキーマ | `apps/web/prisma/schema.prisma` | 単一ソース |
-| 設定値（閾値等） | `apps/web/src/config/` | Zod 検証・外出し |
-| 合成データ | `prisma/seed.ts` / `tests/` | 実 PII 禁止 |
-| WBS 正本 | `wbs/wbs.yml` | 進捗の単一ソース。Sheets は生成ビュー |
-| WBS 同期設定（非秘密） | `wbs/wbs.config.yml` | spreadsheetId・列順等。秘密は書かない |
-| 人手の操作手順 | `manuals/` | Markdownを正本、HTMLを生成物とする。一般化済み手順だけ個別に追跡可 |
-| SA 鍵等の秘密 | `secrets/`（gitignore） | `.gitkeep` のみ追跡。鍵はコミットしない |
-| 図・ダイアグラム | 関連 `docs/*.md` 内 Mermaid | 独立フォルダを作らない |
+| 対象                   | 置き場所                           | 備考                                                                         |
+| ---------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+| 永続ドキュメント       | `docs/`                            | 基本設計の変更時のみ更新                                                     |
+| 作業単位ドキュメント   | `.steering/[YYYYMMDD]-[タイトル]/` | 作業ごとに新規・履歴保持                                                     |
+| Web/API 実装           | `apps/web/src/`                    | レイヤ別（domain / services / repositories / config / schemas / components） |
+| iOS 実装               | `apps/ios/`                        | 主製品UI、認証、計測、同期、端末内保存。見直し計算はサーバー側に置く         |
+| DB スキーマ            | `apps/web/prisma/schema.prisma`    | 単一ソース                                                                   |
+| 設定値（閾値等）       | `apps/web/src/config/`             | Zod 検証・外出し                                                             |
+| 合成データ             | `prisma/seed.ts` / `tests/`        | 実 PII 禁止                                                                  |
+| WBS 正本               | `wbs/wbs.yml`                      | 進捗の単一ソース。Sheets は生成ビュー                                        |
+| WBS 同期設定（非秘密） | `wbs/wbs.config.yml`               | spreadsheetId・列順等。秘密は書かない                                        |
+| 人手の操作手順         | `manuals/`                         | Markdownを正本、HTMLを生成物とする。一般化済み手順だけ個別に追跡可           |
+| SA 鍵等の秘密          | `secrets/`（gitignore）            | `.gitkeep` のみ追跡。鍵はコミットしない                                      |
+| 図・ダイアグラム       | 関連 `docs/*.md` 内 Mermaid        | 独立フォルダを作らない                                                       |
 
 ### 除外（コミットしない）— `.gitignore` で担保
 

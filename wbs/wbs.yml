@@ -1147,9 +1147,9 @@ tasks:
     level: 2
     phase: "v1.1"
     name: "更新前通知"
-    progress: 0
-    status: "保留"
-    note: "N-1(検知)。更新日管理→プッシュ通知。年額7日前既定・月額選択制。⚠️決定待ち: Q-1(v1.1顔ぶれ確定)"
+    progress: 80
+    status: "進行中"
+    note: "基本の更新日前通知は初回版へ移動。.steering/20260723-notification-delivery/で年額7日前・月額選択制のiPhone端末内予約を実装済み。Web単体・DB結合・E2E・migration・運用コマンドは合格し、Mac/iPhone実機確認と外部配信ゲート待ち。通知上の判断操作、トライアル、ダイジェストは後続版のまま"
   - id: "LOOP-1.2"
     parent: "LOOP-1"
     level: 2
@@ -1746,7 +1746,7 @@ tasks:
     plannedEnd: "2027-02-12"
     predecessors: ["REL-1.1"]
     deliverable: "30人募集、iPhone初回有効化、参加同意、任意診断、通知5種"
-    note: "steering T-25/T-28/T-29/T-36/T-45"
+    note: "steering T-25/T-28/T-29/T-36/T-45。通知5種のコードとローカル自動・DB・画面・運用コマンド検証は.steering/20260723-notification-delivery/で実施。メール通知は取りやめ、APNs・Cron・iPhone・削除上流との実環境検証、参加認可・募集・同意・診断は本タスクに残る"
 
   - id: "REL-1.3"
     parent: "REL-1"

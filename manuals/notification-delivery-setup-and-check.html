@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>通知配信の設定・実機確認</title>
+<style>
+:root{
+  --bg:#f7f6f1; --surface:#fffdf8; --ink:#2c2e2a; --muted:#6b6f66;
+  --line:#e3e0d6; --accent:#4a5d4e; --accent-soft:#eef1ea;
+  --warn-bg:#fbf1e8; --warn-line:#c8744f; --ok-bg:#eef3ec; --ok-line:#4a7a55;
+  --code-bg:#23261f; --code-ink:#eef0e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  line-height:1.8;font-size:16px}
+.wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman","Hiragino Mincho ProN",serif;
+  line-height:1.4;font-weight:600;color:var(--ink)}
+h1{font-size:30px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:16px}
+h2{font-size:22px;margin:40px 0 12px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:10px 0}
+a{color:var(--accent);text-underline-offset:2px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:6px 0}
+ol.gui{counter-reset:gui;list-style:none;padding-left:0}
+ol.gui>li{counter-increment:gui;position:relative;padding:8px 8px 8px 44px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px}
+ol.gui>li::before{content:counter(gui);position:absolute;left:10px;top:8px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+code{background:var(--accent-soft);padding:1px 6px;border-radius:4px;font-size:90%;
+  font-family:"SF Mono",Consolas,"DejaVu Sans Mono",monospace}
+.cmd{position:relative;margin:12px 0}
+.cmd pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+  padding:16px 18px;overflow-x:auto}
+.cmd pre code{background:none;color:inherit;padding:0;font-size:13.5px;line-height:1.7}
+pre.plain{background:#eceae2;border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0}
+pre.plain code{background:none;padding:0;font-size:13px}
+.copy{position:absolute;top:10px;right:10px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:6px;font-family:sans-serif;transition:background .15s}
+.copy:hover{background:rgba(255,255,255,.26)}
+.copy.done{background:var(--ok-line);color:#fff}
+.callout{margin:14px 0;padding:12px 16px;border-radius:8px;border-left:4px solid}
+.callout p{margin:4px 0}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.callout.warn::before{content:"⚠ ミスしやすい点";display:block;font-weight:700;
+  font-size:13px;color:var(--warn-line);margin-bottom:2px}
+.callout.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.callout.ok::before{content:"✅ 確認";display:block;font-weight:700;
+  font-size:13px;color:var(--ok-line);margin-bottom:2px}
+.callout.note{background:var(--accent-soft);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>通知配信の設定・実機確認</h1>
+<div class="callout note"><p>初回版の5種類の通知を、検証環境で安全に有効化して確認する手順です。Apple Developer、Renderの管理権限と、通知を確認するiPhoneが必要です。</p></div>
+<h2>前提</h2>
+<ul><li>対象は<code>cloud-testflight</code>検証環境です。<code>local</code>環境では外部通知を有効にしません。</li><li>現在の<code>NOTIFICATIONS_ENABLED</code>は初期値の<code>false</code>です。ステアリングのT-24（サーバー通常通知の配信時間制御）とT-25（業務処理から通知作成までの障害時再実行）が完了するまでは、ステップ6以降を実行しません。</li><li>契約、金額、端末トークンは実在の情報を証跡へ残しません。確認には合成契約を使います。</li><li>外部配信はAPNs（＝Appleのプッシュ通知サービス）だけを使い、メール通知は行いません。</li><li>秘密鍵と暗号鍵はRenderのSecretへ保存し、ファイル、画面共有、ログ、コミットへ含めません。</li><li><code>NOTIFICATIONS_ENABLED</code>は最後の確認まで<code>false</code>のままにします。</li></ul>
+<h2>手順</h2>
+<h3>ステップ1：Appleでプッシュ通知を有効にする</h3>
+<p>アプリIDと署名へAPNs権限を追加します。</p>
+<ol class="gui"><li>Apple Developerの「Certificates, Identifiers &amp; Profiles」を開きます。</li><li>IdentifiersからSubBuddyのApp IDを開きます。</li><li>Push Notificationsを有効にして保存します。</li><li>KeysでAPNs用の鍵を作り、Key IDを控え、秘密鍵を安全な場所へ1回だけダウンロードします。</li><li>Xcodeで<code>apps/ios/project.yml</code>からプロジェクトを再生成します。</li><li>SubBuddyAppのSigning &amp; CapabilitiesにPush Notificationsが表示されることを確認します。</li></ol>
+<div class="callout warn"><p>APNs秘密鍵をリポジトリやチャットへ貼り付けません。sandbox用ビルドとproduction用TestFlightの端末トークンを混ぜません。</p></div>
+<div class="callout ok"><p>確認：Debugでは<code>aps-environment=development</code>、Archiveでは<code>aps-environment=production</code>として署名できます。</p></div>
+<h3>ステップ2：Renderへ秘密値を設定する</h3>
+<p>通知コードを有効化する前に、必要な値をSecretとしてそろえます。</p>
+<ol class="gui"><li>Renderの検証用Web Serviceを開きます。</li><li>Environmentへ次のキーを追加します。値は各管理画面や安全な乱数生成で用意し、手順書へ書きません。</li></ol>
+<table><thead><tr><th>キー</th><th>内容</th></tr></thead><tbody><tr><td><code>NOTIFICATIONS_ENABLED</code></td><td>最初は<code>false</code></td></tr><tr><td><code>NOTIFICATION_ENCRYPTION_KEYS</code></td><td><code>1:&lt;32バイトのbase64url鍵&gt;</code>形式。鍵ローテーション時はカンマ区切り</td></tr><tr><td><code>NOTIFICATION_ACTIVE_KEY_VERSION</code></td><td>現在使う鍵番号</td></tr><tr><td><code>NOTIFICATION_FINGERPRINT_KEY_BASE64URL</code></td><td>検索用HMAC鍵。32バイトbase64url</td></tr><tr><td><code>APNS_KEY_ID</code></td><td>AppleのAPNs Key ID</td></tr><tr><td><code>APNS_TEAM_ID</code></td><td>Apple Developer Team ID</td></tr><tr><td><code>APNS_PRIVATE_KEY</code></td><td>APNs秘密鍵の全文</td></tr><tr><td><code>APNS_TOPIC</code></td><td><code>com.subbuddy.app</code></td></tr><tr><td><code>APNS_ENVIRONMENT</code></td><td>検証ビルドに合わせて<code>sandbox</code>または<code>production</code></td></tr></tbody></table>
+<ol class="gui"><li>保存後も<code>NOTIFICATIONS_ENABLED=false</code>であることを再確認します。</li></ol>
+<div class="callout warn"><p>暗号鍵は32バイトをbase64urlで表した値です。通常のbase64、短いパスワード、環境間の共用は使いません。</p></div>
+<div class="callout ok"><p>確認：すべてSecretとして保存され、Renderのログへ値が表示されていません。</p></div>
+<h3>ステップ3：DB migrationを反映する</h3>
+<p>通知設定、暗号化したAPNsトークン、送信待ち、アプリ内お知らせのテーブルを追加します。</p>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npx prisma migrate deploy</code></pre></div>
+<div class="callout warn"><p>対象が検証用DBであることをRenderの環境名と接続先で確認してから実行します。本番DBや開発者の個人データ入りDBでは試しません。</p></div>
+<div class="callout ok"><p>確認：<code>20260723190000_add_notification_delivery</code>が適用済みと表示されます。</p></div>
+<h3>ステップ4：Render Cronを作る</h3>
+<p>PostgreSQLの送信待ちを5分ごとに処理します。</p>
+<ol class="gui"><li>Render DashboardでNew、Cron Jobを選びます。</li><li>検証用Web Serviceと同じリポジトリ、ブランチ、リージョン、環境変数グループを選びます。</li><li>Root Directoryを<code>apps/web</code>にします。</li><li>Build Commandを<code>npm ci &amp;&amp; npx prisma generate</code>にします。</li><li>Commandを<code>npm run notifications:process</code>にします。</li><li>Scheduleを<code>*/5 * * * *</code>にします。</li><li>同じ環境で通知Cronが1個だけであることを確認します。</li></ol>
+<div class="callout warn"><p>Cronを複製すると同じ送信待ちを競合して取得します。処理は冪等ですが、運用上は1環境1個にします。</p></div>
+<div class="callout ok"><p>確認：通知無効時の実行結果が、秘密値や利用者情報を出さず<code>disabled</code>を示します。</p></div>
+<h3>ステップ5：iPhoneビルドと設定画面を確認する</h3>
+<p>機能フラグを有効にする前に、権限と画面が正しく組み込まれているか確認します。</p>
+<ol class="gui"><li>Xcodeで検証環境のSubBuddyを実機へインストールします。</li><li>合成契約を1件登録し、更新基準日を入力します。</li><li>ホームの通知案内が主要操作を隠さないことを確認します。</li><li>案内を閉じ、再起動後に再表示されないことを確認します。</li><li>設定、通知を開き、機能フラグが無効な間は「準備中」と表示され、OS許可が出ないことを確認します。</li></ol>
+<div class="callout ok"><p>確認：初回起動やサインイン直後にOSの通知許可が自動表示されません。</p></div>
+<h3>ステップ6：完成ゲートを確認し、検証環境だけで一時的に有効にする</h3>
+<p>T-24とT-25を含むコード側の完成ゲート、資格情報、migration、Cron、iPhone署名を確認した後に、実機試験の間だけ利用可能状態へ切り替えます。</p>
+<ol class="gui"><li>Renderの検証用Web Serviceと通知Cronで<code>NOTIFICATIONS_ENABLED=true</code>にします。</li><li>両方を再デプロイします。</li><li>Web設定で通知希望とお知らせが表示されることを確認します。</li><li>iPhoneの設定、通知を開き、「このiPhoneで通知を設定」を押します。</li><li>用途を確認した後にだけOS許可が表示されることを確認し、許可します。</li><li>状態が「このiPhoneで有効」になることを確認します。</li></ol>
+<div class="callout warn"><p>T-24またはT-25が未完了なら有効化しません。Web ServiceとCronの片方だけを有効にしません。設定不足時に500エラーになる場合はフラグを<code>false</code>へ戻し、秘密値のキー名だけを確認します。</p></div>
+<div class="callout ok"><p>確認：Webの希望とiPhoneの配信状態が別項目として確認できます。</p></div>
+<h3>ステップ7：5種類を合成データで確認する</h3>
+<p>本文、重複、画面遷移、取消を確認します。</p>
+<ol class="gui"><li>年額通知を有効にし、7日前10時に相当する合成契約で端末内予約を確認します。</li><li>月額通知は初期オフで、本人が有効にした後だけ1日前10時に予約されることを確認します。</li><li>同期失敗後24時間の予約を確認し、同期成功後に予約が消えることを確認します。</li><li>2台目の検証端末または検証Webブラウザで新規サインインし、発生端末以外のiPhoneと「お知らせ」に1件だけ出ることを確認します。</li><li>削除予定の日程計算、通知作成、取消は実装済みです。削除専用コード・無活動削除・TestFlight終了削除を発生させる上流処理が接続された後に、合成アカウントで90・30・7日前、申請直後・24時間前、終了時の各経路を確認します。上流処理がない間は未確認として残し、アプリ内とAPNsを合格扱いにしません。</li><li>安全通知は最初にdry-runだけを行います。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npm run notifications:safety -- --incident-id synthetic-notification-check</code></pre></div>
+<ol class="gui"><li>表示された対象件数と経路を確認した後、検証環境だけでapplyします。</li></ol>
+<div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npm run notifications:safety -- --incident-id synthetic-notification-check --apply</code></pre></div>
+<ol class="gui"><li>同じ事故IDで再実行して二重作成されないことを確認します。</li><li>通知をタップし、更新、同期、端末とセッション、お知らせの対応画面へ移動することを確認します。</li></ol>
+<div class="callout warn"><p>通知本文、Cron出力、監査証跡へ契約名、金額、更新日、利用量、端末トークンを残しません。</p></div>
+<div class="callout ok"><p>確認：5種類の各経路で重複0件、別利用者への配信0件、禁止情報0件です。</p></div>
+<h3>ステップ8：停止と後片付けを確認する</h3>
+<p>問題時に通知だけを止め、閲覧・退会を維持できることを確認します。</p>
+<ol class="gui"><li>RenderのWeb ServiceとCronで<code>NOTIFICATIONS_ENABLED=false</code>に戻します。</li><li>Cronを再実行し、外部送信が始まらないことを確認します。</li><li>iPhoneでサインアウトし、端末内予約と端末トークンが解除されることを確認します。</li><li>合成契約と合成アカウントを既定の削除手順で片付けます。</li></ol>
+<div class="callout ok"><p>確認：通知は停止し、契約閲覧、データ出力、完全退会の経路は維持されています。</p></div>
+<h2>困ったとき</h2>
+<ul><li>iPhoneが「OS設定で停止中」：iPhoneの設定、通知、SubBuddyで許可状態を確認します。アプリから許可画面を繰り返し出しません。</li><li>「配信準備中」のまま：APNsトークンが届く実機ビルドか、端末IDが有効か、WebとCronのAPNs環境が一致するかを確認します。</li><li>問題を切り分けられない：<code>NOTIFICATIONS_ENABLED=false</code>へ戻し、利用者情報を含まない件数・エラー分類だけで調査します。</li></ul>
+</main>
+<script>
+document.querySelectorAll('.cmd .copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var code=btn.parentElement.querySelector('code').textContent;
+    function done(){
+      var old=btn.dataset.label||btn.textContent;
+      btn.dataset.label=old;btn.textContent='コピーした✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1500);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');ta.value=code;
+      ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done();
+    }
+  });
+});
+</script>
+</body>
+</html>

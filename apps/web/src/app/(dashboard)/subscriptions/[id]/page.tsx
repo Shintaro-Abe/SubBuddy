@@ -12,6 +12,7 @@ import { CapacityInput } from "@/components/CapacityInput";
 import { parseMatchedPatterns } from "@/domain/scoring/matchedPatterns";
 import { parseReviewOptions, parseReviewUnknowns } from "@/domain/review/output";
 import { GuidanceEventReporter } from "@/components/GuidanceEventReporter";
+import { upcomingRenewalDate } from "@/domain/notifications/renewal";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +58,9 @@ export default async function SubscriptionDetailPage({
   const isCapacity = usageType === "capacity";
   const capacityCheckedAt = sRec.capacityCheckedAt as Date | null | undefined;
   const currentPlanCapacityGb = isCapacity ? s.planCapacityGb : null;
-  const reviewUnknowns = rec ? parseReviewUnknowns(rec.reviewUnknowns) ?? [] : [];
-  const reviewOptions = rec ? parseReviewOptions(rec.reviewOptions) ?? [] : [];
+  const reviewUnknowns = rec ? (parseReviewUnknowns(rec.reviewUnknowns) ?? []) : [];
+  const reviewOptions = rec ? (parseReviewOptions(rec.reviewOptions) ?? []) : [];
+  const renewalDate = upcomingRenewalDate(s.nextRenewalDate, s.billingCycle);
 
   return (
     <div>
@@ -104,7 +106,7 @@ export default async function SubscriptionDetailPage({
             value={formatYen(toYearlyAmount(s.amount, s.billingCycle))}
             amount
           />
-          <Row label="次回更新日" value={formatDate(s.nextRenewalDate)} />
+          <Row label="更新予定日" value={formatDate(renewalDate)} />
           <Row label="重要度" value={`${s.importance} / 5`} />
           <Row
             label="状態"
@@ -121,22 +123,21 @@ export default async function SubscriptionDetailPage({
           </p>
           {reviewBlocked ? (
             <div>
-              <p className="body">
-                見直し情報を安全に表示できないため、古い内容を隠しています。
-              </p>
+              <p className="body">見直し情報を安全に表示できないため、古い内容を隠しています。</p>
               <p className="caption" style={{ marginTop: 8 }}>
                 「見直し材料を再計算」を実行してください。
               </p>
             </div>
           ) : rec ? (
             <>
-              <Row
-                label="確認の優先度"
-                value={<DecisionBadge recommendation={rec} />}
-              />
+              <Row label="確認の優先度" value={<DecisionBadge recommendation={rec} />} />
               <Row label="最近30日の利用日" value={`${rec.usageDays30d} 日`} amount />
               {rec.usageMinutes30d > 0 && (
-                <Row label="最近30日の利用時間目安" value={`${rec.usageMinutes30d} 分以上`} amount />
+                <Row
+                  label="最近30日の利用時間目安"
+                  value={`${rec.usageMinutes30d} 分以上`}
+                  amount
+                />
               )}
               {rec.costPerUsageDay !== null && (
                 <Row
@@ -156,11 +157,17 @@ export default async function SubscriptionDetailPage({
                 if (patterns.length === 0) return null;
                 return (
                   <div style={{ marginTop: 16 }}>
-                    <p className="title" style={{ fontSize: 16 }}>確認の根拠</p>
+                    <p className="title" style={{ fontSize: 16 }}>
+                      確認の根拠
+                    </p>
                     {patterns.map((p) => (
                       <div key={p.pattern} style={{ marginTop: 10 }}>
-                        <p className="body" style={{ fontWeight: 700 }}>{p.label}</p>
-                        <p className="caption" style={{ marginTop: 2 }}>{p.evidence}</p>
+                        <p className="body" style={{ fontWeight: 700 }}>
+                          {p.label}
+                        </p>
+                        <p className="caption" style={{ marginTop: 2 }}>
+                          {p.evidence}
+                        </p>
                         {p.caveat && (
                           <p className="caption" style={{ marginTop: 2, color: "var(--muted)" }}>
                             注意: {p.caveat}
@@ -201,8 +208,12 @@ export default async function SubscriptionDetailPage({
           <div className="mobile-card-list" style={{ marginTop: 8 }}>
             {reviewOptions.map((option, index) => (
               <div key={`${option.kind}-${index}`} className="rowitem" style={{ display: "block" }}>
-                <p className="body" style={{ fontWeight: 700 }}>{option.title}</p>
-                <p className="caption" style={{ marginTop: 4 }}>{option.detail}</p>
+                <p className="body" style={{ fontWeight: 700 }}>
+                  {option.title}
+                </p>
+                <p className="caption" style={{ marginTop: 4 }}>
+                  {option.detail}
+                </p>
                 {option.annualSavings !== undefined && (
                   <p className="body num" style={{ marginTop: 6 }}>
                     年間差額の目安 {formatYen(option.annualSavings)}

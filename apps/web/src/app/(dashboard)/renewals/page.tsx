@@ -4,6 +4,7 @@ import { getSubscriptionsWithLatestRecommendation } from "@/lib/queries";
 import { daysUntil, formatDate, formatYen } from "@/lib/display";
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { ScreenIntro } from "@/components/ScreenIntro";
+import { upcomingRenewalDate } from "@/domain/notifications/renewal";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,13 @@ export default async function RenewalsPage({
   const rows = await getSubscriptionsWithLatestRecommendation(await requireServerUserId());
   const upcoming = rows
     .filter((r) => r.subscription.status === "active" && r.subscription.nextRenewalDate)
-    .map((r) => ({ ...r, daysUntil: daysUntil(r.subscription.nextRenewalDate) ?? -1 }))
+    .map((r) => {
+      const renewalDate = upcomingRenewalDate(
+        r.subscription.nextRenewalDate,
+        r.subscription.billingCycle,
+      );
+      return { ...r, renewalDate, daysUntil: daysUntil(renewalDate) ?? -1 };
+    })
     .filter((r) => r.daysUntil >= 0 && r.daysUntil <= days)
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
@@ -57,32 +64,34 @@ export default async function RenewalsPage({
         </div>
       ) : (
         <div className="panel mobile-card-list" style={{ padding: "6px 18px", marginTop: 10 }}>
-          {upcoming.map(({ subscription: s, recommendation: rec, reviewBlocked, daysUntil }) => (
-            <Link
-              key={s.id}
-              href={`/subscriptions/${s.id}`}
-              className="rowitem"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <div className="left">
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="body" style={{ fontWeight: 700 }}>
-                      {s.name}
-                    </span>
-                    <DecisionBadge recommendation={rec} blocked={reviewBlocked} />
-                  </div>
-                  <div className="caption" style={{ margin: "2px 0 0" }}>
-                    {formatDate(s.nextRenewalDate)} 更新・
-                    <span className="num">{formatYen(s.amount)}</span>
+          {upcoming.map(
+            ({ subscription: s, recommendation: rec, reviewBlocked, renewalDate, daysUntil }) => (
+              <Link
+                key={s.id}
+                href={`/subscriptions/${s.id}`}
+                className="rowitem"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <div className="left">
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="body" style={{ fontWeight: 700 }}>
+                        {s.name}
+                      </span>
+                      <DecisionBadge recommendation={rec} blocked={reviewBlocked} />
+                    </div>
+                    <div className="caption" style={{ margin: "2px 0 0" }}>
+                      {formatDate(renewalDate)} 更新予定・
+                      <span className="num">{formatYen(s.amount)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className={`daysbadge${daysUntil <= 3 ? " soon" : ""}`}>
-                あと<span className="num">{daysUntil}</span>日
-              </span>
-            </Link>
-          ))}
+                <span className={`daysbadge${daysUntil <= 3 ? " soon" : ""}`}>
+                  あと<span className="num">{daysUntil}</span>日
+                </span>
+              </Link>
+            ),
+          )}
         </div>
       )}
     </div>

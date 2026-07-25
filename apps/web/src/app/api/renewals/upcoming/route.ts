@@ -1,6 +1,7 @@
 import { authenticateRequest } from "@/lib/auth";
 import { ok, serverError, unauthorized } from "@/lib/api";
 import { listSubscriptions } from "@/repositories/subscriptions";
+import { upcomingRenewalDate } from "@/domain/notifications/renewal";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,18 @@ export async function GET(req: Request) {
     const subs = await listSubscriptions(auth.actor.userId);
     const items = subs
       .filter((s) => s.status === "active" && s.nextRenewalDate)
-      .map((s) => ({
-        ...s,
-        daysUntilRenewal: Math.floor((s.nextRenewalDate!.getTime() - now.getTime()) / DAY_MS),
-      }))
+      .map((s) => {
+        const upcoming = upcomingRenewalDate(s.nextRenewalDate, s.billingCycle, now);
+        return {
+          ...s,
+          renewalAnchorDate: s.nextRenewalDate,
+          upcomingRenewalDate: upcoming,
+          nextRenewalDate: upcoming,
+          daysUntilRenewal: upcoming
+            ? Math.floor((upcoming.getTime() - now.getTime()) / DAY_MS)
+            : -1,
+        };
+      })
       .filter((s) => s.daysUntilRenewal >= 0 && s.daysUntilRenewal <= days)
       .sort((a, b) => a.daysUntilRenewal - b.daysUntilRenewal);
 

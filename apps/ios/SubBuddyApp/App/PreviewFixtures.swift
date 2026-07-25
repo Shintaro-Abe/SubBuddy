@@ -196,19 +196,34 @@ enum PreviewFixtures {
 
 #Preview("ホーム・通常") {
     NavigationStack {
-        HomeView(authSession: AuthSession(), store: ProductStore(previewSnapshot: PreviewFixtures.populated))
+        HomeView(
+            authSession: AuthSession(),
+            store: ProductStore(previewSnapshot: PreviewFixtures.populated),
+            notificationManager: NotificationManager(),
+            requestedSettingsDestination: .constant(nil)
+        )
     }
 }
 
 #Preview("ホーム・空") {
     NavigationStack {
-        HomeView(authSession: AuthSession(), store: ProductStore(previewSnapshot: PreviewFixtures.empty))
+        HomeView(
+            authSession: AuthSession(),
+            store: ProductStore(previewSnapshot: PreviewFixtures.empty),
+            notificationManager: NotificationManager(),
+            requestedSettingsDestination: .constant(nil)
+        )
     }
 }
 
 #Preview("ホーム・通信失敗") {
     NavigationStack {
-        HomeView(authSession: AuthSession(), store: ProductStore(previewSnapshot: PreviewFixtures.failure))
+        HomeView(
+            authSession: AuthSession(),
+            store: ProductStore(previewSnapshot: PreviewFixtures.failure),
+            notificationManager: NotificationManager(),
+            requestedSettingsDestination: .constant(nil)
+        )
     }
 }
 

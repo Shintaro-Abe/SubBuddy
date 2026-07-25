@@ -18,6 +18,8 @@
     "db:catalog": "tsx prisma/bootstrap-service-catalog.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
+    "notifications:process": "tsx scripts/process-notification-deliveries.ts",
+    "notifications:safety": "tsx scripts/create-safety-notification.ts",
     "verify:cloud-apis": "tsx --env-file=.env scripts/verify-cloud-apis.mjs",
     "dev:create-ios-subscription": "node --env-file=.env scripts/create-dev-ios-subscription.mjs",
     "demo:usage": "node --env-file=.env scripts/demo-send-usage.mjs",
@@ -34,6 +36,7 @@
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tsx": "^4.22.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -48,7 +51,6 @@
     "prettier": "^3.8.3",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
-    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.8"
   }

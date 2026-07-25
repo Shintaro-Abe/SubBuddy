@@ -313,6 +313,21 @@ struct Subscription: Decodable, Identifiable, Equatable {
     var yearlyAmount: Int {
         billingCycle == .yearly ? amount : amount * 12
     }
+
+    var upcomingRenewalDate: String? {
+        guard status == .active, let nextRenewalDate else { return nil }
+        let isoFormatter = ISO8601DateFormatter()
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let anchor = isoFormatter.date(from: nextRenewalDate)
+                ?? dateFormatter.date(from: String(nextRenewalDate.prefix(10))),
+              let upcoming = RenewalScheduleCalculator.upcomingDate(
+                anchor: anchor,
+                cycle: billingCycle
+              ) else { return nextRenewalDate }
+        return isoFormatter.string(from: upcoming)
+    }
 }
 
 enum BillingCycle: String, Codable, CaseIterable, Identifiable {

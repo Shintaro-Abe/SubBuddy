@@ -69,6 +69,40 @@ enum GuidanceMeasurementChoice {
   skipped
 }
 
+enum NotificationKind {
+  renewal_reminder
+  sync_failure
+  new_sign_in
+  account_deletion_scheduled
+  safety_incident
+}
+
+enum NotificationChannel {
+  apns
+  in_app
+}
+
+enum NotificationDeliveryStatus {
+  pending
+  processing
+  sent
+  retryable_failure
+  permanent_failure
+  canceled
+}
+
+enum PushEnvironment {
+  sandbox
+  production
+}
+
+enum SafetyBroadcastStatus {
+  previewed
+  confirmed
+  completed
+  canceled
+}
+
 // ---- テーブル ----
 
 model User {
@@ -78,13 +112,17 @@ model User {
   lastSignedInAt   DateTime? @map("last_signed_in_at")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  subscriptions    Subscription[]
-  billingEvents    BillingEvent[]
-  usageSummaries   IosUsageDailySummary[]
-  recommendations  RecommendationSnapshot[]
-  devices          Device[]
-  authSessions     AuthSession[]
-  guidanceProgress UserGuidanceProgress?
+  subscriptions          Subscription[]
+  billingEvents          BillingEvent[]
+  usageSummaries         IosUsageDailySummary[]
+  recommendations        RecommendationSnapshot[]
+  devices                Device[]
+  authSessions           AuthSession[]
+  guidanceProgress       UserGuidanceProgress?
+  notificationPreference NotificationPreference?
+  notificationNotices    NotificationNotice[]
+  notificationEvents     NotificationEvent[]
+  notificationDeliveries NotificationDelivery[]
 
   @@map("users")
 }
@@ -105,22 +143,125 @@ model UserGuidanceProgress {
 }
 
 model Device {
-  id             String    @id @default(cuid())
-  userId         String    @map("user_id")
-  clientDeviceId String?   @map("client_device_id")
-  name           String?
-  tokenHash      String    @unique @map("token_hash")
-  revokedAt      DateTime? @map("revoked_at")
-  lastSyncedAt   DateTime? @map("last_synced_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id                          String           @id @default(cuid())
+  userId                      String           @map("user_id")
+  clientDeviceId              String?          @map("client_device_id")
+  name                        String?
+  tokenHash                   String           @unique @map("token_hash")
+  revokedAt                   DateTime?        @map("revoked_at")
+  lastSyncedAt                DateTime?        @map("last_synced_at")
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  pushTokenCiphertext         String?          @map("push_token_ciphertext")
+  pushTokenFingerprint        String?          @unique @map("push_token_fingerprint")
+  pushTokenKeyVersion         Int?             @map("push_token_key_version")
+  pushEnvironment             PushEnvironment? @map("push_environment")
+  notificationDeliveryEnabled Boolean          @default(false) @map("notification_delivery_enabled")
+  pushTokenUpdatedAt          DateTime?        @map("push_token_updated_at")
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  authSessions AuthSession[]
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authSessions           AuthSession[]
+  notificationDeliveries NotificationDelivery[]
 
   @@unique([userId, clientDeviceId])
   @@index([userId])
   @@map("devices")
+}
+
+model NotificationPreference {
+  userId                String    @id @map("user_id")
+  yearlyRenewalEnabled  Boolean   @default(false) @map("yearly_renewal_enabled")
+  monthlyRenewalEnabled Boolean   @default(false) @map("monthly_renewal_enabled")
+  syncFailureEnabled    Boolean   @default(false) @map("sync_failure_enabled")
+  newSignInPushEnabled  Boolean   @default(true) @map("new_sign_in_push_enabled")
+  promptDismissedAt     DateTime? @map("prompt_dismissed_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationNotice {
+  id            String           @id @default(cuid())
+  userId        String           @map("user_id")
+  eventId       String           @unique @map("event_id")
+  kind          NotificationKind
+  templateKey   String           @map("template_key")
+  safeArguments Json?            @map("safe_arguments")
+  eventAt       DateTime         @map("event_at")
+  readAt        DateTime?        @map("read_at")
+  expiresAt     DateTime         @map("expires_at")
+  resolvedAt    DateTime?        @map("resolved_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventAt])
+  @@index([expiresAt])
+  @@map("notification_notices")
+}
+
+model NotificationEvent {
+  id             String           @id @default(cuid())
+  userId         String           @map("user_id")
+  kind           NotificationKind
+  idempotencyKey String           @unique @map("idempotency_key")
+  templateKey    String           @map("template_key")
+  safeArguments  Json?            @map("safe_arguments")
+  availableAt    DateTime         @default(now()) @map("available_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+  notice     NotificationNotice?
+
+  @@index([availableAt])
+  @@map("notification_events")
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(cuid())
+  userId            String                     @map("user_id")
+  eventId           String                     @map("event_id")
+  channel           NotificationChannel
+  targetKey         String                     @map("target_key")
+  deviceId          String?                    @map("device_id")
+  status            NotificationDeliveryStatus @default(pending)
+  attemptCount      Int                        @default(0) @map("attempt_count")
+  nextAttemptAt     DateTime                   @default(now()) @map("next_attempt_at")
+  leaseExpiresAt    DateTime?                  @map("lease_expires_at")
+  errorClass        String?                    @map("error_class")
+  providerMessageId String?                    @map("provider_message_id")
+  sentAt            DateTime?                  @map("sent_at")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event  NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  device Device?           @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, channel, targetKey])
+  @@index([status, nextAttemptAt])
+  @@index([leaseExpiresAt])
+  @@index([userId, createdAt])
+  @@map("notification_deliveries")
+}
+
+model SafetyBroadcast {
+  id          String                @id @default(cuid())
+  incidentId  String                @unique @map("incident_id")
+  templateKey String                @map("template_key")
+  status      SafetyBroadcastStatus
+  previewedAt DateTime              @map("previewed_at")
+  confirmedAt DateTime?             @map("confirmed_at")
+  completedAt DateTime?             @map("completed_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@map("safety_broadcasts")
 }
 
 model AuthSession {
@@ -231,34 +372,34 @@ model IosUsageDailySummary {
 }
 
 model RecommendationSnapshot {
-  id               String     @id @default(cuid())
-  userId           String     @map("user_id")
-  subscriptionId   String     @map("subscription_id")
+  id                          String          @id @default(cuid())
+  userId                      String          @map("user_id")
+  subscriptionId              String          @map("subscription_id")
   // 利用ベース判定。観測中（data_status=observing）の間は null。
-  decision         Decision?
-  dataStatus       DataStatus @map("data_status")
-  observationDays  Int        @map("observation_days") // 登録からの観測日数
-  daysUntilReady   Int        @map("days_until_ready") // 確定まで残り日数（ready なら 0）
-  cancelScore      Int        @map("cancel_score")
-  monthlyAmount    Int        @map("monthly_amount")
-  yearlyAmount     Int        @map("yearly_amount")
-  usageDays30d     Int        @map("usage_days_30d")
-  usageMinutes30d  Int        @map("usage_minutes_30d")
-  daysSinceLastUse Int?       @map("days_since_last_use") // 未使用判定不能なら null
-  daysUntilRenewal Int?       @map("days_until_renewal")
-  costPerUsageDay  Float?     @map("cost_per_usage_day") // 利用日数0（未使用）なら null
-  hasOverlap       Boolean    @default(false) @map("has_overlap")
-  confidence       Float      @default(1.0) // 暫定/確定の確からしさ（§8.5）
-  reason           String
-  matchedPatterns  Json?      @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
-  reviewPriority   ReviewPriority? @map("review_priority")
-  reviewUnknowns   Json?      @map("review_unknowns")
-  reviewOptions    Json?      @map("review_options")
-  annualSavingsIfCancelled  Int? @map("annual_savings_if_cancelled")
-  annualSavingsIfDowngraded Int? @map("annual_savings_if_downgraded")
-  annualSavingsIfSwitched   Int? @map("annual_savings_if_switched")
-  sourceSubscriptionUpdatedAt DateTime? @map("source_subscription_updated_at")
-  generatedAt      DateTime   @default(now()) @map("generated_at")
+  decision                    Decision?
+  dataStatus                  DataStatus      @map("data_status")
+  observationDays             Int             @map("observation_days") // 登録からの観測日数
+  daysUntilReady              Int             @map("days_until_ready") // 確定まで残り日数（ready なら 0）
+  cancelScore                 Int             @map("cancel_score")
+  monthlyAmount               Int             @map("monthly_amount")
+  yearlyAmount                Int             @map("yearly_amount")
+  usageDays30d                Int             @map("usage_days_30d")
+  usageMinutes30d             Int             @map("usage_minutes_30d")
+  daysSinceLastUse            Int?            @map("days_since_last_use") // 未使用判定不能なら null
+  daysUntilRenewal            Int?            @map("days_until_renewal")
+  costPerUsageDay             Float?          @map("cost_per_usage_day") // 利用日数0（未使用）なら null
+  hasOverlap                  Boolean         @default(false) @map("has_overlap")
+  confidence                  Float           @default(1.0) // 暫定/確定の確からしさ（§8.5）
+  reason                      String
+  matchedPatterns             Json?           @map("matched_patterns") // 判定根拠（MatchedPattern[]）。観測中で根拠なし/旧データは null
+  reviewPriority              ReviewPriority? @map("review_priority")
+  reviewUnknowns              Json?           @map("review_unknowns")
+  reviewOptions               Json?           @map("review_options")
+  annualSavingsIfCancelled    Int?            @map("annual_savings_if_cancelled")
+  annualSavingsIfDowngraded   Int?            @map("annual_savings_if_downgraded")
+  annualSavingsIfSwitched     Int?            @map("annual_savings_if_switched")
+  sourceSubscriptionUpdatedAt DateTime?       @map("source_subscription_updated_at")
+  generatedAt                 DateTime        @default(now()) @map("generated_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
@@ -269,17 +410,17 @@ model RecommendationSnapshot {
 }
 
 model ServiceCatalog {
-  id              String  @id @default(cuid())
-  canonicalName   String  @map("canonical_name")
-  category        String
-  domains         String? // 突合用ドメイン（カンマ区切り等）。iOS 計測対象との突合に使用
-  appBundleIds    String? @map("app_bundle_ids")
-  commonAliases   String? @map("common_aliases") // 表記揺れ
-  cancellationUrl String? @map("cancellation_url")
-  isSupported     Boolean @default(true) @map("is_supported")
-  isExcluded      Boolean @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
-  notes           String?
-  usageType       String  @default("active_foreground") @map("usage_type")
+  id                        String    @id @default(cuid())
+  canonicalName             String    @map("canonical_name")
+  category                  String
+  domains                   String? // 突合用ドメイン（カンマ区切り等）。iOS 計測対象との突合に使用
+  appBundleIds              String?   @map("app_bundle_ids")
+  commonAliases             String?   @map("common_aliases") // 表記揺れ
+  cancellationUrl           String?   @map("cancellation_url")
+  isSupported               Boolean   @default(true) @map("is_supported")
+  isExcluded                Boolean   @default(false) @map("is_excluded") // Apple Music/TV+/Arcade/One 等
+  notes                     String?
+  usageType                 String    @default("active_foreground") @map("usage_type")
   cancellationUrlVerifiedAt DateTime? @map("cancellation_url_verified_at")
   cancellationUrlSourceUrl  String?   @map("cancellation_url_source_url")
 
@@ -305,10 +446,10 @@ model ServicePlan {
 }
 
 model ServiceAlternative {
-  id            String @id @default(cuid())
-  fromServiceId String @map("from_service_id")
-  toServiceId   String @map("to_service_id")
-  relation      String @default("same_category")
+  id            String    @id @default(cuid())
+  fromServiceId String    @map("from_service_id")
+  toServiceId   String    @map("to_service_id")
+  relation      String    @default("same_category")
   verifiedAt    DateTime? @map("verified_at")
   sourceUrl     String?   @map("source_url")
 

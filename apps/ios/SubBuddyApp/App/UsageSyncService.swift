@@ -57,9 +57,11 @@ final class UsageAutoSyncCoordinator: ObservableObject {
         do {
             let count = try await syncService.syncAll()
             UsageSyncStatus.recordSuccess(at: now(), defaults: defaults)
+            LocalNotificationScheduler.cancelSyncFailure()
             return .succeeded(count)
         } catch {
             UsageSyncStatus.recordFailure(at: now(), defaults: defaults)
+            await LocalNotificationScheduler.scheduleSyncFailureIfNeeded(now: now())
             return .failed
         }
     }

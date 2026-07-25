@@ -8,6 +8,7 @@ import {
   upsertAppleUser,
 } from "@/services/auth";
 import { authenticatedDeviceRegistrationSchema, deviceRegistrationSchema } from "@/schemas/auth";
+import { recordNewSignInIfEnabled } from "@/services/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,16 @@ export async function POST(req: Request) {
     if (!result) {
       console.warn("device_registration_rejected", { reason: "session_attach_failed" });
       return unauthorized();
+    }
+    try {
+      await recordNewSignInIfEnabled({
+        userId: auth.actor.userId,
+        sessionId: auth.sessionId,
+        clientType: "ios",
+        deviceId: result.device.id,
+      });
+    } catch {
+      console.warn("new_sign_in_notice_failed", { reason: "event_creation_failed" });
     }
     return created(result);
   } catch (error) {

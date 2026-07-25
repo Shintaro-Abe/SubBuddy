@@ -395,7 +395,15 @@ describe("auth service", () => {
         userId: "synthetic_user_a",
         revokedAt: null,
       },
-      data: { revokedAt: NOW },
+      data: {
+        revokedAt: NOW,
+        pushTokenCiphertext: null,
+        pushTokenFingerprint: null,
+        pushTokenKeyVersion: null,
+        pushEnvironment: null,
+        notificationDeliveryEnabled: false,
+        pushTokenUpdatedAt: null,
+      },
     });
   });
 

@@ -6,6 +6,9 @@ import { daysUntil, formatYen } from "@/lib/display";
 import { RecomputeButton } from "@/components/RecomputeButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { getResolvedGuidanceProgress } from "@/services/guidance-progress";
+import { upcomingRenewalDate } from "@/domain/notifications/renewal";
+import { parseNotificationConfig } from "@/config/notifications";
+import { listNotificationNotices } from "@/services/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +24,17 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 
 export default async function DashboardPage() {
   const userId = await requireServerUserId();
-  const [rows, guidance] = await Promise.all([
+  const notificationConfig = parseNotificationConfig();
+  const [rows, guidance, notices] = await Promise.all([
     getSubscriptionsWithLatestRecommendation(userId),
     getResolvedGuidanceProgress(userId),
+    notificationConfig.enabled ? listNotificationNotices(userId) : Promise.resolve([]),
   ]);
+  const importantUnread = notices.filter(
+    (notice) =>
+      notice.readAt === null &&
+      (notice.kind === "account_deletion_scheduled" || notice.kind === "safety_incident"),
+  );
   const active = rows.filter((r) => r.subscription.status === "active");
 
   let monthlyTotal = 0;
@@ -34,12 +44,12 @@ export default async function DashboardPage() {
     yearlyTotal += toYearlyAmount(s.amount, s.billingCycle);
   }
 
-  const reviewNow = rows.filter(
-    (r) => r.recommendation?.reviewPriority === "now",
-  ).length;
+  const reviewNow = rows.filter((r) => r.recommendation?.reviewPriority === "now").length;
   const observing = rows.filter((r) => r.recommendation?.dataStatus === "observing").length;
   const renewalsSoon = active.filter((r) => {
-    const days = daysUntil(r.subscription.nextRenewalDate);
+    const days = daysUntil(
+      upcomingRenewalDate(r.subscription.nextRenewalDate, r.subscription.billingCycle),
+    );
     return days !== null && days >= 0 && days <= 14;
   }).length;
 
@@ -57,6 +67,21 @@ export default async function DashboardPage() {
         </div>
         <RecomputeButton />
       </section>
+
+      {importantUnread.length > 0 ? (
+        <section className="section panel" aria-labelledby="important-notice-heading">
+          <p className="caption">重要なお知らせ</p>
+          <h2 className="title mt-2" id="important-notice-heading">
+            確認が必要なお知らせが {importantUnread.length} 件あります
+          </h2>
+          <p className="body mt-2">
+            削除予定または安全性・長期障害に関するお知らせです。設定画面で内容を確認してください。
+          </p>
+          <Link href="/settings#notices-heading" className="btn mt-4 inline-flex">
+            お知らせを確認
+          </Link>
+        </section>
+      ) : null}
 
       <section className="section">
         <div className="sechead">

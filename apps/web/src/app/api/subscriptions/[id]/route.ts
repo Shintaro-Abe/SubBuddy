@@ -16,6 +16,7 @@ import {
   updateSubscription,
 } from "@/repositories/subscriptions";
 import { refreshRecommendationAfterMutation } from "@/services/recompute";
+import { withRenewalDates } from "@/domain/notifications/renewal";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(req: Request, { params }: Ctx) {
     const auth = await authenticateRequest(req);
     if (!auth) return unauthorized();
     const sub = await getSubscription(auth.actor.userId, id);
-    return sub ? ok(sub) : notFound();
+    return sub ? ok(withRenewalDates(sub)) : notFound();
   } catch {
     return serverError();
   }
@@ -52,7 +53,7 @@ export async function PUT(req: Request, { params }: Ctx) {
 
     const updated = await updateSubscription(auth.actor.userId, id, parsed.data);
     if (updated) await refreshRecommendationAfterMutation(auth.actor.userId, id);
-    return updated ? ok(updated) : notFound();
+    return updated ? ok(withRenewalDates(updated)) : notFound();
   } catch {
     return serverError();
   }

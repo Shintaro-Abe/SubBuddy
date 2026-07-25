@@ -142,6 +142,9 @@ final class AuthSession: ObservableObject {
         defer { isWorking = false }
 
         do {
+            if let deviceId {
+                try? await client(for: apiBaseURL).removePushToken(deviceId: deviceId)
+            }
             try await client(for: apiBaseURL).signOut()
             isSignedIn = false
             statusMessage = "サインアウトしました"

@@ -131,7 +131,7 @@ private struct SubscriptionRow: View {
                 Spacer()
                 Text(AppFormatters.yen(subscription.amount)).monospacedDigit()
             }
-            Text("\(AppFormatters.category(subscription.category))・\(subscription.billingCycle.label)・更新 \(AppFormatters.date(subscription.nextRenewalDate))")
+            Text("\(AppFormatters.category(subscription.category))・\(subscription.billingCycle.label)・更新予定 \(AppFormatters.date(subscription.upcomingRenewalDate))")
                 .font(.appSubheadline)
                 .foregroundStyle(AppColor.secondaryText)
             if let recommendation {
@@ -141,7 +141,7 @@ private struct SubscriptionRow: View {
                         ? AppColor.secondaryText
                         : AppColor.caution
                 )
-            } else if subscription.nextRenewalDate == nil {
+            } else if subscription.upcomingRenewalDate == nil {
                 StatusPill(text: "更新日を追加できます", color: AppColor.caution)
             }
         }
@@ -175,7 +175,7 @@ struct SubscriptionDetailView: View {
                             VStack(spacing: AppSpacing.medium) {
                                 DetailRow(label: "料金", value: "\(AppFormatters.yen(subscription.amount)) / \(subscription.billingCycle == .monthly ? "月" : "年")")
                                 DetailRow(label: "年額目安", value: AppFormatters.yen(subscription.yearlyAmount))
-                                DetailRow(label: "次回更新", value: AppFormatters.date(subscription.nextRenewalDate))
+                                DetailRow(label: "更新予定日", value: AppFormatters.date(subscription.upcomingRenewalDate))
                                 DetailRow(label: "状態", value: subscription.status.label)
                                 DetailRow(label: "重要度", value: "5段階の\(subscription.importance)")
                             }
