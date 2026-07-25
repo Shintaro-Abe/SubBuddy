@@ -13,7 +13,7 @@
 | iPhone認証更新の競合                       | `20260725-fix-ios-session-refresh-race/`           | 同じAPI URLの通信で`APIClient`と更新処理を共有。利用者がAppleログイン成功を確認済み。Mac build・XCTestは未確認      |
 | Web支出の内訳表示                          | `20260725-fix-web-spending-chart-layout/`          | モバイルの縦並びとPCの横棒表示をE2E、lint、型、buildで確認済み                                                      |
 | 通知配信                                   | `20260723-notification-delivery/`                  | 実装済みだが機能フラグは初期オフ。外部APNs、Render Cron、iPhone実機等の結合確認待ち                                 |
-| Web・iPhoneの認証セッション上限            | `20260725-fix-web-multi-device-login/`             | Web有効10件をiOSと別枠へ修正し、Web設定の一覧・個別失効UIと上限案内を実装。登録iPhone5台は別のデバイス登録要件      |
+| Web・iPhoneの認証セッション上限            | `20260725-fix-web-multi-device-login/`             | Web有効10件をiOSと別枠へ修正。RenderでPC・iPhoneブラウザ同時ログイン、一覧、個別ログアウトまで確認済み              |
 | 外部TestFlightから一般公開までの全体計画   | `20260711-release-roadmap-rebaseline/`             | 計画承認済み。認証以外の多数の実装・運用ゲートは未完了                                                              |
 | Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/`                   | 実装、Web自動試験、Xcode・Render実機確認、main反映まで完了                                                          |
 | iPhone利用者向け主製品UI                   | `20260716-ios-main-ui/`                            | 3タブ、契約・支出・見直し・設定、主要実機API結合、UI品質を確認済み。残機能は移植表を正とする                        |
