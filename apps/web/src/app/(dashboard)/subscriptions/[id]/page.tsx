@@ -284,7 +284,7 @@ export default async function SubscriptionDetailPage({
       </section>
 
       <div className="foot">
-        <span>SubBuddy</span>
+        <span>MUDASK</span>
         <span>プライバシー方針 ・ 利用規約</span>
       </div>
     </div>

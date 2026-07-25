@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="app">
       <aside className="side">
         <Link href="/" className="brand">
-          SubBuddy
+          MUDASK
         </Link>
         <SidebarNav />
         <div className="spacer" />

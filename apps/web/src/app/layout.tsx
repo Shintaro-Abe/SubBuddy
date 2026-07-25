@@ -5,7 +5,7 @@ const googleFontsHref =
   "https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=EB+Garamond:wght@600&family=Geist+Mono:wght@400;500;700&family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap";
 
 export const metadata: Metadata = {
-  title: "SubBuddy",
+  title: "MUDASK",
   description: "サブスクの継続/解約をルールベースで提案するローカルファースト管理アプリ",
 };
 

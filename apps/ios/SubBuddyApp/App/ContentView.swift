@@ -120,7 +120,7 @@ struct IntroView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.xLarge) {
                 Spacer(minLength: AppSpacing.section)
-                Text("SubBuddy")
+                Text("MUDASK")
                     .font(.appDisplay)
                 Text("契約と支出を静かに整理し、次に確認することを見つけます。")
                     .font(.appTitle2)
@@ -130,7 +130,7 @@ struct IntroView: View {
                     VStack(alignment: .leading, spacing: AppSpacing.medium) {
                         Label("判断はあなた自身が行います", systemImage: "checkmark.seal")
                             .font(.appHeadline)
-                        Text("SubBuddyは、分かっている事実と分からない点を示します。継続や解約を自動で決めません。")
+                        Text("MUDASKは、分かっている事実と分からない点を示します。継続や解約を自動で決めません。")
                     }
                 }
 

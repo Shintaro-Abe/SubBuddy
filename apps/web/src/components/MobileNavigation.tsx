@@ -113,7 +113,7 @@ export function MobileNavigation() {
           </Link>
         ) : (
           <Link href="/" className="mobile-brand">
-            SubBuddy
+            MUDASK
           </Link>
         )}
         {form ? <span className="mobile-topbar-title">契約</span> : <span />}

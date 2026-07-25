@@ -45,7 +45,7 @@ targets:
     info:
       path: SubBuddyApp/Info.plist
       properties:
-        CFBundleDisplayName: SubBuddy
+        CFBundleDisplayName: MUDASK
         CFBundleIconName: AppIcon
         SUBBUDDY_API_BASE_URL: $(SUBBUDDY_API_BASE_URL)
         UIAppFonts:

@@ -427,7 +427,7 @@ struct SettingsView: View {
             }
 
             Section {
-                Text("SubBuddy \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                Text("MUDASK \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
                     .font(.appCaption)
                     .foregroundStyle(AppColor.secondaryText)
             }
