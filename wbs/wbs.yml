@@ -1382,7 +1382,7 @@ tasks:
     actualEnd: "2026-07-16"
     predecessors: ["TF-1.2.4"]
     deliverable: "iPhone/Web共通ユーザー、短期・更新トークン、セッション・端末失効、他テナント拒否"
-    note: "steering: .steering/20260713-auth-tenant-boundary/。Web/API/iOS実装、自動回帰、iOS Xcode、Render実機での共通ユーザー・更新・サインアウト・端末失効確認、main反映まで完了。user_localは配布版でフェイルクローズ"
+    note: "steering: .steering/20260713-auth-tenant-boundary/、.steering/20260725-fix-web-multi-device-login/。Web/API/iOS実装、自動回帰、iOS Xcode、Render実機での共通ユーザー・更新・サインアウト・端末失効確認、main反映まで完了。Web有効セッションをiOSと別枠の10件へ修正し、RenderでPC・iPhoneブラウザ同時ログイン、一覧、個別ログアウトまで合格。user_localは配布版でフェイルクローズ"
 
   - id: "REL-0.2.1"
     parent: "REL-0.2"
@@ -1501,6 +1501,7 @@ tasks:
     actualStart: "2026-07-14"
     actualEnd: "2026-07-14"
     predecessors: ["REL-0.2.7"]
+    note: "APIとiPhoneの個別失効・全サインアウトに加え、2026-07-25にWeb設定のセッション一覧・個別ログアウトを実装。Web有効10件をiOSと別枠にし、RenderでPC・iPhoneブラウザ同時ログインと管理操作まで確認済み"
 
   - id: "REL-0.2.10"
     parent: "REL-0.2"
@@ -1637,13 +1638,14 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "オフライン・競合・削除・出力・端末保護"
-    progress: 0
-    status: "未着手"
+    progress: 5
+    status: "進行中"
+    actualStart: "2026-07-25"
     plannedStart: "2026-10-12"
     plannedEnd: "2026-10-30"
     predecessors: ["REL-0.2"]
     deliverable: "暗号化キャッシュ、30日期限、差分選択、完全退会、削除コード、Face IDロック"
-    note: "steering T-23/T-24/T-39/T-56〜T-58。自動上書き・複製・未同期消失を禁止"
+    note: "steering T-23/T-24/T-39/T-56〜T-58。Webセッション一覧・個別失効は実装し、Renderで複数ブラウザ利用まで合格。主計測切替、暗号化オフライン、競合、削除、出力、端末保護は未完了。自動上書き・複製・未同期消失を禁止"
 
   - id: "REL-0.6"
     parent: "REL-0"
@@ -1689,13 +1691,14 @@ tasks:
     level: 2
     phase: "社内実機確認"
     name: "復元訓練・費用監視・利用上限・重大事故停止"
-    progress: 0
-    status: "未着手"
+    progress: 10
+    status: "進行中"
+    actualStart: "2026-07-25"
     plannedStart: "2026-12-07"
     plannedEnd: "2026-12-18"
     predecessors: ["REL-0.2"]
     deliverable: "別環境復元、削除再適用、月1万円監視、回数制限、自動停止手順"
-    note: "steering T-37/T-38/T-44/T-52/T-53"
+    note: "steering T-37/T-38/T-44/T-52/T-53。Web有効セッション10件をiOSと別枠にし、一覧・個別失効・上限案内を実装してRender実環境確認まで合格。契約200件、登録iPhone5台、主計測1台の強制境界、復元、費用監視、重大事故停止は未完了"
 
   - id: "REL-0.GATE"
     parent: "REL-0"
