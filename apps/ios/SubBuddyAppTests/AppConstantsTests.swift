@@ -20,6 +20,47 @@ final class AppConstantsTests: XCTestCase {
 }
 
 final class APIClientTests: XCTestCase {
+    func testSharedClientReusesInstanceForSameBaseURL() {
+        let baseURL = URL(string: "https://shared-client.synthetic.invalid")!
+
+        let first = APIClient.shared(for: baseURL)
+        let second = APIClient.shared(for: baseURL)
+
+        XCTAssertTrue(first === second)
+    }
+
+    func testSharedClientSeparatesDifferentBaseURLs() {
+        let first = APIClient.shared(
+            for: URL(string: "https://shared-client-a.synthetic.invalid")!
+        )
+        let second = APIClient.shared(
+            for: URL(string: "https://shared-client-b.synthetic.invalid")!
+        )
+
+        XCTAssertFalse(first === second)
+    }
+
+    func testConcurrentSharedClientRequestsReuseOneInstance() async throws {
+        let baseURL = URL(string: "https://shared-client-concurrent.synthetic.invalid")!
+        let clients = await withTaskGroup(of: APIClient.self, returning: [APIClient].self) { group in
+            for _ in 0..<20 {
+                group.addTask {
+                    APIClient.shared(for: baseURL)
+                }
+            }
+
+            var values: [APIClient] = []
+            for await client in group {
+                values.append(client)
+            }
+            return values
+        }
+
+        let first = try XCTUnwrap(clients.first)
+        XCTAssertEqual(clients.count, 20)
+        XCTAssertTrue(clients.allSatisfy { $0 === first })
+    }
+
     func testApplySessionClearsPartialKeychainWrite() async {
         let keychain = FailingKeychainStore(failingSetKey: .sessionId)
         let client = APIClient(

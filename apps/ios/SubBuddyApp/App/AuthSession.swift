@@ -221,7 +221,7 @@ final class AuthSession: ObservableObject {
         if apiClientBaseURL == baseURL, let apiClient {
             return apiClient
         }
-        let client = APIClient(baseURL: baseURL)
+        let client = APIClient.shared(for: baseURL)
         apiClient = client
         apiClientBaseURL = baseURL
         return client

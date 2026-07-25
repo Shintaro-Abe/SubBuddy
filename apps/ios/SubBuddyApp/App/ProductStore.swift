@@ -239,7 +239,7 @@ final class ProductStore: ObservableObject {
         if usesInjectedClient { return client }
         guard let baseURL = AppConstants.apiBaseURL else { return nil }
         if baseURL == clientBaseURL, let client { return client }
-        let newClient = APIClient(baseURL: baseURL)
+        let newClient = APIClient.shared(for: baseURL)
         client = newClient
         clientBaseURL = baseURL
         return newClient

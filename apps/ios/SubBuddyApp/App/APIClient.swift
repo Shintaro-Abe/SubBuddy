@@ -1,5 +1,27 @@
 import Foundation
 
+private final class APIClientPool: @unchecked Sendable {
+    static let shared = APIClientPool()
+
+    private let lock = NSLock()
+    private var clients: [URL: APIClient] = [:]
+
+    private init() {}
+
+    func client(for baseURL: URL) -> APIClient {
+        let key = baseURL.absoluteURL
+        lock.lock()
+        defer { lock.unlock() }
+
+        if let client = clients[key] {
+            return client
+        }
+        let client = APIClient(baseURL: key)
+        clients[key] = client
+        return client
+    }
+}
+
 actor APIClient {
     let baseURL: URL
 
@@ -10,6 +32,10 @@ actor APIClient {
     init(baseURL: URL, keychain: KeychainStoring = KeychainStore()) {
         self.baseURL = baseURL
         self.keychain = keychain
+    }
+
+    static func shared(for baseURL: URL) -> APIClient {
+        APIClientPool.shared.client(for: baseURL)
     }
 
     func signInWithApple(identityToken: String, nonce: String) async throws -> AppleSignInResponse {

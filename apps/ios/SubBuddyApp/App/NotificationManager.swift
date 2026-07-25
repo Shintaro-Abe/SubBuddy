@@ -322,7 +322,7 @@ final class NotificationManager: ObservableObject {
         state = .preparing
         errorMessage = nil
         do {
-            let client = APIClient(baseURL: baseURL)
+            let client = APIClient.shared(for: baseURL)
             let envelope = try await client.notificationPreferences()
             featureEnabled = envelope.enabled
             preferences = envelope.preferences
@@ -397,7 +397,7 @@ final class NotificationManager: ObservableObject {
         updated[keyPath: keyPath] = value
         state = .preparing
         do {
-            let client = APIClient(baseURL: baseURL)
+            let client = APIClient.shared(for: baseURL)
             preferences = try await client.updateNotificationPreference(
                 key: preferenceKey,
                 value: value
@@ -418,7 +418,7 @@ final class NotificationManager: ObservableObject {
     func markRead(_ notice: NotificationNotice) async {
         guard let baseURL = AppConstants.apiBaseURL else { return }
         do {
-            let client = APIClient(baseURL: baseURL)
+            let client = APIClient.shared(for: baseURL)
             try await client.markNoticeRead(id: notice.id)
             notices = notices.map {
                 $0.id == notice.id
@@ -440,7 +440,7 @@ final class NotificationManager: ObservableObject {
     func dismissPrompt() async {
         guard let baseURL = AppConstants.apiBaseURL else { return }
         do {
-            try await APIClient(baseURL: baseURL).dismissNotificationPrompt()
+            try await APIClient.shared(for: baseURL).dismissNotificationPrompt()
         } catch {
             errorMessage = "通知案内の状態を保存できませんでした。"
         }
@@ -459,7 +459,7 @@ final class NotificationManager: ObservableObject {
         if let baseURL = AppConstants.apiBaseURL,
            let deviceId,
            let token = UserDefaults.standard.string(forKey: "apns_device_token") {
-            try? await APIClient(baseURL: baseURL).registerPushToken(
+            try? await APIClient.shared(for: baseURL).registerPushToken(
                 deviceId: deviceId,
                 token: token,
                 deliveryEnabled: false
@@ -510,7 +510,7 @@ final class NotificationManager: ObservableObject {
               let token = UserDefaults.standard.string(forKey: "apns_device_token"),
               let baseURL = AppConstants.apiBaseURL else { return }
         do {
-            let client = APIClient(baseURL: baseURL)
+            let client = APIClient.shared(for: baseURL)
             try await client.registerPushToken(deviceId: deviceId, token: token)
         } catch {
             errorMessage = "プッシュ通知の準備が完了していません。"

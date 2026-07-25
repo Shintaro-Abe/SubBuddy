@@ -30,7 +30,7 @@ final class MeasurementDataService: MeasurementDataDeleting {
     private let client: (any ProductAPIProviding)?
 
     init() {
-        client = AppConstants.apiBaseURL.map { APIClient(baseURL: $0) }
+        client = AppConstants.apiBaseURL.map { APIClient.shared(for: $0) }
     }
 
     init(client: any ProductAPIProviding) {
