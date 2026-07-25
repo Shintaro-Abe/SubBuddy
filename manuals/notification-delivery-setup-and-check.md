@@ -18,7 +18,7 @@
 アプリIDと署名へAPNs権限を追加します。
 
 1. Apple Developerの「Certificates, Identifiers & Profiles」を開きます。
-2. IdentifiersからSubBuddyのApp IDを開きます。
+2. IdentifiersからMUDASK本体のApp ID（Bundle IDは`com.subbuddy.app`）を開きます。
 3. Push Notificationsを有効にして保存します。
 4. KeysでAPNs用の鍵を作り、Key IDを控え、秘密鍵を安全な場所へ1回だけダウンロードします。
 5. Xcodeで`apps/ios/project.yml`からプロジェクトを再生成します。
@@ -85,7 +85,7 @@ PostgreSQLの送信待ちを5分ごとに処理します。
 
 機能フラグを有効にする前に、権限と画面が正しく組み込まれているか確認します。
 
-1. Xcodeで検証環境のSubBuddyを実機へインストールします。
+1. Xcodeで検証環境のMUDASKを実機へインストールします。
 2. 合成契約を1件登録し、更新基準日を入力します。
 3. ホームの通知案内が主要操作を隠さないことを確認します。
 4. 案内を閉じ、再起動後に再表示されないことを確認します。
@@ -150,6 +150,6 @@ cd /workspaces/SubBuddy/apps/web && npm run notifications:safety -- --incident-i
 
 ## 困ったとき
 
-- iPhoneが「OS設定で停止中」：iPhoneの設定、通知、SubBuddyで許可状態を確認します。アプリから許可画面を繰り返し出しません。
+- iPhoneが「OS設定で停止中」：iPhoneの設定、通知、MUDASKで許可状態を確認します。アプリから許可画面を繰り返し出しません。
 - 「配信準備中」のまま：APNsトークンが届く実機ビルドか、端末IDが有効か、WebとCronのAPNs環境が一致するかを確認します。
 - 問題を切り分けられない：`NOTIFICATIONS_ENABLED=false`へ戻し、利用者情報を含まない件数・エラー分類だけで調査します。

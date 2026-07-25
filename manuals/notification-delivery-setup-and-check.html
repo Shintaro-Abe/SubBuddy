@@ -69,7 +69,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>手順</h2>
 <h3>ステップ1：Appleでプッシュ通知を有効にする</h3>
 <p>アプリIDと署名へAPNs権限を追加します。</p>
-<ol class="gui"><li>Apple Developerの「Certificates, Identifiers &amp; Profiles」を開きます。</li><li>IdentifiersからSubBuddyのApp IDを開きます。</li><li>Push Notificationsを有効にして保存します。</li><li>KeysでAPNs用の鍵を作り、Key IDを控え、秘密鍵を安全な場所へ1回だけダウンロードします。</li><li>Xcodeで<code>apps/ios/project.yml</code>からプロジェクトを再生成します。</li><li>SubBuddyAppのSigning &amp; CapabilitiesにPush Notificationsが表示されることを確認します。</li></ol>
+<ol class="gui"><li>Apple Developerの「Certificates, Identifiers &amp; Profiles」を開きます。</li><li>IdentifiersからMUDASK本体のApp ID（Bundle IDは<code>com.subbuddy.app</code>）を開きます。</li><li>Push Notificationsを有効にして保存します。</li><li>KeysでAPNs用の鍵を作り、Key IDを控え、秘密鍵を安全な場所へ1回だけダウンロードします。</li><li>Xcodeで<code>apps/ios/project.yml</code>からプロジェクトを再生成します。</li><li>SubBuddyAppのSigning &amp; CapabilitiesにPush Notificationsが表示されることを確認します。</li></ol>
 <div class="callout warn"><p>APNs秘密鍵をリポジトリやチャットへ貼り付けません。sandbox用ビルドとproduction用TestFlightの端末トークンを混ぜません。</p></div>
 <div class="callout ok"><p>確認：Debugでは<code>aps-environment=development</code>、Archiveでは<code>aps-environment=production</code>として署名できます。</p></div>
 <h3>ステップ2：Renderへ秘密値を設定する</h3>
@@ -91,7 +91,7 @@ th{background:var(--accent-soft);font-weight:600}
 <div class="callout ok"><p>確認：通知無効時の実行結果が、秘密値や利用者情報を出さず<code>disabled</code>を示します。</p></div>
 <h3>ステップ5：iPhoneビルドと設定画面を確認する</h3>
 <p>機能フラグを有効にする前に、権限と画面が正しく組み込まれているか確認します。</p>
-<ol class="gui"><li>Xcodeで検証環境のSubBuddyを実機へインストールします。</li><li>合成契約を1件登録し、更新基準日を入力します。</li><li>ホームの通知案内が主要操作を隠さないことを確認します。</li><li>案内を閉じ、再起動後に再表示されないことを確認します。</li><li>設定、通知を開き、機能フラグが無効な間は「準備中」と表示され、OS許可が出ないことを確認します。</li></ol>
+<ol class="gui"><li>Xcodeで検証環境のMUDASKを実機へインストールします。</li><li>合成契約を1件登録し、更新基準日を入力します。</li><li>ホームの通知案内が主要操作を隠さないことを確認します。</li><li>案内を閉じ、再起動後に再表示されないことを確認します。</li><li>設定、通知を開き、機能フラグが無効な間は「準備中」と表示され、OS許可が出ないことを確認します。</li></ol>
 <div class="callout ok"><p>確認：初回起動やサインイン直後にOSの通知許可が自動表示されません。</p></div>
 <h3>ステップ6：完成ゲートを確認し、検証環境だけで一時的に有効にする</h3>
 <p>コード側の自動試験、資格情報、migration、Cron、iPhone署名を確認した後に、実機試験の間だけ利用可能状態へ切り替えます。</p>
@@ -112,7 +112,7 @@ th{background:var(--accent-soft);font-weight:600}
 <ol class="gui"><li>RenderのWeb ServiceとCronで<code>NOTIFICATIONS_ENABLED=false</code>に戻します。</li><li>Cronを再実行し、外部送信が始まらないことを確認します。</li><li>iPhoneでサインアウトし、端末内予約と端末トークンが解除されることを確認します。</li><li>合成契約と合成アカウントを既定の削除手順で片付けます。</li></ol>
 <div class="callout ok"><p>確認：通知は停止し、契約閲覧、データ出力、完全退会の経路は維持されています。</p></div>
 <h2>困ったとき</h2>
-<ul><li>iPhoneが「OS設定で停止中」：iPhoneの設定、通知、SubBuddyで許可状態を確認します。アプリから許可画面を繰り返し出しません。</li><li>「配信準備中」のまま：APNsトークンが届く実機ビルドか、端末IDが有効か、WebとCronのAPNs環境が一致するかを確認します。</li><li>問題を切り分けられない：<code>NOTIFICATIONS_ENABLED=false</code>へ戻し、利用者情報を含まない件数・エラー分類だけで調査します。</li></ul>
+<ul><li>iPhoneが「OS設定で停止中」：iPhoneの設定、通知、MUDASKで許可状態を確認します。アプリから許可画面を繰り返し出しません。</li><li>「配信準備中」のまま：APNsトークンが届く実機ビルドか、端末IDが有効か、WebとCronのAPNs環境が一致するかを確認します。</li><li>問題を切り分けられない：<code>NOTIFICATIONS_ENABLED=false</code>へ戻し、利用者情報を含まない件数・エラー分類だけで調査します。</li></ul>
 </main>
 <script>
 document.querySelectorAll('.cmd .copy').forEach(function(btn){

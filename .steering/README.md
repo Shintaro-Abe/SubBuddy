@@ -1,23 +1,29 @@
 # ステアリング索引
 
-> 最終更新：2026-07-21
+> 最終更新：2026-07-25
 
 `.steering/`は作業時点の要求・設計・判断・進捗を残す履歴である。現行の基本仕様は`docs/`、全体進捗は`wbs/wbs.yml`、テスト結果は`.audit/test-status.md`を正とする。同じ論点に複数の作業文書がある場合は、後続の承認済み文書を優先する。
 
 ## 現在の主要文書
 
-| 論点 | 正とする作業文書 | 現在の状態 |
-|---|---|---|
-| 外部TestFlightから一般公開までの全体計画 | `20260711-release-roadmap-rebaseline/` | 計画承認済み。認証以外の多数の実装・運用ゲートは未完了 |
-| Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/` | 実装、Web自動試験、Xcode・Render実機確認、main反映まで完了 |
-| iPhone利用者向け主製品UI | `20260716-ios-main-ui/` | 3タブ、契約・支出・見直し・設定、主要実機API結合、UI品質を確認済み。残機能は移植表を正とする |
-| Screen Time計測の自動開始・対象変更・解除 | `20260719-auto-screen-time-measurement-lifecycle/` | コードとWeb側試験を実装済み。最新変更後のMac・実機回帰待ち |
-| Screen Time利用量の自動同期 | `20260719-auto-usage-sync/` | 3同期契機、失敗保持、設定表示を実装し、修復後のMac・iPhone実機回帰まで完了 |
-| 初回利用後の案内と進捗共有 | `20260720-first-use-guidance/` | Web・共通APIの自動/E2E確認とiPhoneのMac・実機画面回帰まで完了 |
-| iPhone案内完了状態 | `20260720-fix-ios-review-guidance-state/` | 見直し1件で案内を充足し、完了後カードと重複説明を削除。Mac・実機回帰まで完了 |
-| iPhone操作部品・ダークモード | `20260720-fix-ios-controls-dark-mode/` | Appleボタン寸法と共通操作色を実装。コントラスト計算とMac・実機回帰まで完了 |
-| Web設定・ログアウト | `20260720-fix-guidance-layout-and-web-account/` | 設定導線、cloud modeログアウト、local mode説明を自動/E2E確認済み |
-| Web版のデザイン基準 | `20260618-web-ui-implementation/` | 実装済みWeb UIをiPhoneのブランド正本として利用 |
+| 論点                                       | 正とする作業文書                                                            | 現在の状態                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 現行実装と文書の同期                       | `20260725-sync-docs-current-state/`                                         | MUDASK表示、内部SubBuddy識別子、直近修正、認証セッションの仕様差、通知初期オフを文書へ反映済み                      |
+| 利用者向け名称                             | `20260725-rename-app-to-mudask/`                                            | Web・iPhone本体の表示をMUDASKへ変更し、利用者確認済み。Target・Scheme・Bundle ID・Monitor Extension等の内部名は維持 |
+| iPhone認証更新の競合                       | `20260725-fix-ios-session-refresh-race/`                                    | 同じAPI URLの通信で`APIClient`と更新処理を共有。利用者がAppleログイン成功を確認済み。Mac build・XCTestは未確認      |
+| Web支出の内訳表示                          | `20260725-fix-web-spending-chart-layout/`                                   | モバイルの縦並びとPCの横棒表示をE2E、lint、型、buildで確認済み                                                      |
+| 通知配信                                   | `20260723-notification-delivery/`                                           | 実装済みだが機能フラグは初期オフ。外部APNs、Render Cron、iPhone実機等の結合確認待ち                                 |
+| Web・iPhoneの認証セッション上限            | `20260711-release-roadmap-rebaseline/`、`20260725-sync-docs-current-state/` | 目標はWeb有効10件と登録iPhone5台の別枠。現行コードは合算10件で、Web設定の一覧・個別失効UIも未実装                   |
+| 外部TestFlightから一般公開までの全体計画   | `20260711-release-roadmap-rebaseline/`                                      | 計画承認済み。認証以外の多数の実装・運用ゲートは未完了                                                              |
+| Apple認証、通常APIセッション、テナント境界 | `20260713-auth-tenant-boundary/`                                            | 実装、Web自動試験、Xcode・Render実機確認、main反映まで完了                                                          |
+| iPhone利用者向け主製品UI                   | `20260716-ios-main-ui/`                                                     | 3タブ、契約・支出・見直し・設定、主要実機API結合、UI品質を確認済み。残機能は移植表を正とする                        |
+| Screen Time計測の自動開始・対象変更・解除  | `20260719-auto-screen-time-measurement-lifecycle/`                          | コードとWeb側試験を実装済み。最新変更後のMac・実機回帰待ち                                                          |
+| Screen Time利用量の自動同期                | `20260719-auto-usage-sync/`                                                 | 3同期契機、失敗保持、設定表示を実装し、修復後のMac・iPhone実機回帰まで完了                                          |
+| 初回利用後の案内と進捗共有                 | `20260720-first-use-guidance/`                                              | Web・共通APIの自動/E2E確認とiPhoneのMac・実機画面回帰まで完了                                                       |
+| iPhone案内完了状態                         | `20260720-fix-ios-review-guidance-state/`                                   | 見直し1件で案内を充足し、完了後カードと重複説明を削除。Mac・実機回帰まで完了                                        |
+| iPhone操作部品・ダークモード               | `20260720-fix-ios-controls-dark-mode/`                                      | Appleボタン寸法と共通操作色を実装。コントラスト計算とMac・実機回帰まで完了                                          |
+| Web設定・ログアウト                        | `20260720-fix-guidance-layout-and-web-account/`                             | 設定導線、cloud modeログアウト、local mode説明を自動/E2E確認済み                                                    |
+| Web版のデザイン基準                        | `20260618-web-ui-implementation/`                                           | 実装済みWeb UIをiPhoneのブランド正本として利用                                                                      |
 
 ## 上書き関係
 

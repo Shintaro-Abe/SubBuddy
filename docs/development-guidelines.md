@@ -1,6 +1,6 @@
 # 開発ガイドライン（Development Guidelines）
 
-> プロジェクト名 / アプリ名：**SubBuddy**
+> 利用者向けアプリ名：**MUDASK** / 内部プロジェクト名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
 > 最終更新：2026-07-25（通知の実装・有効化ゲートを反映）
 > 関連：`architecture.md`（技術仕様）、`repository-structure.md`（構成）、`functional-design.md`（機能設計）、`glossary.md`（用語）
@@ -46,6 +46,9 @@
 ---
 
 ## 3. 命名規則
+
+- 利用者向けの表示名・案内文・Apple Developer上のDescriptionは`MUDASK`を使う。
+- リポジトリ名、ソース上のモジュール・Target・Scheme、Bundle ID、App Group、Cookie、環境変数、API URL、DB名などの内部識別子は`SubBuddy`を維持する。名称変更を理由に一括置換しない。
 
 ### 3.1 TypeScript（Mac 側）
 

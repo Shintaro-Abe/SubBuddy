@@ -1,6 +1,6 @@
 # リポジトリ構造定義書（Repository Structure）
 
-> プロジェクト名 / アプリ名：**SubBuddy**
+> 利用者向けアプリ名：**MUDASK** / 内部プロジェクト名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
 > 最終更新：2026-07-25（通知サービス・運用コマンドの配置を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）

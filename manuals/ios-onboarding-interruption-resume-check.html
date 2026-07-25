@@ -87,7 +87,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>3. 初回導線を開始する</h2>
 <p>○ 認証を終了してからアプリを再インストールし、初回完了状態を安全にリセットする。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>iPhoneの<code>ホーム</code>右上から<code>設定</code>を開く。</li><li><code>このiPhoneからサインアウト</code>を押す。</li><li>Appleサインイン画面へ戻ることを確認する。</li><li>iPhoneのホーム画面でSubBuddyを長押しする。</li><li><code>アプリを削除</code>を選び、確認画面でも<code>アプリを削除</code>を選ぶ。</li><li>MacでXcodeのSubBuddyプロジェクトを開く。</li><li>接続した同じiPhoneを実行先に選ぶ。</li><li>Xcode左上の実行ボタンを押し、SubBuddyを再インストールする。</li><li>iPhoneで<code>内容を確認して続ける</code>を押す。</li><li>同じテスト用Appleアカウントでサインインする。</li><li><code>まず1件だけ登録しましょう</code>が表示されることを確認する。</li></ol>
+<ol class="gui"><li>iPhoneの<code>ホーム</code>右上から<code>設定</code>を開く。</li><li><code>このiPhoneからサインアウト</code>を押す。</li><li>Appleサインイン画面へ戻ることを確認する。</li><li>iPhoneのホーム画面でMUDASKを長押しする。</li><li><code>アプリを削除</code>を選び、確認画面でも<code>アプリを削除</code>を選ぶ。</li><li>MacでXcodeのSubBuddyプロジェクトを開く。</li><li>接続した同じiPhoneを実行先に選ぶ。</li><li>Xcode左上の実行ボタンを押し、MUDASKを再インストールする。</li><li>iPhoneで<code>内容を確認して続ける</code>を押す。</li><li>同じテスト用Appleアカウントでサインインする。</li><li><code>まず1件だけ登録しましょう</code>が表示されることを確認する。</li></ol>
 <div class="callout warn"><p>サインアウトだけでは初回完了状態はリセットされない。必ずサインアウトしてからアプリを削除する。削除・再インストールはこの手順3だけで行い、手順6以降の中断確認では行わない。</p></div>
 <div class="callout ok"><p>再インストール後に説明画面、Appleサインイン、初回導線の順で進み、<code>まず1件だけ登録しましょう</code>が表示される。</p></div>
 <hr>
@@ -100,7 +100,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>5. 通信失敗と再試行を確認する</h2>
 <p>○ 入力を失わずに通信を再試行できることを確認する。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>iPhoneのコントロールセンターまたは<code>設定</code>で、Wi-Fiとモバイル通信を一時的にオフにする。</li><li>SubBuddyへ戻る。</li><li><code>登録済みの契約を読み込む</code>を押す。</li><li>通信できない旨と<code>もう一度試す</code>が表示されることを確認する。</li><li>Wi-Fiまたはモバイル通信を元に戻す。</li><li>通信が復旧したことをSafariなどで確認する。</li><li>SubBuddyへ戻り、<code>もう一度試す</code>を押す。</li><li>契約0件の案内へ戻ることを確認する。</li></ol>
+<ol class="gui"><li>iPhoneのコントロールセンターまたは<code>設定</code>で、Wi-Fiとモバイル通信を一時的にオフにする。</li><li>MUDASKへ戻る。</li><li><code>登録済みの契約を読み込む</code>を押す。</li><li>通信できない旨と<code>もう一度試す</code>が表示されることを確認する。</li><li>Wi-Fiまたはモバイル通信を元に戻す。</li><li>通信が復旧したことをSafariなどで確認する。</li><li>MUDASKへ戻り、<code>もう一度試す</code>を押す。</li><li>契約0件の案内へ戻ることを確認する。</li></ol>
 <div class="callout warn"><p>機内モードを使う場合は、確認後に必ず元へ戻す。エラー参照コードやネットワーク情報を証跡へ転記しない。</p></div>
 <div class="callout ok"><p>通信失敗を0件として扱わず、復旧後の再試行で正しい0件案内を表示する。</p></div>
 <hr>
@@ -109,7 +109,7 @@ th{background:var(--accent-soft);font-weight:600}
 <p>□ 操作</p>
 <ol class="gui"><li><code>最初の契約を登録</code>を押す。</li><li>次の合成値を入力する。</li></ol>
 <table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成初回・未保存</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>other</code></td></tr><tr><td>日本円の請求額</td><td><code>1200</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr></tbody></table>
-<ol class="gui"><li><code>保存</code>を押さない。</li><li>iPhoneのAppスイッチャーを開く。</li><li>SubBuddyを上へスワイプして完全に終了する。</li><li>SubBuddyをもう一度起動する。</li></ol>
+<ol class="gui"><li><code>保存</code>を押さない。</li><li>iPhoneのAppスイッチャーを開く。</li><li>MUDASKを上へスワイプして完全に終了する。</li><li>MUDASKをもう一度起動する。</li></ol>
 <div class="callout ok"><p><code>まず1件だけ登録しましょう</code>へ戻り、未保存フォームの途中画面を表示しない。</p></div>
 <hr>
 <h2>7. 未保存契約が作られていないことを確認する</h2>
@@ -123,7 +123,7 @@ th{background:var(--accent-soft);font-weight:600}
 <p>□ 操作</p>
 <ol class="gui"><li><code>最初の契約を登録</code>を押す。</li><li>次の合成値を入力する。</li></ol>
 <table><thead><tr><th>項目</th><th>合成値</th></tr></thead><tbody><tr><td>サービス名</td><td><code>合成初回・保存済み</code></td></tr><tr><td>カタログ候補</td><td><code>手動入力</code></td></tr><tr><td>カテゴリ</td><td><code>other</code></td></tr><tr><td>日本円の請求額</td><td><code>1200</code></td></tr><tr><td>請求周期</td><td><code>月払い</code></td></tr><tr><td>更新日を登録</td><td>オン</td></tr><tr><td>次回更新日</td><td>実施日の30日後</td></tr><tr><td>契約状態</td><td><code>利用中</code></td></tr><tr><td>重要度</td><td><code>3 / 5</code></td></tr></tbody></table>
-<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li><code>最初の全体像</code>に進み、年間支出が<code>14,400円</code>であることを確認する。</li><li>AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>保存済み契約が自動で読み込まれ、<code>最初の全体像</code>へ戻ることを確認する。</li></ol>
+<ol class="gui"><li><code>保存</code>を1回だけ押す。</li><li><code>最初の全体像</code>に進み、年間支出が<code>14,400円</code>であることを確認する。</li><li>AppスイッチャーでMUDASKを完全に終了する。</li><li>MUDASKをもう一度起動する。</li><li>保存済み契約が自動で読み込まれ、<code>最初の全体像</code>へ戻ることを確認する。</li></ol>
 <div class="callout ok"><p>保存後に中断してもサインイン状態を保ち、保存済み進捗から安全に再開できる。</p></div>
 <hr>
 <h2>9. 保存済み契約から再開する</h2>
@@ -135,7 +135,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>10. 棚卸し画面で再び中断する</h2>
 <p>○ 後半で中断しても保存済み契約を失わないことを確認する。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>棚卸し画面を表示したまま、AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>保存済み契約と未完了進捗から<code>最初の全体像</code>が自動表示されることを確認する。</li><li>年間支出が<code>14,400円</code>であることを確認する。</li><li><code>今は1件で始める</code>を押す。</li></ol>
+<ol class="gui"><li>棚卸し画面を表示したまま、AppスイッチャーでMUDASKを完全に終了する。</li><li>MUDASKをもう一度起動する。</li><li>保存済み契約と未完了進捗から<code>最初の全体像</code>が自動表示されることを確認する。</li><li>年間支出が<code>14,400円</code>であることを確認する。</li><li><code>今は1件で始める</code>を押す。</li></ol>
 <div class="callout ok"><p>後半で中断しても保存済み契約を読み直し、初回導線を続けられる。</p></div>
 <hr>
 <h2>11. 初回導線を完了する</h2>
@@ -147,7 +147,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h2>12. 完了状態が再起動後も残ることを確認する</h2>
 <p>○ 初回導線を繰り返し表示しないことを確認する。</p>
 <p>□ 操作</p>
-<ol class="gui"><li>AppスイッチャーでSubBuddyを完全に終了する。</li><li>SubBuddyをもう一度起動する。</li><li>初回導線ではなくホームが表示されることを確認する。</li><li>契約タブに<code>合成初回・保存済み</code>が1件だけ表示されることを確認する。</li><li>初回導線で4段階を完了したため、ホームに<code>はじめ方 n/4</code>の案内カードが残っていないことを確認する。</li></ol>
+<ol class="gui"><li>AppスイッチャーでMUDASKを完全に終了する。</li><li>MUDASKをもう一度起動する。</li><li>初回導線ではなくホームが表示されることを確認する。</li><li>契約タブに<code>合成初回・保存済み</code>が1件だけ表示されることを確認する。</li><li>初回導線で4段階を完了したため、ホームに<code>はじめ方 n/4</code>の案内カードが残っていないことを確認する。</li></ol>
 <div class="callout ok"><p>初回完了状態が保持され、再起動後にホームへ戻る。</p></div>
 <hr>
 <h2>13. 完了後の使い方と画面説明を確認する</h2>

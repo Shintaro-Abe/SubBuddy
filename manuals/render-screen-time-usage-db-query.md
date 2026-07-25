@@ -17,7 +17,7 @@
 | Render Dashboard | MacのWebブラウザ | SubBuddyのWeb Serviceを選ぶ |
 | Web ServiceのShell | Render Dashboard内の黒いコマンド入力画面。通常は行頭に`$`などが表示される | `psql`を起動する |
 | PostgreSQLの入力画面 | `psql`接続後の同じShell。行頭が`データベース名=>`に変わる | `SELECT`と`\q`を実行する |
-| iPhone版SubBuddy | iPhone | Screen Time集計値を同期する |
+| iPhone版MUDASK | iPhone | Screen Time集計値を同期する |
 
 > ⚠ この手順では`SELECT`だけを使う。`UPDATE`、`DELETE`、`INSERT`、`TRUNCATE`、`DROP`は実行しない。
 
@@ -34,12 +34,12 @@
 1. [Render Dashboard](https://dashboard.render.com/)へログインする。
 2. SubBuddyのWeb Serviceが有料インスタンスで稼働中であることを確認する。
 3. Web Serviceの環境変数に`DATABASE_URL`というキーがあることを確認する。値は表示・コピーしない。
-4. iPhoneでSubBuddyへサインイン済みであることを確認する。
+4. iPhoneでMUDASKへサインイン済みであることを確認する。
 5. 対象契約に計測対象アプリが対応付けられていることを確認する。
 
 > ⚠ Renderの無料Web ServiceではDashboard Shellを利用できない。SubBuddyの配布検証構成では有料Web Serviceを使用する。
 
-> ✅ Render DashboardでSubBuddyのWeb Serviceを開け、iPhone版SubBuddyにもサインインできる。
+> ✅ Render DashboardでSubBuddyのWeb Serviceを開け、iPhone版MUDASKにもサインインできる。
 
 ## 2. Web ServiceのShellを開く
 
@@ -129,19 +129,19 @@ WHERE revoked_at IS NULL;
 
 □ 操作
 
-**操作場所: iPhone版SubBuddy**
+**操作場所: iPhone版MUDASK**
 
 1. iPhoneで計測対象アプリを利用し、現在の最小計測しきい値である15分以上に到達させる。
-2. SubBuddyを開く。
+2. MUDASKを開く。
 3. `ホーム`を開く。
 4. 右上の`設定`を開く。
 5. `同期`を開く。
-6. `自動同期`が`オン`で、`最終同期確認`がSubBuddyを開いた後の日時へ更新されたことを確認する。
+6. `自動同期`が`オン`で、`最終同期確認`がMUDASKを開いた後の日時へ更新されたことを確認する。
 7. 日時が更新されない場合だけ、通信・サインイン状態を確認し、確認・復旧用の`今すぐ同期`を押す。
 
 > ⚠ 未送信記録が0件の場合、APIへ送る集計値がないため、DBの同期時刻が変わらないことがある。
 
-> ✅ 通常は手動操作なしで、SubBuddyの最終同期確認が更新される。
+> ✅ 通常は手動操作なしで、MUDASKの最終同期確認が更新される。
 
 ## 7. 同期APIへの到達を確認する
 
@@ -279,13 +279,13 @@ SubBuddyのNode.jsネイティブ実行環境にはPostgreSQLクライアント�
 
 ### 同期時刻が変わらない
 
-**操作場所: iPhone版SubBuddy**
+**操作場所: iPhone版MUDASK**
 
-1. iPhoneがSubBuddyへサインイン済みか確認する。
+1. iPhoneがMUDASKへサインイン済みか確認する。
 2. `設定` → `同期`で未送信記録が1件以上あるか確認する。
 3. 計測対象アプリが契約へ対応付けられているか確認する。
 4. 対象アプリを15分以上利用する。
-5. SubBuddyを前面へ戻し、再度`今すぐ同期`を実行する。
+5. MUDASKを前面へ戻し、再度`今すぐ同期`を実行する。
 
 > ⚠ DB接続情報やSQL結果を貼り付けて質問しない。必要な場合は「Shellなし」「DB設定なし」「接続失敗」「時刻未更新」「対象日なし」のいずれかと、秘密情報を除いたエラー種別だけを共有する。
 
