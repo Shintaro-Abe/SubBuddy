@@ -100,6 +100,7 @@ test.describe("iPhone向けWeb", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.reload();
     await expect(page.locator(".bars")).toBeVisible();
+    await expect(page.locator(".bars")).toHaveCSS("display", "flex");
     await expect(page.locator(".mobile-trend-list")).toBeHidden();
     await expect(page.locator(".side")).toBeVisible();
     await expect(page.locator(".mobile-bottom-nav")).toBeHidden();

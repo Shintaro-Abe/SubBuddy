@@ -574,10 +574,6 @@ body {
   display: none;
 }
 
-.desktop-only {
-  display: block;
-}
-
 @media (max-width: 1023px) {
   html,
   body {
