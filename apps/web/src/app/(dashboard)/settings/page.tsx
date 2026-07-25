@@ -1,6 +1,7 @@
 import { LogoutButton } from "@/components/LogoutButton";
 import { NoticeList } from "@/components/NoticeList";
 import { NotificationSettingsPanel } from "@/components/NotificationSettingsPanel";
+import { SessionManagementPanel } from "@/components/SessionManagementPanel";
 import { parseAuthConfig } from "@/config/auth";
 import { parseNotificationConfig } from "@/config/notifications";
 import { requireServerUserId } from "@/lib/server-auth";
@@ -52,6 +53,7 @@ export default async function SettingsPage() {
           </>
         )}
       </section>
+      {config.mode !== "local" ? <SessionManagementPanel /> : null}
     </div>
   );
 }

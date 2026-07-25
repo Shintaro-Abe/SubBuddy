@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { AuthClientType } from "@prisma/client";
 import { isAppleOutageAccessAllowed, type CloudAuthConfig } from "@/config/auth";
+import { MAX_ACTIVE_WEB_SESSIONS } from "@/config/session-limits";
 import { prisma } from "@/lib/prisma";
 import { hashDeviceSyncToken, type AuthenticatedActor } from "@/lib/auth";
 import type { AppleIdentity } from "@/lib/apple-auth";
@@ -60,7 +61,6 @@ type SessionAuthDb = Pick<typeof prisma, "$transaction" | "authSession">;
 type SessionStoreDb = Pick<typeof prisma, "authSession">;
 type DeviceStoreDb = Pick<AuthDb, "device">;
 type AppleSessionExchangeDb = Pick<AuthDb, "user"> & SessionAuthDb;
-const MAX_ACTIVE_SESSIONS = 10;
 const IOS_NOTIFICATION_DEVICE_REGISTRATION_GRACE_SECONDS = 2 * 60;
 
 export type IssuedSession = {
@@ -141,15 +141,18 @@ export async function createAuthSession(
           const priorSessionCount = input.enqueueNewSignInNotification
             ? await tx.authSession.count({ where: { userId: input.userId } })
             : 0;
-          const activeSessions = await tx.authSession.count({
-            where: {
-              userId: input.userId,
-              revokedAt: null,
-              idleExpiresAt: { gt: now },
-              absoluteExpiresAt: { gt: now },
-            },
-          });
-          if (activeSessions >= MAX_ACTIVE_SESSIONS) throw new SessionLimitError();
+          if (input.clientType === "web") {
+            const activeWebSessions = await tx.authSession.count({
+              where: {
+                userId: input.userId,
+                clientType: "web",
+                revokedAt: null,
+                idleExpiresAt: { gt: now },
+                absoluteExpiresAt: { gt: now },
+              },
+            });
+            if (activeWebSessions >= MAX_ACTIVE_WEB_SESSIONS) throw new SessionLimitError();
+          }
           await tx.authSession.create({
             data: {
               id: sessionId,

@@ -20,6 +20,7 @@ vi.mock("@/services/auth", async (importOriginal) => ({
 
 import { POST } from "./route";
 import { AppleIdentityTokenError } from "@/lib/apple-auth";
+import { SessionLimitError } from "@/services/auth";
 
 const config = {
   mode: "cloud-testflight",
@@ -124,5 +125,14 @@ describe("POST /api/auth/apple/callback", () => {
     const response = await POST(request({}, "https://attacker.invalid"));
     expect(response.status).toBe(403);
     expect(mocks.verifyAppleIdentityToken).not.toHaveBeenCalled();
+  });
+
+  it("Webセッション上限到達時は409を返す", async () => {
+    mocks.exchangeAppleIdentityForSession.mockRejectedValue(new SessionLimitError());
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: "session limit reached" });
   });
 });

@@ -79,11 +79,40 @@ function fakeDb() {
 }
 
 describe("auth service", () => {
-  it("有効sessionが10件なら新規sessionだけを拒否する", async () => {
+  it("有効なWeb sessionが10件なら11件目のWeb sessionだけを拒否する", async () => {
     const create = vi.fn();
+    const count = vi.fn().mockResolvedValue(10);
     const db = {
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
-      authSession: { count: async () => 10, create },
+      authSession: { count, create },
+    };
+
+    await expect(
+      createAuthSession(
+        { userId: "synthetic_user_a", clientType: "web" },
+        authConfig,
+        db as never,
+        NOW,
+      ),
+    ).rejects.toBeInstanceOf(SessionLimitError);
+    expect(create).not.toHaveBeenCalled();
+    expect(count).toHaveBeenCalledWith({
+      where: {
+        userId: "synthetic_user_a",
+        clientType: "web",
+        revokedAt: null,
+        idleExpiresAt: { gt: NOW },
+        absoluteExpiresAt: { gt: NOW },
+      },
+    });
+  });
+
+  it("iOS sessionはWeb session上限へ含めず発行する", async () => {
+    const count = vi.fn();
+    const create = vi.fn().mockResolvedValue({ id: "synthetic_session_ios" });
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+      authSession: { count, create },
     };
 
     await expect(
@@ -93,8 +122,32 @@ describe("auth service", () => {
         db as never,
         NOW,
       ),
-    ).rejects.toBeInstanceOf(SessionLimitError);
-    expect(create).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ clientType: "ios" });
+    expect(count).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("iOS sessionが10件存在してもWeb sessionを発行する", async () => {
+    const count = vi.fn(async (args: { where: { clientType?: string } }) =>
+      args.where.clientType === "web" ? 0 : 10,
+    );
+    const create = vi.fn().mockResolvedValue({ id: "synthetic_session_web" });
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+      authSession: { count, create },
+    };
+
+    await expect(
+      createAuthSession(
+        { userId: "synthetic_user_a", clientType: "web" },
+        authConfig,
+        db as never,
+        NOW,
+      ),
+    ).resolves.toMatchObject({ clientType: "web" });
+    expect(count).toHaveBeenCalledOnce();
+    expect(count.mock.calls[0][0].where.clientType).toBe("web");
+    expect(create).toHaveBeenCalledOnce();
   });
 
   it("iOS sessionを発行しrefresh tokenはhashだけ保存する", async () => {

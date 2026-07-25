@@ -1,0 +1,1 @@
+export const MAX_ACTIVE_WEB_SESSIONS = 10;

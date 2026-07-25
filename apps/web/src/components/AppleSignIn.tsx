@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { appleSignInErrorMessage } from "@/lib/apple-sign-in-errors";
 import { refreshBrowserSession } from "@/lib/client-api";
 
 type AppleAuthorization = {
@@ -85,11 +86,15 @@ export function AppleSignIn() {
           nonce: flow.nonce,
         }),
       });
+      if (callback.status === 409) {
+        setError(appleSignInErrorMessage(callback.status));
+        return;
+      }
       if (!callback.ok) throw new Error();
       router.replace("/");
       router.refresh();
     } catch {
-      setError("Appleでサインインできませんでした。時間をおいて再度お試しください。");
+      setError(appleSignInErrorMessage(0));
     } finally {
       setWorking(false);
     }
