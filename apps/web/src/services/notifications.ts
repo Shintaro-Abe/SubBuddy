@@ -96,6 +96,7 @@ export async function registerPushToken(
   token: string,
   environment: PushEnvironment,
   deliveryEnabled: boolean,
+  timeZone?: string,
 ) {
   const config = parseNotificationConfig();
   if (!config.enabled) throw new Error("notifications disabled");
@@ -105,6 +106,7 @@ export async function registerPushToken(
   const normalized = token.toLowerCase();
   const encrypted = encryptNotificationValue(normalized, config);
   const fingerprint = notificationFingerprint(normalized, config.fingerprintKey);
+  const updatedAt = new Date();
   const result = await prisma.device.updateMany({
     where: { id: deviceId, userId, revokedAt: null },
     data: {
@@ -113,7 +115,38 @@ export async function registerPushToken(
       pushTokenKeyVersion: encrypted.keyVersion,
       pushEnvironment: environment,
       notificationDeliveryEnabled: deliveryEnabled,
-      pushTokenUpdatedAt: new Date(),
+      pushTokenUpdatedAt: updatedAt,
+      ...(timeZone && { timeZone }),
+    },
+  });
+  if (result.count === 1 && timeZone) {
+    await prisma.notificationDelivery.updateMany({
+      where: {
+        deviceId,
+        status: { in: ["pending", "retryable_failure"] },
+        event: { kind: "account_deletion_scheduled" },
+      },
+      data: { nextAttemptAt: updatedAt },
+    });
+  }
+  return result.count === 1;
+}
+
+export async function releaseNewSignInNotificationTask(
+  userId: string,
+  sessionId: string,
+  excludeDeviceId: string,
+  now = new Date(),
+) {
+  const result = await prisma.notificationCreationTask.updateMany({
+    where: {
+      userId,
+      idempotencyKey: `new-sign-in:${sessionId}`,
+      status: { in: ["pending", "retryable_failure"] },
+    },
+    data: {
+      excludeDeviceId,
+      nextAttemptAt: now,
     },
   });
   return result.count === 1;
@@ -218,32 +251,6 @@ export class PushEnvironmentMismatchError extends Error {
     super("push environment does not match server");
     this.name = "PushEnvironmentMismatchError";
   }
-}
-
-export async function recordNewSignInIfEnabled(input: {
-  userId: string;
-  sessionId: string;
-  clientType: "web" | "ios";
-  deviceId?: string;
-  eventAt?: Date;
-}) {
-  const config = parseNotificationConfig();
-  if (!config.enabled) return null;
-  const priorSessionCount = await prisma.authSession.count({
-    where: { userId: input.userId, id: { not: input.sessionId } },
-  });
-  if (priorSessionCount === 0) return null;
-  return createNotificationEvent({
-    userId: input.userId,
-    kind: "new_sign_in",
-    idempotencyKey: `new-sign-in:${input.sessionId}`,
-    templateKey: "new_sign_in",
-    safeArguments: {
-      clientType: input.clientType === "ios" ? "iPhoneアプリ" : "Webブラウザ",
-    },
-    excludeDeviceId: input.deviceId,
-    eventAt: input.eventAt,
-  });
 }
 
 export async function recordAccountDeletionScheduled(input: {

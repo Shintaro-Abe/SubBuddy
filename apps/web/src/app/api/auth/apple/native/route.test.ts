@@ -48,6 +48,7 @@ function request(body: unknown) {
 describe("POST /api/auth/apple/native", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.NOTIFICATIONS_ENABLED = "false";
     mocks.verifyAppleIdentityToken.mockResolvedValue(identity);
     mocks.upsertAppleUser.mockResolvedValue(actor);
   });
@@ -76,7 +77,7 @@ describe("POST /api/auth/apple/native", () => {
     });
     expect(mocks.exchangeAppleIdentityForSession).toHaveBeenCalledWith(
       identity,
-      { clientType: "ios" },
+      { clientType: "ios", enqueueNewSignInNotification: false },
       config,
     );
     expect(await response.json()).toEqual({ actor, session });
@@ -108,9 +109,7 @@ describe("POST /api/auth/apple/native", () => {
       appleAllowedClientIds: ["com.subbuddy.web", "com.subbuddy.app"],
       appleSubjectHashSalt: "synthetic-subject-hash-salt-32-bytes",
     });
-    mocks.verifyAppleIdentityToken.mockRejectedValue(
-      new AppleIdentityTokenError("nonce_mismatch"),
-    );
+    mocks.verifyAppleIdentityToken.mockRejectedValue(new AppleIdentityTokenError("nonce_mismatch"));
 
     const response = await POST(request({ identityToken: "synthetic.identity.token", nonce }));
 

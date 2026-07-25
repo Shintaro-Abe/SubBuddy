@@ -73,6 +73,7 @@ struct PushTokenRequest: Encodable {
     let token: String
     let environment: String
     let deliveryEnabled: Bool
+    let timeZone: String
 }
 
 struct PushTokenResponse: Decodable {

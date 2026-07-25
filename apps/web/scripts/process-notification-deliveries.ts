@@ -5,8 +5,11 @@ async function main() {
   const result = await processNotificationDeliveries();
   process.stdout.write(
     JSON.stringify({
+      created: result.created,
+      creationFailed: result.creationFailed,
       processed: result.processed,
       sent: result.sent,
+      deferred: result.deferred,
       failed: result.failed,
       disabled: result.disabled,
     }) + "\n",

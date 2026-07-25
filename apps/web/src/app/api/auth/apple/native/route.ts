@@ -48,7 +48,14 @@ export async function POST(req: Request) {
     });
 
     if (config.mode !== "local") {
-      const result = await exchangeAppleIdentityForSession(identity, { clientType: "ios" }, config);
+      const result = await exchangeAppleIdentityForSession(
+        identity,
+        {
+          clientType: "ios",
+          enqueueNewSignInNotification: process.env.NOTIFICATIONS_ENABLED === "true",
+        },
+        config,
+      );
       return ok(result);
     }
 

@@ -65,7 +65,7 @@ th{background:var(--accent-soft);font-weight:600}
 <h1>通知配信の設定・実機確認</h1>
 <div class="callout note"><p>初回版の5種類の通知を、検証環境で安全に有効化して確認する手順です。Apple Developer、Renderの管理権限と、通知を確認するiPhoneが必要です。</p></div>
 <h2>前提</h2>
-<ul><li>対象は<code>cloud-testflight</code>検証環境です。<code>local</code>環境では外部通知を有効にしません。</li><li>現在の<code>NOTIFICATIONS_ENABLED</code>は初期値の<code>false</code>です。ステアリングのT-24（サーバー通常通知の配信時間制御）とT-25（業務処理から通知作成までの障害時再実行）が完了するまでは、ステップ6以降を実行しません。</li><li>契約、金額、端末トークンは実在の情報を証跡へ残しません。確認には合成契約を使います。</li><li>外部配信はAPNs（＝Appleのプッシュ通知サービス）だけを使い、メール通知は行いません。</li><li>秘密鍵と暗号鍵はRenderのSecretへ保存し、ファイル、画面共有、ログ、コミットへ含めません。</li><li><code>NOTIFICATIONS_ENABLED</code>は最後の確認まで<code>false</code>のままにします。</li></ul>
+<ul><li>対象は<code>cloud-testflight</code>検証環境です。<code>local</code>環境では外部通知を有効にしません。</li><li>現在の<code>NOTIFICATIONS_ENABLED</code>は初期値の<code>false</code>です。配信時間制御と通知作成失敗時の再実行は実装・ローカル検証済みですが、資格情報、migration、Cron、iPhoneビルドの確認が終わるまではステップ6以降を実行しません。</li><li>契約、金額、端末トークンは実在の情報を証跡へ残しません。確認には合成契約を使います。</li><li>外部配信はAPNs（＝Appleのプッシュ通知サービス）だけを使い、メール通知は行いません。</li><li>秘密鍵と暗号鍵はRenderのSecretへ保存し、ファイル、画面共有、ログ、コミットへ含めません。</li><li><code>NOTIFICATIONS_ENABLED</code>は最後の確認まで<code>false</code>のままにします。</li></ul>
 <h2>手順</h2>
 <h3>ステップ1：Appleでプッシュ通知を有効にする</h3>
 <p>アプリIDと署名へAPNs権限を追加します。</p>
@@ -83,7 +83,7 @@ th{background:var(--accent-soft);font-weight:600}
 <p>通知設定、暗号化したAPNsトークン、送信待ち、アプリ内お知らせのテーブルを追加します。</p>
 <div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npx prisma migrate deploy</code></pre></div>
 <div class="callout warn"><p>対象が検証用DBであることをRenderの環境名と接続先で確認してから実行します。本番DBや開発者の個人データ入りDBでは試しません。</p></div>
-<div class="callout ok"><p>確認：<code>20260723190000_add_notification_delivery</code>が適用済みと表示されます。</p></div>
+<div class="callout ok"><p>確認：<code>20260723190000_add_notification_delivery</code>と<code>20260725010000_add_notification_creation_retry_and_device_timezone</code>が適用済みと表示されます。</p></div>
 <h3>ステップ4：Render Cronを作る</h3>
 <p>PostgreSQLの送信待ちを5分ごとに処理します。</p>
 <ol class="gui"><li>Render DashboardでNew、Cron Jobを選びます。</li><li>検証用Web Serviceと同じリポジトリ、ブランチ、リージョン、環境変数グループを選びます。</li><li>Root Directoryを<code>apps/web</code>にします。</li><li>Build Commandを<code>npm ci &amp;&amp; npx prisma generate</code>にします。</li><li>Commandを<code>npm run notifications:process</code>にします。</li><li>Scheduleを<code>*/5 * * * *</code>にします。</li><li>同じ環境で通知Cronが1個だけであることを確認します。</li></ol>
@@ -94,13 +94,13 @@ th{background:var(--accent-soft);font-weight:600}
 <ol class="gui"><li>Xcodeで検証環境のSubBuddyを実機へインストールします。</li><li>合成契約を1件登録し、更新基準日を入力します。</li><li>ホームの通知案内が主要操作を隠さないことを確認します。</li><li>案内を閉じ、再起動後に再表示されないことを確認します。</li><li>設定、通知を開き、機能フラグが無効な間は「準備中」と表示され、OS許可が出ないことを確認します。</li></ol>
 <div class="callout ok"><p>確認：初回起動やサインイン直後にOSの通知許可が自動表示されません。</p></div>
 <h3>ステップ6：完成ゲートを確認し、検証環境だけで一時的に有効にする</h3>
-<p>T-24とT-25を含むコード側の完成ゲート、資格情報、migration、Cron、iPhone署名を確認した後に、実機試験の間だけ利用可能状態へ切り替えます。</p>
+<p>コード側の自動試験、資格情報、migration、Cron、iPhone署名を確認した後に、実機試験の間だけ利用可能状態へ切り替えます。</p>
 <ol class="gui"><li>Renderの検証用Web Serviceと通知Cronで<code>NOTIFICATIONS_ENABLED=true</code>にします。</li><li>両方を再デプロイします。</li><li>Web設定で通知希望とお知らせが表示されることを確認します。</li><li>iPhoneの設定、通知を開き、「このiPhoneで通知を設定」を押します。</li><li>用途を確認した後にだけOS許可が表示されることを確認し、許可します。</li><li>状態が「このiPhoneで有効」になることを確認します。</li></ol>
-<div class="callout warn"><p>T-24またはT-25が未完了なら有効化しません。Web ServiceとCronの片方だけを有効にしません。設定不足時に500エラーになる場合はフラグを<code>false</code>へ戻し、秘密値のキー名だけを確認します。</p></div>
+<div class="callout warn"><p>migration、Cron、iPhone署名のいずれかが未確認なら有効化しません。Web ServiceとCronの片方だけを有効にしません。設定不足時に500エラーになる場合はフラグを<code>false</code>へ戻し、秘密値のキー名だけを確認します。</p></div>
 <div class="callout ok"><p>確認：Webの希望とiPhoneの配信状態が別項目として確認できます。</p></div>
 <h3>ステップ7：5種類を合成データで確認する</h3>
 <p>本文、重複、画面遷移、取消を確認します。</p>
-<ol class="gui"><li>年額通知を有効にし、7日前10時に相当する合成契約で端末内予約を確認します。</li><li>月額通知は初期オフで、本人が有効にした後だけ1日前10時に予約されることを確認します。</li><li>同期失敗後24時間の予約を確認し、同期成功後に予約が消えることを確認します。</li><li>2台目の検証端末または検証Webブラウザで新規サインインし、発生端末以外のiPhoneと「お知らせ」に1件だけ出ることを確認します。</li><li>削除予定の日程計算、通知作成、取消は実装済みです。削除専用コード・無活動削除・TestFlight終了削除を発生させる上流処理が接続された後に、合成アカウントで90・30・7日前、申請直後・24時間前、終了時の各経路を確認します。上流処理がない間は未確認として残し、アプリ内とAPNsを合格扱いにしません。</li><li>安全通知は最初にdry-runだけを行います。</li></ol>
+<ol class="gui"><li>年額通知を有効にし、7日前10時に相当する合成契約で端末内予約を確認します。</li><li>月額通知は初期オフで、本人が有効にした後だけ1日前10時に予約されることを確認します。</li><li>同期失敗後24時間の予約を確認し、同期成功後に予約が消えることを確認します。</li><li>2台目の検証端末または検証Webブラウザで新規サインインし、発生端末以外のiPhoneと「お知らせ」に1件だけ出ることを確認します。</li><li>削除予定の日程計算、通知作成、取消は実装済みです。削除専用コード・無活動削除・TestFlight終了削除を発生させる上流処理が接続された後に、合成アカウントで90・30・7日前、申請直後・24時間前、終了時の各経路を確認します。端末現地の20時以降ではAPNsを送らず次の9時へ繰り下げ、新規サインインは時間外でも即時に処理することも確認します。上流処理がない間は未確認として残し、アプリ内とAPNsを合格扱いにしません。</li><li>通知作成処理を一時的に失敗させる検証では、認証セッションが成功したまま通知作成待ちが残り、Cron再実行後にお知らせとAPNs配信対象が各1件になることを確認します。</li><li>安全通知は最初にdry-runだけを行います。</li></ol>
 <div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npm run notifications:safety -- --incident-id synthetic-notification-check</code></pre></div>
 <ol class="gui"><li>表示された対象件数と経路を確認した後、検証環境だけでapplyします。</li></ol>
 <div class="cmd"><button class="copy" type="button">コピー</button><pre><code>cd /workspaces/SubBuddy/apps/web &amp;&amp; npm run notifications:safety -- --incident-id synthetic-notification-check --apply</code></pre></div>

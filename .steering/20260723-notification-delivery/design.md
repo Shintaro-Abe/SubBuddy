@@ -2,13 +2,13 @@
 
 > 2026-07-24変更: SESメール通知と重要連絡先メールの登録・確認・保存を取りやめた。重要連絡はAPNsとアプリ内のお知らせで提供する。
 >
-> 2026-07-25照合: APNs送信待ちと通知イベントのトランザクションは実装済みだが、業務処理と通知作成は同一トランザクションではない。通常のサーバー通知を9〜20時へ制限する処理も未接続である。両方を完成前の残タスクとする。
+> 2026-07-25実装: 通常のサーバー通知を端末現地時刻9〜20時へ制限し、新規サインインの業務トランザクションへ通知作成待ちを保存する方式を実装した。外部APNs・Render Cron・iPhone実機の検証が終わるまで機能フラグはオフを維持する。
 
 ## 実装アプローチ
 
 通知を「端末内通知」「サーバー通知」「アプリ内のお知らせ」の3経路へ分ける。契約情報と同期失敗はiPhone内で判定し、別端末の出来事と運営上の重要連絡だけをサーバーへ送る。これにより、更新日前通知のために契約名・金額・更新日を外部配信基盤へ渡さず、OS通知拒否時も重要連絡を確認できる。
 
-完成時のサーバー通知は、業務イベントと通知作成の間で通知を失わないアウトボックス方式とする。現行コードは、通知イベント・アプリ内のお知らせ・配信対象を1つのDBトランザクションで保存するが、認証などの業務処理が成功した後に別処理として呼び出している。通知作成に失敗した場合の再実行を追加し、障害時にも通知を失わない状態を完成条件とする。Render Cronが5分ごとに送信可能な行を小分けに取得し、APNsへ送信する。イベントID・経路・対象の一意制約で重複を防ぎ、失敗は上限付き指数バックオフで再試行する。Redisと常時稼働Workerは初回版では追加しない。
+サーバー通知は、業務イベントと通知作成の間で通知を失わないアウトボックス方式とする。新規サインインでは認証セッションと通知作成待ちを同じDBトランザクションで保存する。Render Cronは通知作成待ちをイベント・アプリ内のお知らせ・配信対象へ冪等に展開してから、送信可能な行を小分けに取得してAPNsへ送信する。通知作成の失敗は安全な分類だけを記録して再試行し、イベントID・経路・対象の一意制約で重複を防ぐ。APNsの一時失敗は上限付き指数バックオフで再試行する。Redisと常時稼働Workerは初回版では追加しない。
 
 ### 実装段階
 
@@ -37,7 +37,7 @@
 | `apps/web/src/services/notifications.ts`                                                 | テナント境界付き通知データ操作、イベント・お知らせ・配信対象の作成                       | AC-7〜AC-18, AC-21                     |
 | `apps/web/src/services/notification-delivery/`                                           | APNs HTTP/2、再試行、無効トークン・恒久失敗処理                                          | AC-10, AC-14〜AC-18                    |
 | `apps/web/src/app/api/notification-preferences/`・`notices/`・`devices/[id]/push-token/` | 設定、お知らせ、既読、端末APNs登録API                                                    | AC-6〜AC-11, AC-14, AC-16, AC-18       |
-| Apple認証・端末登録・セッション処理                                                      | 新規サインインイベントを初回・更新と区別して作成。失敗時の再実行はT-25で追加             | AC-9, AC-10, AC-15                     |
+| Apple認証・端末登録・セッション処理                                                      | 初回以外の新規セッションと同時に通知作成待ちを保存し、iPhone登録後に発生端末を除外       | AC-9, AC-10, AC-15                     |
 | アカウント削除・保持処理                                                                 | 削除予定イベント、取消、削除時の通知データ連鎖削除                                       | AC-12, AC-16, AC-18                    |
 | `apps/web/scripts/process-notification-deliveries.ts`・`create-safety-notification.ts`   | Cron送信、安全通知のdry-run/apply管理コマンド                                            | AC-13, AC-15, AC-18                    |
 | Web設定・ホーム                                                                          | 通知希望、お知らせ、未読重要連絡。Web Pushとメール登録は置かない                         | AC-7, AC-8, AC-11, AC-14, AC-20        |
@@ -68,6 +68,9 @@ NotificationDeliveryStatus
   pending | processing | sent | retryable_failure
   permanent_failure | canceled
 
+NotificationCreationStatus
+  pending | processing | retryable_failure | completed
+
 NotificationClientState
   not_configured | requesting | active | os_disabled
   preparing | temporary_failure | disabled_on_device
@@ -77,14 +80,15 @@ NotificationClientState
 
 ### 新規・拡張モデル
 
-| モデル                   | 主な項目                                                                                                              | 目的                                                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `NotificationPreference` | `userId`, 年額/月額/同期希望, `newSignInPushEnabled`, `updatedAt`                                                     | 利用者単位の希望                                                                                               |
-| `Device`拡張             | `pushTokenCiphertext`, `pushTokenFingerprint`, `pushEnvironment`, `notificationDeliveryEnabled`, `pushTokenUpdatedAt` | 端末単位のAPNs配信。平文トークンをログ・レスポンスへ出さない。T-24で配信時間判定用のIANAタイムゾーンを追加する |
-| `NotificationNotice`     | `id`, `userId`, `kind`, `templateKey`, 安全な表示引数, `eventAt`, `readAt`, `expiresAt`, `resolvedAt`                 | アプリ内のお知らせ                                                                                             |
-| `NotificationEvent`      | `id`, `userId?`, `kind`, `idempotencyKey`, `templateKey`, 安全な引数, `availableAt`, `createdAt`                      | 配信の原因と重複防止                                                                                           |
-| `NotificationDelivery`   | `eventId`, `channel`, `targetKey`, `deviceId?`, `status`, `attemptCount`, `nextAttemptAt`, `errorClass`, `sentAt`     | 経路・対象ごとの送信待ちと30日証跡                                                                             |
-| `SafetyBroadcast`        | `incidentId`, `templateKey`, `status`, `previewedAt`, `confirmedAt`, `completedAt`                                    | 管理者確認と一斉配信の重複防止                                                                                 |
+| モデル                     | 主な項目                                                                                                                          | 目的                                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `NotificationPreference`   | `userId`, 年額/月額/同期希望, `newSignInPushEnabled`, `updatedAt`                                                                 | 利用者単位の希望                                                                                     |
+| `Device`拡張               | `pushTokenCiphertext`, `pushTokenFingerprint`, `pushEnvironment`, `notificationDeliveryEnabled`, `pushTokenUpdatedAt`, `timeZone` | 端末単位のAPNs配信。平文トークンをログ・レスポンスへ出さず、IANAタイムゾーンで配信可能時刻を判定する |
+| `NotificationNotice`       | `id`, `userId`, `kind`, `templateKey`, 安全な表示引数, `eventAt`, `readAt`, `expiresAt`, `resolvedAt`                             | アプリ内のお知らせ                                                                                   |
+| `NotificationEvent`        | `id`, `userId?`, `kind`, `idempotencyKey`, `templateKey`, 安全な引数, `availableAt`, `createdAt`                                  | 配信の原因と重複防止                                                                                 |
+| `NotificationDelivery`     | `eventId`, `channel`, `targetKey`, `deviceId?`, `status`, `attemptCount`, `nextAttemptAt`, `errorClass`, `sentAt`                 | 経路・対象ごとの送信待ちと30日証跡                                                                   |
+| `NotificationCreationTask` | `userId`, `kind`, `idempotencyKey`, 安全な引数, 除外端末, `status`, `nextAttemptAt`, `errorClass`                                 | 業務処理と同時に残す通知作成待ち。失敗後もリース取得して冪等に再実行する                             |
+| `SafetyBroadcast`          | `incidentId`, `templateKey`, `status`, `previewedAt`, `confirmedAt`, `completedAt`                                                | 管理者確認と一斉配信の重複防止                                                                       |
 
 `targetKey`は端末IDから作る内部値で、APNsトークンを含めない。各配信は`(eventId, channel, targetKey)`を一意にする。ユーザーに紐づく表は完全退会時に連鎖削除する。
 
@@ -117,7 +121,8 @@ sequenceDiagram
     participant C as Render Cron
     participant P as APNs
 
-    S->>DB: 通知イベント・お知らせ・配信対象を同一トランザクションで保存
+    S->>DB: 業務データ・通知作成待ちを同一トランザクションで保存
+    C->>DB: 通知作成待ちをイベント・お知らせ・配信対象へ冪等展開
     C->>DB: 送信可能行を小分けに取得・processing化
     C->>P: 安全な定型payloadを送信
     alt 成功
@@ -134,7 +139,7 @@ sequenceDiagram
 - 年額: 更新予定日の7日前10時。月額: 利用者が追加で有効にした場合だけ1日前10時。
 - iOS予約上限を超えないよう、現在時刻に近い最大60件を予約し、契約同期、契約変更、アプリ復帰、タイムゾーン変更時に全件を決定的に再構築する。SubBuddy以外の予約には触れない。
 - 同期失敗時は24時間後を仮予約し、成功時に取消。同じ未解決期間は安定したIDで1回だけにする。
-- 完成時は通常通知を端末現地時刻9〜20時へ繰り下げ、新規サインインと安全通知だけを即時とする。現行の端末モデルにはタイムゾーンがなく、サーバー配信処理にも時間帯判定が未接続である。T-24でiPhoneのIANAタイムゾーンを端末単位に登録・更新し、配信可能時刻を判定する。
+- 通常通知はiPhoneが登録・更新するIANAタイムゾーンを使い、端末現地時刻9時以上20時未満だけ配信する。時間外は失敗回数を増やさず次の9時へ繰り下げる。タイムゾーン未登録・不正時は送らず再確認へ戻し、新規サインインと安全通知は即時とする。
 - APNs payloadは種類ごとの定型文だけとし、契約名、金額、更新日、利用量、見直し内容、IP、場所を含めない。
 - APNsは発生端末を除く通知対象端末へ送る。重要連絡はAPNsとアプリ内のお知らせを併用する。
 - APNsの無効トークン応答は再試行せず停止する。429・5xx・通信失敗は上限付き指数バックオフ、`Retry-After`があれば優先する。

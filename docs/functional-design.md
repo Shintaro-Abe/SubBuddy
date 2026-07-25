@@ -131,7 +131,15 @@ erDiagram
   users ||--o{ devices : owns
   users ||--o{ auth_sessions : has
   users ||--o| user_guidance_progress : has
+  users ||--o| notification_preferences : has
+  users ||--o{ notification_events : has
+  users ||--o{ notification_notices : has
+  users ||--o{ notification_deliveries : has
+  users ||--o{ notification_creation_tasks : has
   devices ||--o{ auth_sessions : binds
+  devices ||--o{ notification_deliveries : receives
+  notification_events ||--o| notification_notices : appears_as
+  notification_events ||--o{ notification_deliveries : delivers
   subscriptions ||--o{ billing_events : generates
   subscriptions ||--o{ ios_usage_daily_summaries : measured_as
   subscriptions ||--o{ recommendation_snapshots : evaluated_as
@@ -215,6 +223,7 @@ erDiagram
     string token_hash UK
     datetime revoked_at
     datetime last_synced_at
+    string time_zone
     datetime created_at
     datetime updated_at
   }
@@ -234,6 +243,56 @@ erDiagram
     string revoke_reason
     datetime created_at
     datetime updated_at
+  }
+  notification_preferences {
+    string user_id PK,FK
+    boolean yearly_renewal_enabled
+    boolean monthly_renewal_enabled
+    boolean sync_failure_enabled
+    boolean new_sign_in_push_enabled
+    datetime prompt_dismissed_at
+  }
+  notification_events {
+    string id PK
+    string user_id FK
+    string kind
+    string idempotency_key UK
+    string template_key
+    json safe_arguments
+    datetime available_at
+  }
+  notification_notices {
+    string id PK
+    string user_id FK
+    string event_id FK,UK
+    string kind
+    datetime event_at
+    datetime read_at
+    datetime expires_at
+    datetime resolved_at
+  }
+  notification_deliveries {
+    string id PK
+    string user_id FK
+    string event_id FK
+    string device_id FK
+    string channel
+    string target_key
+    string status
+    int attempt_count
+    datetime next_attempt_at
+    datetime sent_at
+  }
+  notification_creation_tasks {
+    string id PK
+    string user_id FK
+    string kind
+    string idempotency_key UK
+    string exclude_device_id
+    string status
+    int attempt_count
+    datetime next_attempt_at
+    datetime completed_at
   }
   recommendation_snapshots {
     string id PK
@@ -330,7 +389,7 @@ iPhone Screen Time から自動取得した**集計値**。`usage_bucket` は
 
 クラウド配布版で、ユーザーに紐づく iPhone デバイスを表す。`token_hash` はデバイス同期トークンのハッシュであり、平文トークンは保存しない。
 `client_device_id` は iOS が端末内で生成し Keychain に保存する UUID で、同一ユーザーの同一端末登録を1レコードへ収束させるために使う（個人情報や Apple の端末識別子は使わない）。
-`revoked_at` は失効日時、`last_synced_at` は最後に利用量同期が成功した日時。ユーザーが端末を紛失した場合や再設定した場合に、トークンを失効・再発行できるようにする。
+`revoked_at` は失効日時、`last_synced_at` は最後に利用量同期が成功した日時。`time_zone`はiPhoneが登録するIANAタイムゾーンで、通常のサーバー通知を端末現地時刻9〜20時に制限するために使う。ユーザーが端末を紛失した場合や再設定した場合に、トークンを失効・再発行できるようにする。
 
 #### auth_sessions（Web・iPhone認証セッション）
 
@@ -890,8 +949,8 @@ iPhoneは進捗APIが一時的に使えなくても通常機能を止めず、�
 - 通知は更新日前、同期失敗、新規サインイン、削除予定、セキュリティ事故・長期障害の5種類だけとする。前2つは初期オフ、新規サインインのプッシュは停止可能、後2つは重要連絡としてアプリ内表示を停止できない。
 - ロック画面とAPNs payloadに契約名、金額、更新日、利用量、見直し内容を出さない。
 
-2026-07-25時点で、利用者単位の通知希望、端末単位の許可・配信状態、更新予定日の月末・閏日計算、最大60件の端末内予約、同期失敗24時間予約と成功取消、新規サインイン検知、APNsの送信待ち、Web/iPhoneのお知らせ、安全通知のdry-run/applyを実装した。削除予定は通常90・30・7日前、空アカウント7日前、削除専用コード申請直後・24時間前、TestFlight終了7日前・終了時、Apple再認証による即時退会は通知なしをコード化し、冪等作成と取消を実装した。メール通知と通知用メールアドレスの登録・保存は実装しない。Web Pushも実装しない。
+2026-07-25時点で、利用者単位の通知希望、端末単位の許可・配信状態とIANAタイムゾーン、更新予定日の月末・閏日計算、最大60件の端末内予約、同期失敗24時間予約と成功取消、新規サインイン検知、通知作成待ちの再実行、通常通知の現地9〜20時制御、APNsの送信待ち、Web/iPhoneのお知らせ、安全通知のdry-run/applyを実装した。削除予定は通常90・30・7日前、空アカウント7日前、削除専用コード申請直後・24時間前、TestFlight終了7日前・終了時、Apple再認証による即時退会は通知なしをコード化し、冪等作成と取消を実装した。メール通知と通知用メールアドレスの登録・保存は実装しない。Web Pushも実装しない。
 
-残るコード対応は、削除予定など通常のサーバー通知を端末現地時刻9〜20時へ制限する処理と、認証などの業務処理が成功した後に通知作成だけ失敗した場合の再実行である。削除予定を発生させる上流処理も未接続である。機能フラグは初期オフとし、これらの実装、MacでのiOS build・単体試験、iPhone実機APNs、Render Cron、削除上流との結合が合格するまで利用可能表示と外部配信を有効にしない。
+新規サインインでは認証セッションと`NotificationCreationTask`を同じDBトランザクションで保存する。Cronがリース取得し、失敗時は安全な分類だけを残して再試行する。再実行は`idempotencyKey`と配信対象の一意制約により、通知イベント・お知らせ・APNs配信対象を各1件へ収束させる。削除予定を発生させる上流処理は未接続である。機能フラグは初期オフとし、MacでのiOS build・単体試験、iPhone実機APNs、Render Cron、削除上流との結合が合格するまで利用可能表示と外部配信を有効にしない。
 
-通知希望は`NotificationPreference`、暗号化したAPNsトークンは`Device`、アプリ内履歴は`NotificationNotice`、送信原因と冪等キーは`NotificationEvent`、経路別の再試行は`NotificationDelivery`へ保存する。通知試行は30日、お知らせは原則90日保持する。契約名、金額、更新日、利用量、見直し内容をAPNs payload、配信記録へ含めない。
+通知希望は`NotificationPreference`、暗号化したAPNsトークンとタイムゾーンは`Device`、業務処理と同時に残す通知作成待ちは`NotificationCreationTask`、アプリ内履歴は`NotificationNotice`、送信原因と冪等キーは`NotificationEvent`、経路別の再試行は`NotificationDelivery`へ保存する。完了した通知作成待ちと通知試行は30日、お知らせは原則90日保持する。契約名、金額、更新日、利用量、見直し内容をAPNs payload、配信記録へ含めない。

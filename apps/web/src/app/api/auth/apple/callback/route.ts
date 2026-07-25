@@ -23,7 +23,6 @@ import {
 } from "@/services/auth";
 import { appleCallbackSchema } from "@/schemas/auth";
 import { authFlowCookieNames, clearAuthFlowCookies, setWebSessionCookies } from "@/lib/web-auth";
-import { recordNewSignInIfEnabled } from "@/services/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -71,18 +70,13 @@ export async function POST(req: Request) {
     });
     const result = await exchangeAppleIdentityForSession(
       identity,
-      { clientType: "web", rememberBrowser: remember === "1" },
+      {
+        clientType: "web",
+        rememberBrowser: remember === "1",
+        enqueueNewSignInNotification: process.env.NOTIFICATIONS_ENABLED === "true",
+      },
       config,
     );
-    try {
-      await recordNewSignInIfEnabled({
-        userId: result.actor.userId,
-        sessionId: result.session.sessionId,
-        clientType: "web",
-      });
-    } catch {
-      console.warn("new_sign_in_notice_failed", { reason: "event_creation_failed" });
-    }
     const response = ok({ actor: result.actor, redirectTo: "/" });
     setWebSessionCookies(response, config, result.session, remember === "1");
     clearAuthFlowCookies(response, config);

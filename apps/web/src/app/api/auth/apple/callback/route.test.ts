@@ -55,6 +55,7 @@ function request(overrides: Record<string, unknown> = {}, origin = config.allowe
 describe("POST /api/auth/apple/callback", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.NOTIFICATIONS_ENABLED = "false";
     mocks.parseAuthConfig.mockReturnValue(config);
     mocks.verifyAppleIdentityToken.mockResolvedValue({ subjectHash: "synthetic-subject-hash" });
     mocks.exchangeAppleIdentityForSession.mockResolvedValue({
@@ -83,13 +84,20 @@ describe("POST /api/auth/apple/callback", () => {
       expectedNonce: nonce,
       subjectHashSalt: config.appleSubjectHashSalt,
     });
+    expect(mocks.exchangeAppleIdentityForSession).toHaveBeenCalledWith(
+      { subjectHash: "synthetic-subject-hash" },
+      {
+        clientType: "web",
+        rememberBrowser: false,
+        enqueueNewSignInNotification: false,
+      },
+      config,
+    );
   });
 
   it("Apple token拒否時は値を含めず固定理由コードだけを記録する", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    mocks.verifyAppleIdentityToken.mockRejectedValue(
-      new AppleIdentityTokenError("nonce_mismatch"),
-    );
+    mocks.verifyAppleIdentityToken.mockRejectedValue(new AppleIdentityTokenError("nonce_mismatch"));
 
     const response = await POST(request());
 
@@ -107,9 +115,7 @@ describe("POST /api/auth/apple/callback", () => {
   });
 
   it("nonce不一致はApple token検証前に403", async () => {
-    const response = await POST(
-      request({ nonce: "wrong-nonce-with-at-least-32-characters" }),
-    );
+    const response = await POST(request({ nonce: "wrong-nonce-with-at-least-32-characters" }));
     expect(response.status).toBe(403);
     expect(mocks.verifyAppleIdentityToken).not.toHaveBeenCalled();
   });

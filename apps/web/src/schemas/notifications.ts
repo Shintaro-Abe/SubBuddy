@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSupportedTimeZone } from "@/domain/notifications/time-zone";
 
 export const notificationPreferencePatchSchema = z
   .object({
@@ -16,5 +17,11 @@ export const pushTokenSchema = z
     token: z.string().regex(/^[a-fA-F0-9]{32,512}$/),
     environment: z.enum(["sandbox", "production"]),
     deliveryEnabled: z.boolean(),
+    timeZone: z
+      .string()
+      .min(1)
+      .max(64)
+      .refine(isSupportedTimeZone, "unsupported time zone")
+      .optional(),
   })
   .strict();

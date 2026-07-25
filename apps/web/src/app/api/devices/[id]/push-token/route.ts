@@ -37,6 +37,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
       parsed.data.token,
       parsed.data.environment,
       parsed.data.deliveryEnabled,
+      parsed.data.timeZone,
     );
     if (!saved) return notFound();
     return ok({ registered: true });

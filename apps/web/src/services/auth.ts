@@ -61,6 +61,7 @@ type SessionStoreDb = Pick<typeof prisma, "authSession">;
 type DeviceStoreDb = Pick<AuthDb, "device">;
 type AppleSessionExchangeDb = Pick<AuthDb, "user"> & SessionAuthDb;
 const MAX_ACTIVE_SESSIONS = 10;
+const IOS_NOTIFICATION_DEVICE_REGISTRATION_GRACE_SECONDS = 2 * 60;
 
 export type IssuedSession = {
   sessionId: string;
@@ -78,6 +79,7 @@ export type CreateSessionInput = {
   clientType: AuthClientType;
   deviceId?: string;
   rememberBrowser?: boolean;
+  enqueueNewSignInNotification?: boolean;
 };
 
 export type AppleSessionExchange = {
@@ -136,6 +138,9 @@ export async function createAuthSession(
     try {
       await db.$transaction(
         async (tx) => {
+          const priorSessionCount = input.enqueueNewSignInNotification
+            ? await tx.authSession.count({ where: { userId: input.userId } })
+            : 0;
           const activeSessions = await tx.authSession.count({
             where: {
               userId: input.userId,
@@ -159,6 +164,27 @@ export async function createAuthSession(
               absoluteExpiresAt: refreshAbsoluteExpiresAt,
             },
           });
+          if (input.enqueueNewSignInNotification && priorSessionCount > 0) {
+            await tx.notificationCreationTask.create({
+              data: {
+                userId: input.userId,
+                kind: "new_sign_in",
+                idempotencyKey: `new-sign-in:${sessionId}`,
+                templateKey: "new_sign_in",
+                safeArguments: {
+                  clientType: input.clientType === "ios" ? "iPhoneアプリ" : "Webブラウザ",
+                },
+                excludeDeviceId: input.deviceId,
+                eventAt: now,
+                nextAttemptAt:
+                  input.clientType === "ios" && !input.deviceId
+                    ? new Date(
+                        now.getTime() + IOS_NOTIFICATION_DEVICE_REGISTRATION_GRACE_SECONDS * 1000,
+                      )
+                    : now,
+              },
+            });
+          }
         },
         { isolationLevel: "Serializable" },
       );

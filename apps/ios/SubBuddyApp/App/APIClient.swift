@@ -189,7 +189,8 @@ actor APIClient {
             body: PushTokenRequest(
                 token: token,
                 environment: environment,
-                deliveryEnabled: deliveryEnabled
+                deliveryEnabled: deliveryEnabled,
+                timeZone: TimeZone.autoupdatingCurrent.identifier
             )
         )
     }

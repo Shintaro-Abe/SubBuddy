@@ -142,6 +142,46 @@ describe("auth service", () => {
     });
   });
 
+  it("2回目以降の新規sessionは同じtransactionへ通知作成待ちを保存する", async () => {
+    const taskCreate = vi.fn().mockResolvedValue({ id: "synthetic-creation-task" });
+    const counts = [1, 1];
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+      authSession: {
+        count: async () => counts.shift() ?? 0,
+        create: vi.fn().mockResolvedValue({ id: "synthetic_session_b" }),
+      },
+      notificationCreationTask: { create: taskCreate },
+    };
+    const ids = ["synthetic_session_b", "synthetic_family_b"];
+
+    await createAuthSession(
+      {
+        userId: "synthetic_user_a",
+        clientType: "ios",
+        enqueueNewSignInNotification: true,
+      },
+      authConfig,
+      db as never,
+      NOW,
+      () => "synthetic-refresh-token-b",
+      () => ids.shift()!,
+    );
+
+    expect(taskCreate).toHaveBeenCalledWith({
+      data: {
+        userId: "synthetic_user_a",
+        kind: "new_sign_in",
+        idempotencyKey: "new-sign-in:synthetic_session_b",
+        templateKey: "new_sign_in",
+        safeArguments: { clientType: "iPhoneアプリ" },
+        excludeDeviceId: undefined,
+        eventAt: NOW,
+        nextAttemptAt: new Date("2026-07-14T00:02:00.000Z"),
+      },
+    });
+  });
+
   it("保持しないWeb sessionはサーバー側も24時間で失効する", async () => {
     let createArgs: { data: { idleExpiresAt: Date; absoluteExpiresAt: Date } } | undefined;
     const db = {

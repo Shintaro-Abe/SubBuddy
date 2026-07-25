@@ -10,6 +10,9 @@ vi.mock("@/config/notifications", () => ({
     deliveryLeaseSeconds: 300,
     maxDeliveryAttempts: 6,
     deliveryRetentionDays: 30,
+    noticeRetentionDays: 90,
+    quietStartHour: 20,
+    quietEndHour: 9,
   },
   parseNotificationConfig: () => ({
     enabled: true,
@@ -102,5 +105,64 @@ describeDb("通知配信キューのDB結合", () => {
       attemptCount: 1,
       providerMessageId: "synthetic-provider-id",
     });
+  });
+
+  it("並列処理でも通知作成待ちはイベント・お知らせ・配信各1件へ収束する", async () => {
+    const now = new Date("2026-07-25T02:00:00.000Z");
+    const userId = "synthetic-notification-db-creation-user";
+    const deviceId = "synthetic-notification-db-creation-device";
+    await prisma.user.create({ data: { id: userId, name: "Synthetic User" } });
+    await prisma.device.create({
+      data: {
+        id: deviceId,
+        userId,
+        name: "Synthetic iPhone",
+        tokenHash: "synthetic-notification-db-creation-token-hash",
+        pushTokenCiphertext: "synthetic-ciphertext",
+        pushTokenFingerprint: "synthetic-notification-db-creation-fingerprint",
+        pushTokenKeyVersion: 1,
+        pushEnvironment: "sandbox",
+        notificationDeliveryEnabled: true,
+        pushTokenUpdatedAt: now,
+        timeZone: "Asia/Tokyo",
+      },
+    });
+    await prisma.notificationCreationTask.create({
+      data: {
+        id: "synthetic-notification-db-creation-task",
+        userId,
+        kind: "new_sign_in",
+        idempotencyKey: "new-sign-in:synthetic-notification-db-session",
+        templateKey: "new_sign_in",
+        safeArguments: { clientType: "Webブラウザ" },
+        eventAt: now,
+        nextAttemptAt: now,
+      },
+    });
+    mocks.sendApns.mockResolvedValue({
+      status: "sent",
+      providerMessageId: "synthetic-provider-id",
+    });
+
+    const [first, second] = await Promise.all([
+      processNotificationDeliveries(now),
+      processNotificationDeliveries(now),
+    ]);
+
+    expect(first.created + second.created).toBe(1);
+    await expect(
+      prisma.notificationCreationTask.findUnique({
+        where: { id: "synthetic-notification-db-creation-task" },
+        select: { status: true, attemptCount: true },
+      }),
+    ).resolves.toEqual({ status: "completed", attemptCount: 1 });
+    await expect(
+      Promise.all([
+        prisma.notificationEvent.count({ where: { userId } }),
+        prisma.notificationNotice.count({ where: { userId } }),
+        prisma.notificationDelivery.count({ where: { userId } }),
+      ]),
+    ).resolves.toEqual([1, 1, 1]);
+    expect(mocks.sendApns).toHaveBeenCalledTimes(1);
   });
 });
