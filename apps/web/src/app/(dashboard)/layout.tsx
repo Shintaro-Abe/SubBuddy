@@ -15,9 +15,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Image
             src="/brand/mudask-wordmark.svg"
             alt=""
-            width={150}
-            height={36}
+            width={136}
+            height={33}
             className="brand-logo"
+            priority
+          />
+          <Image
+            src="/brand/mudask-mascot.png"
+            alt=""
+            width={38}
+            height={38}
+            className="brand-mascot"
             priority
           />
         </Link>

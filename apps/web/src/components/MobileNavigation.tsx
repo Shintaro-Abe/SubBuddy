@@ -117,9 +117,17 @@ export function MobileNavigation() {
             <Image
               src="/brand/mudask-wordmark.svg"
               alt=""
-              width={108}
-              height={27}
+              width={92}
+              height={22}
               className="mobile-brand-logo"
+              priority
+            />
+            <Image
+              src="/brand/mudask-mascot.png"
+              alt=""
+              width={28}
+              height={28}
+              className="mobile-brand-mascot"
               priority
             />
           </Link>
