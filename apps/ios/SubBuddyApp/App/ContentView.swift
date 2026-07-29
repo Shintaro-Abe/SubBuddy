@@ -120,8 +120,7 @@ struct IntroView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.xLarge) {
                 Spacer(minLength: AppSpacing.section)
-                Text("MUDASK")
-                    .font(.appDisplay)
+                MudaskBrandCard()
                 Text("契約と支出を静かに整理し、次に確認することを見つけます。")
                     .font(.appTitle2)
                     .accessibilityAddTraits(.isHeader)
@@ -174,43 +173,98 @@ struct SignInView: View {
     @ObservedObject var authSession: AuthSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.large) {
-            Spacer()
-            Text("おかえりなさい")
-                .font(.appDisplay)
-            Text("契約情報を安全に読み込むため、Appleでサインインします。氏名とApple提供メールは保存しません。")
-                .foregroundStyle(AppColor.secondaryText)
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppSpacing.large) {
+                Spacer(minLength: AppSpacing.section)
+                MudaskWordmark()
+                    .frame(maxWidth: 168)
+                    .padding(AppSpacing.medium)
+                    .background(MudaskBrandColor.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(MudaskBrandColor.border, lineWidth: 1)
+                    }
 
-            SignInWithAppleButton(.signIn) { request in
-                authSession.prepareAppleAuthorizationRequest(request)
-            } onCompletion: { result in
-                Task {
-                    switch result {
-                    case .success(let authorization):
-                        await authSession.handleAppleAuthorization(authorization)
-                    case .failure(let error):
-                        authSession.handleAppleAuthorizationError(error)
+                Text("おかえりなさい")
+                    .font(.appDisplay)
+                    .accessibilityAddTraits(.isHeader)
+                Text("契約情報を安全に読み込むため、Appleでサインインします。氏名とApple提供メールは保存しません。")
+                    .foregroundStyle(AppColor.secondaryText)
+
+                SignInWithAppleButton(.signIn) { request in
+                    authSession.prepareAppleAuthorizationRequest(request)
+                } onCompletion: { result in
+                    Task {
+                        switch result {
+                        case .success(let authorization):
+                            await authSession.handleAppleAuthorization(authorization)
+                        case .failure(let error):
+                            authSession.handleAppleAuthorizationError(error)
+                        }
                     }
                 }
-            }
-            .signInWithAppleButtonStyle(.black)
-            .appAppleSignInButtonSize()
-            .disabled(authSession.isWorking || AppConstants.apiBaseURL == nil)
+                .signInWithAppleButtonStyle(.black)
+                .appAppleSignInButtonSize()
+                .disabled(authSession.isWorking || AppConstants.apiBaseURL == nil)
 
-            if AppConstants.apiBaseURL == nil {
-                Label("配布用の接続設定がありません。アプリのビルド設定を確認してください。", systemImage: "exclamationmark.triangle")
-                    .font(.appFootnote)
-                    .foregroundStyle(AppColor.caution)
-            } else if authSession.statusMessage != "サインインしていません" {
-                Text(authSession.statusMessage)
-                    .font(.appFootnote)
-                    .foregroundStyle(AppColor.secondaryText)
+                if AppConstants.apiBaseURL == nil {
+                    Label("配布用の接続設定がありません。アプリのビルド設定を確認してください。", systemImage: "exclamationmark.triangle")
+                        .font(.appFootnote)
+                        .foregroundStyle(AppColor.caution)
+                } else if authSession.statusMessage != "サインインしていません" {
+                    Text(authSession.statusMessage)
+                        .font(.appFootnote)
+                        .foregroundStyle(AppColor.secondaryText)
+                }
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppSpacing.large)
+            .padding(.bottom, AppSpacing.section)
         }
-        .padding(AppSpacing.large)
     }
 }
+
+private enum MudaskBrandColor {
+    static let surface = Color(
+        red: 249.0 / 255.0,
+        green: 249.0 / 255.0,
+        blue: 246.0 / 255.0
+    )
+    static let border = Color.black.opacity(0.14)
+}
+
+private struct MudaskWordmark: View {
+    var body: some View {
+        Image("MudaskWordmark")
+            .resizable()
+            .scaledToFit()
+            .accessibilityLabel("MUDASK")
+    }
+}
+
+private struct MudaskBrandCard: View {
+    var body: some View {
+        VStack(spacing: AppSpacing.medium) {
+            Image("MudaskMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(maxHeight: 132)
+                .accessibilityHidden(true)
+            MudaskWordmark()
+                .frame(maxWidth: 220)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppSpacing.large)
+        .background(MudaskBrandColor.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(MudaskBrandColor.border, lineWidth: 1)
+        }
+    }
+}
+
 struct OnboardingFlowView: View {
     @ObservedObject var store: ProductStore
     let reauthenticate: () -> Void

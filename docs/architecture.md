@@ -2,7 +2,7 @@
 
 > 利用者向けアプリ名：**MUDASK** / 内部プロジェクト名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-25（通知の実装済み範囲と残る信頼性対応を反映）
+> 最終更新：2026-07-29（認証セッション、通知、ブランド画像の技術境界を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`repository-structure.md`（構成）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -75,6 +75,7 @@ flowchart TB
 | バリデーション     | Zod                                           | API 入力・フォーム入力のスキーマ検証。型と単一ソース化                                          |
 | テスト             | Vitest（単体）/ Playwright（E2E）             | ドメインロジックを単体テスト中心で担保し、主要Web導線をE2Eで確認                                |
 | Lint / Format      | ESLint + Prettier                             | `development-guidelines.md` の規約を機械的に強制                                                |
+| ブランド画像       | 共通SVG/PNG正本 + プラットフォーム派生物      | ワードマークとキャラクターはローカル同梱し、Webファビコンは16・32・48pxの背景透過画像を1つのICOで提供 |
 
 > バージョンの具体値（Node / Next / Postgres 等）は `repository-structure.md` または `package.json` / `.tool-versions` を一次情報とし、本書では固定しない（陳腐化防止）。
 
@@ -92,6 +93,7 @@ Webは同じHTMLを画面幅で再配置し、1023px以下で上部バー・下�
 | 計測データの共有 | App Group内JSONファイル                           | 本体とMonitor Extension間の対応表・日別バケット集計。詳細ログは保持しない                                                    |
 | 同期             | URLSession（HTTPS）                               | 本体アプリの起動・サインイン完了・フォアグラウンド復帰時にSubBuddy APIへ**集計値のみ**自動送信。失敗時は端末内保持して再試行 |
 | UIデザイン       | SwiftUI標準操作 + `AppColor` / 共通View modifier  | Webのブランド基準をiPhone向け動的色へ対応付け、ライト・ダーク・高コントラスト、Dynamic Type、VoiceOverを維持                 |
+| ブランド画像     | Asset Catalog + SVG / PNG                         | ワードマークはベクター保持SVG、キャラクターは透明PNG、App IconはApple要件に合わせた不透明PNGとして同梱                     |
 
 > iOS Spikeと開発実機で、FamilyControls認可、Picker、Monitor Extension、App Group集計、Render同期まで確認済み。現行認証セッション基盤でのWeb・iPhone実機再確認も完了した。7日連続計測とArchive/codesignは未完了であり、外部TestFlight前のゲートに残る。
 
@@ -330,6 +332,7 @@ type AuthenticatedActor =
 | TC-6 | 金額は整数（最小通貨単位）で保持                                                         | 計算誤差防止（本書 5）         |
 | TC-7 | Apple Music/TV+/Arcade/One を実装・サンプル・レコメンドに含めない                        | 要求 5・6                      |
 | TC-8 | 実 PII を開発成果物（コード/seed/fixture/ログ/スクショ）に含めない                       | `AGENTS.md` PII 方針           |
+| TC-9 | アイコン正本は`apps/ios/scripts/assets/`、ワードマークとキャラクター正本は`assets/brand/`に分け、同期スクリプトでWebとiOSへ派生する。iOS App Iconは不透明のまま維持する | プラットフォーム要件と一貫性   |
 
 ---
 

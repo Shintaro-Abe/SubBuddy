@@ -2,7 +2,7 @@
 
 > 利用者向けアプリ名：**MUDASK** / 内部プロジェクト名：**SubBuddy**
 > ドキュメント種別：永続的ドキュメント（`docs/`）
-> 最終更新：2026-07-25（通知サービス・運用コマンドの配置を反映）
+> 最終更新：2026-07-29（通知サービス・ブランド画像正本・派生先を反映）
 > 関連：`product-requirements.md`（要求）、`functional-design.md`（機能設計）、`architecture.md`（技術仕様）、`development-guidelines.md`（開発規約）、`glossary.md`（用語）
 
 ---
@@ -37,6 +37,8 @@ SubBuddy/
 ├── obsidian/                  # 日付付き技術メモ。現行仕様の正本ではない
 ├── .agents/skills/            # リポジトリ管理の Codex Skills（SKILL.md 標準）
 ├── .codex/                    # Codex ハーネス（config.toml / agents/*.toml / hooks/ / harness/）
+├── assets/brand/              # MUDASKワードマークSVG・キャラクターPNGの共通正本
+├── scripts/                   # リポジトリ共通の同期・補助スクリプト
 ├── memory/                    # 旧自動メモリ（Codex は自動注入なし→明示 read。集約時に配置）
 ├── manuals/                   # ローカル専用の人手操作手順書（Git非追跡）
 ├── wbs/                       # WBS 進捗管理の正本（wbs.yml）と Sheets 同期ツール
@@ -49,7 +51,7 @@ SubBuddy/
 
 - **エージェント環境**：`AGENTS.md`、`.agents/skills/`、`.codex/` を Codex 用の作業基盤とする。構成の詳細は `.codex/harness/harness-map.md`。
 - **`apps/` で Web/API 側と iPhone 側を物理分離**する。両者は言語・ツールチェーンが異なるため、依存とビルドを混在させない。
-- ルート直下には**設定・ドキュメント・アプリ群のみ**を置き、実装コードは各 `apps/*` に閉じ込める。
+- ルート直下には**設定・ドキュメント・共通素材・同期スクリプト・アプリ群のみ**を置き、製品の実装コードは各`apps/*`に閉じ込める。
 - パッケージ共有機構（`packages/` 等のモノレポ化）は **MVP では導入しない**。必要が生じた時点で別途検討する（過剰構造の回避）。
 
 ---
@@ -101,6 +103,7 @@ apps/web/
 │   ├── seed.ts                    # ローカル開発用の合成データ（実 PII 禁止）
 │   └── bootstrap-service-catalog.ts # 利用者データに触れないカタログ同期
 ├── public/                        # 静的アセット
+│   └── brand/                     # 同期生成したワードマークSVG・キャラクターPNG
 └── src/
     ├── app/                       # App Router（画面 + Route Handlers）
     │   ├── (dashboard)/           # ダッシュボード、契約、支出、見直し、更新、使い方、設定
@@ -140,7 +143,7 @@ apps/ios/
 │   ├── App/                       # SwiftUI画面、デザイン、APIモデル、認証、計測、同期、通知、Keychain
 │   ├── Shared/                    # App Group共有の対応表・集計レコード
 │   ├── Resources/                 # 同梱フォントとOFLライセンス
-│   └── Assets.xcassets/           # アプリアイコン等
+│   └── Assets.xcassets/           # App Icon、ワードマークSVG、キャラクターPNG
 ├── SubBuddyMonitorExtension/      # しきい値超過イベント受信Extension
 ├── SubBuddyAppTests/              # 共有処理・UIモデル・表示整形のXCTest
 └── scripts/                       # XcodeGen・Simulator build・単体テストの検証スクリプト
@@ -154,6 +157,8 @@ apps/ios/
 - `project.yml`を正本としてXcodeGenで`.xcodeproj`を生成する。生成物を正本にしない。
 - SwiftUIはルート状態、3タブ、機能別View、ViewModel相当の`ProductStore`、API/表示モデル、案内進捗、自動同期、デザイントークンを`SubBuddyApp/App/`内で分離する。合成プレビューは`PreviewFixtures.swift`へ置く。
 - 主要操作色、塗りつぶしボタン、Apple公式ボタン寸法は`DesignSystem.swift`の共通定義を使い、画面ごとにライト・ダーク配色を直書きしない。
+- App IconとWebファビコンは`apps/ios/scripts/assets/app-icon-source.svg`を正本とする。iOS用の1024px入力とApp Icon画像は不透明PNGとして派生生成し、Webの背景透過はファビコン生成時だけ適用する。
+- ワードマークSVGとキャラクターPNGは`assets/brand/`を正本とし、`scripts/sync-brand-assets.mjs`で`apps/web/public/brand/`とiOS Asset Catalogへ同期する。ワードマーク派生物は形状・配色を変えず、表示領域だけを安全余白付きで調整する。
 - 利用者向けUIの基本回帰は`apps/ios/scripts/verify-main-ui.sh`でXcodeGen、Simulator build、単体テストを一続きで実行する。利用可能なiPhone Simulatorは自動選択する。
 - entitlement・署名情報・プロビジョニングプロファイル等の**秘密情報はコミットしない**（`.gitignore` で除外）。
 

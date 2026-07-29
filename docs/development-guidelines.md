@@ -49,6 +49,7 @@
 
 - 利用者向けの表示名・案内文・Apple Developer上のDescriptionは`MUDASK`を使う。
 - リポジトリ名、ソース上のモジュール・Target・Scheme、Bundle ID、App Group、Cookie、環境変数、API URL、DB名などの内部識別子は`SubBuddy`を維持する。名称変更を理由に一括置換しない。
+- App IconとWebファビコンの正本は`apps/ios/scripts/assets/app-icon-source.svg`とし、Webファビコンは背景透過の16・32・48px PNGを内包するICO、iOS App Iconは透明部分のないPNGとして生成する。ワードマークとキャラクターの正本は`assets/brand/`に置き、`scripts/sync-brand-assets.mjs`でWebとiOSへ同期する。正式画像内の多色はUI配色へ展開しない。
 
 ### 3.1 TypeScript（Mac 側）
 

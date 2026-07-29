@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -112,8 +113,15 @@ export function MobileNavigation() {
             <span aria-hidden="true">←</span>
           </Link>
         ) : (
-          <Link href="/" className="mobile-brand">
-            MUDASK
+          <Link href="/" className="mobile-brand" aria-label="MUDASK ホーム">
+            <Image
+              src="/brand/mudask-wordmark.svg"
+              alt=""
+              width={108}
+              height={27}
+              className="mobile-brand-logo"
+              priority
+            />
           </Link>
         )}
         {form ? <span className="mobile-topbar-title">契約</span> : <span />}

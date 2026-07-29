@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SidebarNav } from "@/components/SidebarNav";
 import { MobileNavigation } from "@/components/MobileNavigation";
@@ -10,8 +11,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="app">
       <aside className="side">
-        <Link href="/" className="brand">
-          MUDASK
+        <Link href="/" className="brand" aria-label="MUDASK ホーム">
+          <Image
+            src="/brand/mudask-wordmark.svg"
+            alt=""
+            width={150}
+            height={36}
+            className="brand-logo"
+            priority
+          />
         </Link>
         <SidebarNav />
         <div className="spacer" />

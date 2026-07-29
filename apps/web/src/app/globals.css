@@ -116,13 +116,39 @@ body {
   flex-direction: column;
 }
 .brand {
-  font-family: var(--mincho);
-  font-weight: 600;
-  font-size: 22px;
-  letter-spacing: 0;
+  display: block;
+  width: fit-content;
   margin-bottom: 24px;
-  color: var(--ink);
   text-decoration: none;
+}
+.brand-logo {
+  display: block;
+  width: 150px;
+  height: auto;
+}
+.sign-in-panel {
+  overflow: hidden;
+}
+.sign-in-brand-visual {
+  display: grid;
+  place-items: center;
+  min-height: 132px;
+}
+.sign-in-mascot {
+  display: block;
+  width: clamp(132px, 44vw, 168px);
+  height: auto;
+}
+.sign-in-brand {
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 8px;
+  line-height: 0;
+}
+.sign-in-brand-logo {
+  display: block;
+  width: min(210px, 100%);
+  height: auto;
 }
 .nav a {
   display: flex;
@@ -605,12 +631,13 @@ body {
 
   .mobile-brand {
     justify-self: start;
-    color: var(--ink);
-    font-family: var(--mincho);
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 0;
     text-decoration: none;
+  }
+
+  .mobile-brand-logo {
+    display: block;
+    width: 108px;
+    height: auto;
   }
 
   .mobile-topbar-title {
