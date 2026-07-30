@@ -5,21 +5,23 @@ export default function SignInPage() {
   return (
     <main className="min-h-screen grid place-items-center px-6">
       <section className="sign-in-panel w-full max-w-sm border border-hair bg-card p-8 rounded-lg">
+        <div className="sign-in-brand-visual" aria-hidden="true">
+          <Image
+            src="/brand/mudask-mascot.png"
+            alt=""
+            width={180}
+            height={180}
+            className="sign-in-mascot"
+            priority
+          />
+        </div>
         <h1 className="sign-in-brand" aria-label="MUDASK">
           <Image
             src="/brand/mudask-wordmark.svg"
             alt=""
-            width={190}
-            height={46}
+            width={230}
+            height={56}
             className="sign-in-brand-logo"
-            priority
-          />
-          <Image
-            src="/brand/mudask-mascot.png"
-            alt=""
-            width={52}
-            height={52}
-            className="sign-in-brand-mascot"
             priority
           />
         </h1>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900" viewBox="0 0 1100 900">
+  <rect width="1100" height="900" fill="#fcfbf8"/>
+  <text x="550" y="58" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="700" fill="#2e332e">MUDASK iPhone入口画面 完成イメージ</text>
+  <text x="300" y="115" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#2e332e">初回案内</text>
+  <text x="800" y="115" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#2e332e">おかえりなさい</text>
+
+  <rect x="120" y="140" width="360" height="700" rx="30" fill="#f6f4ee" stroke="#2e332e" stroke-width="3"/>
+  <rect x="620" y="140" width="360" height="700" rx="30" fill="#f6f4ee" stroke="#2e332e" stroke-width="3"/>
+
+  <image href="../../apps/web/public/brand/mudask-mascot.png" x="220" y="185" width="160" height="160" preserveAspectRatio="xMidYMid meet"/>
+  <image href="../../apps/web/public/brand/mudask-wordmark.svg" x="190" y="360" width="220" height="70" preserveAspectRatio="xMidYMid meet"/>
+  <text x="300" y="475" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="700" fill="#2e332e">
+    <tspan x="300">契約と支出を静かに整理し、</tspan>
+    <tspan x="300" dy="30">次に確認することを見つけます。</tspan>
+  </text>
+  <rect x="155" y="555" width="290" height="145" rx="18" fill="#3c4a3e"/>
+  <text x="175" y="585" font-family="sans-serif" font-size="16" font-weight="700" fill="#fdfcf9">判断はあなた自身が行います</text>
+  <text x="175" y="625" font-family="sans-serif" font-size="14" fill="#fdfcf9">
+    <tspan x="175">保存するもの・端末内に残すもの・</tspan>
+    <tspan x="175" dy="24">送る利用情報を確認します。</tspan>
+  </text>
+  <rect x="155" y="735" width="290" height="52" rx="13" fill="#475347"/>
+  <text x="300" y="768" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#fff">内容を確認して続ける</text>
+
+  <image href="../../apps/web/public/brand/mudask-wordmark.svg" x="680" y="235" width="170" height="60" preserveAspectRatio="xMidYMid meet"/>
+  <image href="../../apps/web/public/brand/mudask-mascot.png" x="862" y="236" width="58" height="58" preserveAspectRatio="xMidYMid meet"/>
+  <text x="800" y="380" text-anchor="middle" font-family="serif" font-size="31" font-weight="700" fill="#2e332e">おかえりなさい</text>
+  <text x="655" y="445" font-family="sans-serif" font-size="16" fill="#6f6a5c">
+    <tspan x="655">契約情報を安全に読み込むため、</tspan>
+    <tspan x="655" dy="25">Appleでサインインします。</tspan>
+    <tspan x="655" dy="25">氏名とApple提供メールは保存しません。</tspan>
+  </text>
+  <rect x="655" y="565" width="290" height="52" rx="13" fill="#000"/>
+  <text x="800" y="598" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="700" fill="#fff">  Appleでサインイン</text>
+
+  <rect x="230" y="852" width="640" height="38" rx="12" fill="#e8e5dd"/>
+  <text x="550" y="877" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#2e332e">薄いベージュが画面背景です。ロゴ・キャラの周囲に白いカードや枠線は置きません。</text>
+</svg>

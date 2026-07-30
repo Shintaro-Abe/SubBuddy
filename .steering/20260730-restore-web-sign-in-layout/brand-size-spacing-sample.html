@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MUDASK Webブランド表示 調整サンプル</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f6f4ee;
+        --card: #fdfcf9;
+        --sidebar: #efece4;
+        --ink: #2e332e;
+        --muted: #6f6a5c;
+        --hair: rgba(46, 51, 46, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic",
+          sans-serif;
+      }
+
+      main {
+        width: min(100% - 32px, 980px);
+        margin: 0 auto;
+        padding: 36px 0 48px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        text-align: center;
+        font-size: clamp(25px, 4vw, 34px);
+      }
+
+      .intro {
+        margin: 0 0 32px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .samples {
+        display: grid;
+        grid-template-columns: minmax(0, 430px) minmax(0, 1fr);
+        align-items: start;
+        gap: 44px;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      .login-page {
+        display: grid;
+        min-height: 680px;
+        padding: 24px;
+        background: var(--paper);
+        border: 1px dashed var(--hair);
+        place-items: center;
+      }
+
+      .login-card {
+        width: min(100%, 416px);
+        padding: 32px;
+        overflow: hidden;
+        background: var(--card);
+        border: 1px solid var(--hair);
+        border-radius: 8px;
+      }
+
+      .login-brand {
+        display: grid;
+        justify-items: center;
+        gap: 0;
+      }
+
+      .login-mascot {
+        display: block;
+        width: clamp(150px, 44vw, 180px);
+        height: 180px;
+        object-fit: contain;
+      }
+
+      .login-logo {
+        display: block;
+        width: min(230px, 100%);
+        height: auto;
+        margin-top: -2px;
+      }
+
+      .lead {
+        margin: 10px 0 30px;
+        color: var(--muted);
+      }
+
+      .apple-button {
+        display: grid;
+        width: 100%;
+        min-height: 48px;
+        color: white;
+        background: black;
+        border: 0;
+        border-radius: 8px;
+        place-items: center;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      .right-column {
+        display: grid;
+        gap: 32px;
+      }
+
+      .surface {
+        overflow: hidden;
+        border: 1px solid var(--hair);
+        border-radius: 12px;
+      }
+
+      .desktop-page {
+        display: grid;
+        min-height: 260px;
+        grid-template-columns: 236px minmax(0, 1fr);
+        background: var(--card);
+      }
+
+      .sidebar {
+        padding: 26px 20px;
+        background: var(--sidebar);
+        border-right: 1px solid var(--hair);
+      }
+
+      .desktop-brand,
+      .mobile-brand {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+      }
+
+      .desktop-brand {
+        gap: 3px;
+      }
+
+      .desktop-logo {
+        display: block;
+        width: 148px;
+        height: auto;
+      }
+
+      .desktop-mascot {
+        display: block;
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+      }
+
+      .nav {
+        display: grid;
+        gap: 8px;
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .nav span:first-child {
+        padding: 9px 12px;
+        color: var(--ink);
+        background: #eaeee4;
+        border-radius: 8px;
+        font-weight: 700;
+      }
+
+      .content-placeholder {
+        padding: 30px;
+      }
+
+      .content-placeholder strong {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .placeholder-line {
+        width: 100%;
+        height: 12px;
+        margin-bottom: 12px;
+        background: #ebe8e0;
+        border-radius: 999px;
+      }
+
+      .placeholder-line.short {
+        width: 62%;
+      }
+
+      .mobile-page {
+        width: min(100%, 390px);
+        min-height: 180px;
+        margin: 0 auto;
+        background: var(--card);
+      }
+
+      .mobile-topbar {
+        display: flex;
+        min-height: 62px;
+        padding: 12px 16px;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--sidebar);
+        border-bottom: 1px solid var(--hair);
+      }
+
+      .mobile-brand {
+        gap: 2px;
+      }
+
+      .mobile-logo {
+        display: block;
+        width: 105px;
+        height: auto;
+      }
+
+      .mobile-mascot {
+        display: block;
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+      }
+
+      .menu-button {
+        width: 38px;
+        height: 38px;
+        color: var(--ink);
+        background: var(--card);
+        border: 1px solid var(--hair);
+        border-radius: 8px;
+        font-size: 19px;
+      }
+
+      .spec {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 820px) {
+        .samples {
+          grid-template-columns: minmax(0, 430px);
+          justify-content: center;
+        }
+      }
+
+      @media (max-width: 430px) {
+        main {
+          width: 100%;
+          padding-top: 24px;
+        }
+
+        h1,
+        .intro,
+        h2,
+        .spec {
+          padding-inline: 16px;
+        }
+
+        .login-page {
+          min-height: 620px;
+          padding: 16px;
+          border-inline: 0;
+        }
+
+        .login-card {
+          padding: 24px;
+        }
+
+        .desktop-page {
+          grid-template-columns: 212px minmax(0, 1fr);
+        }
+
+        .sidebar {
+          padding-inline: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>MUDASK Webブランド表示 調整サンプル</h1>
+      <p class="intro">ロゴとキャラクターを近づけ、現在より少し大きくした案</p>
+
+      <div class="samples">
+        <section>
+          <h2>ログイン画面</h2>
+          <div class="login-page">
+            <div class="login-card">
+              <div class="login-brand" aria-label="MUDASK">
+                <img
+                  class="login-mascot"
+                  src="../../apps/web/public/brand/mudask-mascot.png"
+                  alt=""
+                />
+                <img
+                  class="login-logo"
+                  src="../../apps/web/public/brand/mudask-wordmark.svg"
+                  alt=""
+                />
+              </div>
+              <p class="lead">サブスクリプションを確認する</p>
+              <button class="apple-button" type="button">
+                &ensp;Appleでサインイン
+              </button>
+            </div>
+          </div>
+          <p class="spec">キャラ180px・ロゴ230px・縦間隔0px</p>
+        </section>
+
+        <div class="right-column">
+          <section>
+            <h2>PCページのサイドバー</h2>
+            <div class="surface desktop-page">
+              <aside class="sidebar">
+                <a class="desktop-brand" href="#" aria-label="MUDASK ホーム">
+                  <img
+                    class="desktop-logo"
+                    src="../../apps/web/public/brand/mudask-wordmark.svg"
+                    alt=""
+                  />
+                  <img
+                    class="desktop-mascot"
+                    src="../../apps/web/public/brand/mudask-mascot.png"
+                    alt=""
+                  />
+                </a>
+                <div class="nav">
+                  <span>ホーム</span>
+                  <span>契約</span>
+                  <span>見直し</span>
+                </div>
+              </aside>
+              <div class="content-placeholder">
+                <strong>ホーム</strong>
+                <div class="placeholder-line"></div>
+                <div class="placeholder-line short"></div>
+              </div>
+            </div>
+            <p class="spec">ロゴ148px・キャラ44px・横間隔3px</p>
+          </section>
+
+          <section>
+            <h2>モバイルページの上部バー</h2>
+            <div class="surface mobile-page">
+              <header class="mobile-topbar">
+                <a class="mobile-brand" href="#" aria-label="MUDASK ホーム">
+                  <img
+                    class="mobile-logo"
+                    src="../../apps/web/public/brand/mudask-wordmark.svg"
+                    alt=""
+                  />
+                  <img
+                    class="mobile-mascot"
+                    src="../../apps/web/public/brand/mudask-mascot.png"
+                    alt=""
+                  />
+                </a>
+                <button class="menu-button" type="button" aria-label="メニュー">
+                  ≡
+                </button>
+              </header>
+            </div>
+            <p class="spec">ロゴ105px・キャラ32px・横間隔2px</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

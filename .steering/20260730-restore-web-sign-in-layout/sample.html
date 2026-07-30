@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MUDASK Webログイン画面 復元サンプル</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f6f4ee;
+        --card: #fdfcf9;
+        --ink: #2e332e;
+        --muted: #6f6a5c;
+        --hair: rgba(46, 51, 46, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic",
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        min-height: 100vh;
+        padding: 24px;
+        place-items: center;
+      }
+
+      .sample {
+        width: min(100%, 384px);
+        padding: 32px;
+        overflow: hidden;
+        background: var(--card);
+        border: 1px solid var(--hair);
+        border-radius: 8px;
+      }
+
+      .preview {
+        width: min(100%, 384px);
+      }
+
+      .mascot-area {
+        display: grid;
+        min-height: 132px;
+        place-items: center;
+      }
+
+      .mascot {
+        display: block;
+        width: clamp(132px, 44vw, 168px);
+        height: auto;
+      }
+
+      h1 {
+        width: 100%;
+        max-width: 100%;
+        margin: 4px auto 8px;
+        line-height: 0;
+      }
+
+      .wordmark {
+        display: block;
+        width: min(210px, 100%);
+        height: auto;
+        margin-inline: auto;
+      }
+
+      .lead {
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.7;
+      }
+
+      .apple-button {
+        display: grid;
+        width: 100%;
+        min-height: 48px;
+        padding: 0 20px;
+        color: white;
+        background: black;
+        border: 0;
+        border-radius: 8px;
+        place-items: center;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      .caption {
+        margin: 20px 0 0;
+        color: var(--muted);
+        text-align: center;
+        font-size: 13px;
+      }
+
+      @media (max-width: 374px) {
+        main {
+          padding: 16px;
+        }
+
+        .sample {
+          padding: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="preview">
+        <section class="sample" aria-label="MUDASKログイン">
+          <div class="mascot-area" aria-hidden="true">
+            <img
+              class="mascot"
+              src="../../apps/web/public/brand/mudask-mascot.png"
+              alt=""
+            />
+          </div>
+
+          <h1 aria-label="MUDASK">
+            <img
+              class="wordmark"
+              src="../../apps/web/public/brand/mudask-wordmark.svg"
+              alt=""
+            />
+          </h1>
+
+          <p class="lead">サブスクリプションを確認する</p>
+
+          <button class="apple-button" type="button">
+            &ensp;Appleでサインイン
+          </button>
+        </section>
+
+        <p class="caption">Webログイン画面を直前の変更前へ戻した場合</p>
+      </div>
+    </main>
+  </body>
+</html>

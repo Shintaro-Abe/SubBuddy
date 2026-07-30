@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MUDASK iPhone入口画面 完成イメージ</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #fcfbf8;
+        --app-background: #f6f4ee;
+        --text: #2e332e;
+        --secondary: #6f6a5c;
+        --accent: #475347;
+        --review: #3c4a3e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background: var(--page);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic",
+          sans-serif;
+      }
+
+      main {
+        width: min(100% - 32px, 920px);
+        margin: 0 auto;
+        padding: 36px 0 24px;
+      }
+
+      h1 {
+        margin: 0 0 32px;
+        text-align: center;
+        font-size: clamp(24px, 4vw, 32px);
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 360px));
+        justify-content: center;
+        gap: 72px;
+      }
+
+      .sample-title {
+        margin: 0 0 16px;
+        text-align: center;
+        font-size: 18px;
+      }
+
+      .phone {
+        min-height: 700px;
+        padding: 44px 34px 38px;
+        overflow: hidden;
+        background: var(--app-background);
+        border: 3px solid var(--text);
+        border-radius: 30px;
+      }
+
+      .intro-brand {
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+      }
+
+      .intro-mascot {
+        width: 160px;
+        height: 160px;
+        object-fit: contain;
+      }
+
+      .intro-logo {
+        width: 220px;
+        height: auto;
+      }
+
+      .intro-heading {
+        margin: 28px 0 36px;
+        text-align: center;
+        font-size: 20px;
+        line-height: 1.55;
+      }
+
+      .review-card {
+        min-height: 145px;
+        padding: 20px;
+        color: #fdfcf9;
+        background: var(--review);
+        border-radius: 18px;
+      }
+
+      .review-card strong {
+        display: block;
+        margin-bottom: 20px;
+      }
+
+      .review-card p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .primary-button,
+      .apple-button {
+        display: grid;
+        width: 100%;
+        min-height: 52px;
+        margin-top: 34px;
+        place-items: center;
+        border: 0;
+        border-radius: 13px;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      .primary-button {
+        color: white;
+        background: var(--accent);
+      }
+
+      .sign-in-brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 46px;
+      }
+
+      .sign-in-logo {
+        width: 170px;
+        height: auto;
+      }
+
+      .sign-in-mascot {
+        width: 58px;
+        height: 58px;
+        object-fit: contain;
+      }
+
+      .welcome {
+        margin: 48px 0 34px;
+        text-align: center;
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: 32px;
+      }
+
+      .description {
+        margin: 0;
+        color: var(--secondary);
+        line-height: 1.65;
+      }
+
+      .apple-button {
+        margin-top: 34px;
+        color: white;
+        background: black;
+      }
+
+      .note {
+        width: fit-content;
+        max-width: 100%;
+        margin: 20px auto 0;
+        padding: 10px 18px;
+        text-align: center;
+        background: #e8e5dd;
+        border-radius: 12px;
+      }
+
+      @media (max-width: 820px) {
+        .screens {
+          grid-template-columns: minmax(0, 360px);
+          gap: 32px;
+        }
+      }
+
+      @media (max-width: 390px) {
+        main {
+          width: 100%;
+          padding-top: 24px;
+        }
+
+        h1 {
+          padding-inline: 20px;
+        }
+
+        .sample {
+          padding-inline: 12px;
+        }
+
+        .phone {
+          min-height: 650px;
+          padding-inline: 24px;
+        }
+
+        .sign-in-logo {
+          width: 148px;
+        }
+
+        .sign-in-mascot {
+          width: 48px;
+          height: 48px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>MUDASK iPhone入口画面 完成イメージ</h1>
+
+      <div class="screens">
+        <section class="sample" aria-labelledby="intro-title">
+          <h2 class="sample-title" id="intro-title">初回案内</h2>
+          <div class="phone">
+            <div class="intro-brand" aria-label="MUDASK">
+              <img
+                class="intro-mascot"
+                src="../../apps/web/public/brand/mudask-mascot.png"
+                alt=""
+              />
+              <img
+                class="intro-logo"
+                src="../../apps/web/public/brand/mudask-wordmark.svg"
+                alt=""
+              />
+            </div>
+
+            <p class="intro-heading">
+              契約と支出を静かに整理し、<br />
+              次に確認することを見つけます。
+            </p>
+
+            <div class="review-card">
+              <strong>判断はあなた自身が行います</strong>
+              <p>
+                保存するもの・端末内に残すもの・<br />
+                送る利用情報を確認します。
+              </p>
+            </div>
+
+            <button class="primary-button" type="button">
+              内容を確認して続ける
+            </button>
+          </div>
+        </section>
+
+        <section class="sample" aria-labelledby="signin-title">
+          <h2 class="sample-title" id="signin-title">おかえりなさい</h2>
+          <div class="phone">
+            <div class="sign-in-brand" aria-label="MUDASK">
+              <img
+                class="sign-in-logo"
+                src="../../apps/web/public/brand/mudask-wordmark.svg"
+                alt=""
+              />
+              <img
+                class="sign-in-mascot"
+                src="../../apps/web/public/brand/mudask-mascot.png"
+                alt=""
+              />
+            </div>
+
+            <h3 class="welcome">おかえりなさい</h3>
+            <p class="description">
+              契約情報を安全に読み込むため、Appleでサインインします。<br />
+              氏名とApple提供メールは保存しません。
+            </p>
+
+            <button class="apple-button" type="button">
+              &ensp;Appleでサインイン
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <p class="note">
+        薄いベージュが画面背景です。ロゴ・キャラの周囲に白いカードや枠線は置きません。
+      </p>
+    </main>
+  </body>
+</html>

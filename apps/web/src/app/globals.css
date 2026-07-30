@@ -118,7 +118,7 @@ body {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
   min-width: 0;
   width: fit-content;
   margin-bottom: 24px;
@@ -127,14 +127,14 @@ body {
 .brand-logo {
   display: block;
   flex: none;
-  width: 136px;
+  width: 148px;
   height: auto;
 }
 .brand-mascot {
   display: block;
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
 }
 .brand:focus-visible,
@@ -146,32 +146,28 @@ body {
 .sign-in-panel {
   overflow: hidden;
 }
-.sign-in-brand {
+.sign-in-brand-visual {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  width: 100%;
-  max-width: 100%;
-  margin: 0 0 12px;
-  background: var(--paper);
+  place-items: center;
   line-height: 0;
 }
-.sign-in-brand::before {
-  content: "";
+.sign-in-mascot {
+  display: block;
+  width: clamp(150px, 44vw, 180px);
+  height: auto;
+}
+.sign-in-brand {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 100%;
+  margin: -2px 0 10px;
+  line-height: 0;
 }
 .sign-in-brand-logo {
   display: block;
-  grid-column: 2;
-  width: 190px;
+  width: min(230px, 100%);
   height: auto;
-}
-.sign-in-brand-mascot {
-  display: block;
-  grid-column: 3;
-  justify-self: start;
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
 }
 .nav a {
   display: flex;
@@ -655,35 +651,26 @@ body {
   .mobile-brand {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
     justify-self: start;
     min-width: 0;
-    max-width: 126px;
+    max-width: 139px;
     text-decoration: none;
   }
 
   .mobile-brand-logo {
     display: block;
     flex: none;
-    width: 92px;
+    width: 105px;
     height: auto;
   }
 
   .mobile-brand-mascot {
     display: block;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
-  }
-
-  .sign-in-brand-logo {
-    width: 184px;
-  }
-
-  .sign-in-brand-mascot {
-    width: 48px;
-    height: 48px;
   }
 
   .mobile-topbar-title {
@@ -1076,17 +1063,6 @@ body {
   .scard {
     padding-right: 13px;
     padding-left: 13px;
-  }
-}
-
-@media (max-width: 374px) {
-  .sign-in-brand-logo {
-    width: 144px;
-  }
-
-  .sign-in-brand-mascot {
-    width: 40px;
-    height: 40px;
   }
 }
 

@@ -176,18 +176,21 @@ struct SignInView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.large) {
                 Spacer(minLength: AppSpacing.section)
-                MudaskWordmark()
-                    .frame(maxWidth: 168)
-                    .padding(AppSpacing.medium)
-                    .background(MudaskBrandColor.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(MudaskBrandColor.border, lineWidth: 1)
-                    }
+                HStack(spacing: AppSpacing.small) {
+                    MudaskWordmark()
+                        .frame(maxWidth: 168)
+                    Image("MudaskMascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 48, height: 48)
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("おかえりなさい")
                     .font(.appDisplay)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
                 Text("契約情報を安全に読み込むため、Appleでサインインします。氏名とApple提供メールは保存しません。")
                     .foregroundStyle(AppColor.secondaryText)
@@ -225,15 +228,6 @@ struct SignInView: View {
     }
 }
 
-private enum MudaskBrandColor {
-    static let surface = Color(
-        red: 249.0 / 255.0,
-        green: 249.0 / 255.0,
-        blue: 246.0 / 255.0
-    )
-    static let border = Color.black.opacity(0.14)
-}
-
 private struct MudaskWordmark: View {
     var body: some View {
         Image("MudaskWordmark")
@@ -256,12 +250,6 @@ private struct MudaskBrandCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(AppSpacing.large)
-        .background(MudaskBrandColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(MudaskBrandColor.border, lineWidth: 1)
-        }
     }
 }
 
